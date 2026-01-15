@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Estilos específicos para las secciones hero */
+.hero-section {
+  height: 60vh;
+  min-height: 400px;
+}
+
+@media (min-width: 768px) {
+  .hero-section {
+    height: 70vh;
+    min-height: 500px;
+  }
+}
+
+/* Asegurar que no haya espacios entre secciones */
+section {
+  margin: 0;
+  padding: 0;
+}
+
+/* Forzar que las imágenes hero ocupen todo el espacio */
+.hero-image {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
