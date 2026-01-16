@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { ReactNode } from "react";
 
 interface AnimatedSectionProps {
@@ -25,7 +25,7 @@ const AnimatedSection = ({
     right: { x: -60, opacity: 0 },
   };
 
-  const animateVariants = {
+  const animateVariants: Variants = {
     hidden: directionVariants[direction],
     visible: {
       y: 0,
@@ -34,7 +34,7 @@ const AnimatedSection = ({
       transition: {
         duration,
         delay,
-        ease: [0.25, 0.46, 0.45, 0.94], // Custom easing
+        ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number], // Custom easing
       },
     },
   };

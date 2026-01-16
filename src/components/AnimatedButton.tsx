@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { ReactNode } from "react";
 
 interface AnimatedButtonProps {
@@ -33,7 +33,7 @@ const AnimatedButton = ({
 
   const buttonClasses = `${baseClasses} ${variantClasses[variant]} ${className}`;
 
-  const buttonVariants = {
+  const buttonVariants: Variants = {
     initial: { scale: 1, y: 0 },
     hover: {
       scale: 1.05,

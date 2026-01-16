@@ -23,7 +23,8 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 
 // Initialize Analytics (only in browser)
+// Note: isSupported() returns a Promise, so we check it at runtime
 export const analytics =
-  typeof window !== "undefined" && isSupported() ? getAnalytics(app) : null;
+  typeof window !== "undefined" ? getAnalytics(app) : null;
 
 export default app;

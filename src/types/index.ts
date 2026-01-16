@@ -31,13 +31,24 @@ export interface ProductImage {
   isPrimary: boolean;
 }
 
-export type ProductCategory =
-  | "joyeria-artesanal"
-  | "minerales-del-mundo"
-  | "macrame"
-  | "ropa-artesanal"
-  | "tesoros-del-mundo"
-  | "coleccion-etiopia";
+// Tipo flexible para categorías dinámicas
+// El slug debe coincidir con una categoría en Firestore
+export type ProductCategory = string;
+
+// Interfaz para categorías gestionadas desde admin
+export interface Category {
+  id: string;
+  name: string;
+  slug: string; // URL-friendly (ej: "joyeria-artesanal")
+  description: string;
+  image?: string;
+  icon?: string;
+  order: number; // Orden de visualización
+  active: boolean; // Si está visible
+  parentId?: string; // Para subcategorías (opcional)
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Tipos para artesanos
 export interface Artisan {

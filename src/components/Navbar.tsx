@@ -2,11 +2,95 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, User, ShoppingBag } from "lucide-react";
+import { Menu, X, User } from "lucide-react";
+import CartIcon from "./CartIcon";
+import { getActiveCategories } from "@/lib/firebase/categories";
+import type { Category } from "@/types";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  // Cargar categorías activas desde Firestore
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const activeCategories = await getActiveCategories();
+        setCategories(activeCategories);
+      } catch (error) {
+        console.error("Error loading categories:", error);
+        // Fallback: usar categorías estáticas si falla Firestore
+        setCategories([
+          {
+            id: "joyeria-artesanal",
+            name: "Joyería Artesanal",
+            slug: "joyeria-artesanal",
+            description: "",
+            order: 1,
+            active: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            id: "minerales-del-mundo",
+            name: "Minerales del mundo",
+            slug: "minerales-del-mundo",
+            description: "",
+            order: 2,
+            active: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            id: "macrame",
+            name: "Macramé",
+            slug: "macrame",
+            description: "",
+            order: 3,
+            active: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            id: "tesoros-del-mundo",
+            name: "Tesoros del mundo",
+            slug: "tesoros-del-mundo",
+            description: "",
+            order: 4,
+            active: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            id: "ropa-artesanal",
+            name: "Ropa Artesanal",
+            slug: "ropa-artesanal",
+            description: "",
+            order: 5,
+            active: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            id: "coleccion-etiopia",
+            name: "Colección ETIOPÍA",
+            slug: "coleccion-etiopia",
+            description: "",
+            order: 6,
+            active: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ]);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -83,43 +167,20 @@ const Navbar = () => {
                     >
                       Ver todas las categorías
                     </Link>
-                    <div className="border-t border-gray-200 my-2"></div>
-                    <Link
-                      href="/joyeria-artesanal"
-                      className="block px-4 py-2 text-xl text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
-                    >
-                      Joyería Artesanal
-                    </Link>
-                    <Link
-                      href="/minerales-del-mundo"
-                      className="block px-4 py-2 text-xl text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
-                    >
-                      Minerales del mundo
-                    </Link>
-                    <Link
-                      href="/macrame"
-                      className="block px-4 py-2 text-xl text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
-                    >
-                      Macramé
-                    </Link>
-                    <Link
-                      href="/tesoros-del-mundo"
-                      className="block px-4 py-2 text-xl text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
-                    >
-                      Tesoros del mundo
-                    </Link>
-                    <Link
-                      href="/ropa-artesanal"
-                      className="block px-4 py-2 text-xl text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
-                    >
-                      Ropa
-                    </Link>
-                    <Link
-                      href="/coleccion-etiopia"
-                      className="block px-4 py-2 text-xl text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
-                    >
-                      Colección ETIOPÍA
-                    </Link>
+                    {categories.length > 0 && (
+                      <>
+                        <div className="border-t border-gray-200 my-2"></div>
+                        {categories.map((category) => (
+                          <Link
+                            key={category.id}
+                            href={`/categorias/${category.slug}`}
+                            className="block px-4 py-2 text-xl text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
+                          >
+                            {category.name}
+                          </Link>
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -170,15 +231,7 @@ const Navbar = () => {
               <User className="h-6 w-6" />
               <span className="text-xl font-medium">Login</span>
             </Link>
-            <Link
-              href="/carrito"
-              className="relative text-white hover:text-[#F5EFFF] transition-colors duration-200 p-2 rounded-lg hover:bg-white/10"
-            >
-              <ShoppingBag className="h-7 w-7" />
-              <span className="absolute -top-1 -right-1 bg-white text-[#5B4BA5] text-xs font-semibold rounded-full h-5 w-5 flex items-center justify-center shadow-md">
-                0
-              </span>
-            </Link>
+            <CartIcon />
           </div>
 
           {/* Mobile menu button */}
@@ -212,30 +265,16 @@ const Navbar = () => {
               >
                 Tienda Online
               </Link>
-              <Link
-                href="/joyeria-artesanal"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
-              >
-                Joyería Artesanal
-              </Link>
-              <Link
-                href="/minerales-del-mundo"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
-              >
-                Minerales del mundo
-              </Link>
-              <Link
-                href="/macrame"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
-              >
-                Macramé
-              </Link>
-              <Link
-                href="/ropa-artesanal"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
-              >
-                Ropa Artesanal
-              </Link>
+              {categories.map((category) => (
+                <Link
+                  key={category.id}
+                  href={`/categorias/${category.slug}`}
+                  className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {category.name}
+                </Link>
+              ))}
               <Link
                 href="/equipo"
                 className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
@@ -260,6 +299,12 @@ const Navbar = () => {
                 className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
               >
                 Contacto
+              </Link>
+              <Link
+                href="/carrito"
+                className="flex items-center px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+              >
+                Carrito
               </Link>
               <Link
                 href="/login"

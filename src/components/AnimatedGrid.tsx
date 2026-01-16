@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { ReactNode } from "react";
 
 interface AnimatedGridProps {
@@ -14,7 +14,7 @@ const AnimatedGrid = ({
   className = "",
   staggerDelay = 0.1,
 }: AnimatedGridProps) => {
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -25,7 +25,7 @@ const AnimatedGrid = ({
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: {
       y: 20,
       opacity: 0,
@@ -37,7 +37,7 @@ const AnimatedGrid = ({
       scale: 1,
       transition: {
         duration: 0.3,
-        ease: [0.25, 0.46, 0.45, 0.94],
+        ease: [0.25, 0.46, 0.45, 0.94] as [number, number, number, number],
       },
     },
   };
