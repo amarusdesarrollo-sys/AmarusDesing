@@ -1,4 +1,4 @@
-import { analytics } from "./firebase";
+import { getAnalyticsInstance } from "./firebase";
 import { logEvent } from "firebase/analytics";
 
 // Initialize Google Analytics
@@ -6,6 +6,7 @@ export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 // Track page views
 export const pageview = (url: string) => {
+  const analytics = getAnalyticsInstance();
   if (analytics && typeof window !== "undefined") {
     logEvent(analytics, "page_view", {
       page_location: url,
@@ -26,6 +27,7 @@ export const event = ({
   label?: string;
   value?: number;
 }) => {
+  const analytics = getAnalyticsInstance();
   if (analytics && typeof window !== "undefined") {
     logEvent(analytics, action, {
       event_category: category,
@@ -48,6 +50,7 @@ export const trackPurchase = (transactionData: {
     price: number;
   }>;
 }) => {
+  const analytics = getAnalyticsInstance();
   if (analytics && typeof window !== "undefined") {
     logEvent(analytics, "purchase", {
       transaction_id: transactionData.transaction_id,
@@ -65,6 +68,7 @@ export const trackAddToCart = (itemData: {
   quantity: number;
   price: number;
 }) => {
+  const analytics = getAnalyticsInstance();
   if (analytics && typeof window !== "undefined") {
     logEvent(analytics, "add_to_cart", {
       currency: "EUR",
@@ -80,6 +84,7 @@ export const trackViewItem = (itemData: {
   category: string;
   price: number;
 }) => {
+  const analytics = getAnalyticsInstance();
   if (analytics && typeof window !== "undefined") {
     logEvent(analytics, "view_item", {
       currency: "EUR",
@@ -99,6 +104,7 @@ export const trackBeginCheckout = (
   }>,
   value: number
 ) => {
+  const analytics = getAnalyticsInstance();
   if (analytics && typeof window !== "undefined") {
     logEvent(analytics, "begin_checkout", {
       currency: "EUR",
