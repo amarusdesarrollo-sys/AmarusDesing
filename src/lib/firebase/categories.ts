@@ -51,11 +51,21 @@ const firestoreToCategory = (data: any, id: string): Category => {
 const categoryToFirestore = (
   category: Omit<Category, "id" | "createdAt" | "updatedAt">
 ) => {
-  return {
-    ...category,
+  // Filtrar campos undefined (Firestore no los acepta)
+  const firestoreData: any = {
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
   };
+  
+  // Solo agregar campos que no sean undefined
+  Object.keys(category).forEach((key) => {
+    const value = (category as any)[key];
+    if (value !== undefined) {
+      firestoreData[key] = value;
+    }
+  });
+  
+  return firestoreData;
 };
 
 // Obtener todas las categorías
@@ -180,10 +190,21 @@ export const createCategory = async (
   try {
     const categoriesRef = collection(db, COLLECTION_NAME);
     const firestoreData = categoryToFirestore(category);
+    
+    console.log("💾 Guardando en Firestore:", {
+      name: firestoreData.name,
+      slug: firestoreData.slug,
+      image: firestoreData.image,
+      hasImage: !!firestoreData.image,
+    });
+    
     const docRef = await addDoc(categoriesRef, firestoreData);
+    
+    console.log("✅ Categoría guardada en Firestore con ID:", docRef.id);
+    
     return docRef.id;
   } catch (error) {
-    console.error("Error creating category:", error);
+    console.error("❌ Error creating category:", error);
     throw error;
   }
 };
@@ -195,10 +216,20 @@ export const updateCategory = async (
 ): Promise<void> => {
   try {
     const categoryRef = doc(db, COLLECTION_NAME, id);
+    
+    // Filtrar campos undefined (Firestore no los acepta)
     const firestoreData: any = {
-      ...updates,
       updatedAt: Timestamp.now(),
     };
+    
+    // Solo agregar campos que no sean undefined
+    Object.keys(updates).forEach((key) => {
+      const value = (updates as any)[key];
+      if (value !== undefined) {
+        firestoreData[key] = value;
+      }
+    });
+    
     await updateDoc(categoryRef, firestoreData);
   } catch (error) {
     console.error("Error updating category:", error);

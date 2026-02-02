@@ -5,6 +5,11 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { ShoppingCart, Heart } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
+import {
+  getProductImageUrl,
+  isCloudinaryUrl,
+  extractPublicIdFromUrl,
+} from "@/lib/cloudinary";
 import type { Product } from "@/types";
 
 interface ProductCardProps {
@@ -22,6 +27,25 @@ export default function ProductCard({
 
   const formatPrice = (cents: number) => {
     return (cents / 100).toFixed(2);
+  };
+
+  // Función helper para obtener URL de imagen optimizada
+  const getImageUrl = (image: { url: string; publicId?: string }) => {
+    // Si tiene publicId, usar función optimizada de Cloudinary
+    if (image.publicId) {
+      return getProductImageUrl(image.publicId, "medium", image.url);
+    }
+    
+    // Si la URL ya es de Cloudinary, intentar extraer publicId
+    if (isCloudinaryUrl(image.url)) {
+      const publicId = extractPublicIdFromUrl(image.url);
+      if (publicId) {
+        return getProductImageUrl(publicId, "medium", image.url);
+      }
+    }
+    
+    // Fallback a URL directa
+    return image.url;
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -48,12 +72,21 @@ export default function ProductCard({
         {/* Imagen del producto */}
         <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
           <Image
-            src={primaryImage?.url || "/images/placeholder.jpg"}
+            src={
+              primaryImage
+                ? getImageUrl(primaryImage)
+                : "/images/placeholder.jpg"
+            }
             alt={primaryImage?.alt || product.name}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-300"
             priority={priority}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            unoptimized={
+              primaryImage
+                ? isCloudinaryUrl(primaryImage.url)
+                : false
+            }
           />
 
           {/* Badges */}

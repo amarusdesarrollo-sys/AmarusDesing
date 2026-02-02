@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Upload, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { createCategory } from "@/lib/firebase/categories";
 
 // Esquema de validación
@@ -30,6 +31,9 @@ export default function NuevaCategoriaPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePublicId, setImagePublicId] = useState<string | null>(null);
 
   const {
     register,
@@ -63,6 +67,74 @@ export default function NuevaCategoriaPage() {
     setValue("slug", slug);
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith("image/")) {
+      setError("Por favor, selecciona un archivo de imagen válido");
+      return;
+    }
+
+    // Validar tamaño (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("La imagen no puede ser mayor a 5MB");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      setError(null);
+
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Subir a Cloudinary
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "categories");
+
+      const response = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log("✅ Imagen subida exitosamente:", {
+          publicId: result.publicId,
+          url: result.url,
+        });
+        setImagePublicId(result.publicId);
+      } else {
+        console.error("❌ Error al subir imagen:", result);
+        throw new Error(result.message || "Error al subir la imagen");
+      }
+    } catch (err) {
+      console.error("Error uploading image:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Error al subir la imagen. Intenta nuevamente."
+      );
+      setImagePreview(null);
+      setImagePublicId(null);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setImagePublicId(null);
+  };
+
   const onSubmit = async (data: CategoryFormData) => {
     try {
       setLoading(true);
@@ -71,13 +143,23 @@ export default function NuevaCategoriaPage() {
       const categoryData = {
         ...data,
         description: data.description || "",
+        image: imagePublicId || undefined,
       };
 
-      await createCategory(categoryData);
+      console.log("📦 Guardando categoría con datos:", {
+        name: categoryData.name,
+        slug: categoryData.slug,
+        image: categoryData.image,
+        hasImage: !!categoryData.image,
+      });
+
+      const categoryId = await createCategory(categoryData);
+      
+      console.log("✅ Categoría creada exitosamente con ID:", categoryId);
 
       router.push("/admin/categorias");
     } catch (err) {
-      console.error("Error creating category:", err);
+      console.error("❌ Error creating category:", err);
       setError(
         "Error al crear la categoría. Verifica que el slug no esté duplicado."
       );
@@ -168,6 +250,64 @@ export default function NuevaCategoriaPage() {
             </p>
             {errors.slug && (
               <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>
+            )}
+          </div>
+
+          {/* Imagen */}
+          <div>
+            <label
+              htmlFor="image"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Imagen de la Categoría
+            </label>
+            
+            {imagePreview ? (
+              <div className="relative w-full max-w-md">
+                <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-gray-300">
+                  <Image
+                    src={imagePreview}
+                    alt="Preview"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                {imagePublicId && (
+                  <p className="mt-2 text-sm text-green-600">
+                    ✓ Imagen subida correctamente
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#6B5BB6] transition-colors">
+                <input
+                  type="file"
+                  id="image"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="image"
+                  className="cursor-pointer flex flex-col items-center"
+                >
+                  <ImageIcon className="h-12 w-12 text-gray-400 mb-4" />
+                  <span className="text-gray-600 font-medium mb-2">
+                    {uploadingImage ? "Subiendo..." : "Haz clic para subir una imagen"}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    PNG, JPG, WEBP hasta 5MB
+                  </span>
+                </label>
+              </div>
             )}
           </div>
 

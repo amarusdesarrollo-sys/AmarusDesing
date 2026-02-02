@@ -2,6 +2,11 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import {
+  getProductImageUrl,
+  isCloudinaryUrl,
+  extractPublicIdFromUrl,
+} from "@/lib/cloudinary";
 
 interface OptimizedImageProps {
   src: string;
@@ -17,6 +22,8 @@ interface OptimizedImageProps {
   fallback?: string;
   avifSrc?: string;
   webpSrc?: string;
+  publicId?: string; // Cloudinary public ID
+  cloudinarySize?: "small" | "medium" | "large" | "thumbnail";
 }
 
 export default function OptimizedImage({
@@ -33,24 +40,28 @@ export default function OptimizedImage({
   fallback,
   avifSrc,
   webpSrc,
+  publicId,
+  cloudinarySize = "medium",
 }: OptimizedImageProps) {
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Generar srcset para diferentes formatos y tamaños
-  const generateSrcSet = (baseSrc: string, format: string) => {
-    const sizes = [400, 800, 1200, 1600];
-    return sizes
-      .map(
-        (size) =>
-          `${baseSrc.replace(/\.[^/.]+$/, `_${size}.${format}`)} ${size}w`
-      )
-      .join(", ");
-  };
-
   // Determinar la mejor imagen a usar
   const getBestImageSrc = () => {
     if (imageError && fallback) return fallback;
+
+    // Si hay publicId de Cloudinary, usar función optimizada
+    if (publicId) {
+      return getProductImageUrl(publicId, cloudinarySize);
+    }
+
+    // Si la URL es de Cloudinary, intentar extraer publicId
+    if (isCloudinaryUrl(src)) {
+      const extractedPublicId = extractPublicIdFromUrl(src);
+      if (extractedPublicId) {
+        return getProductImageUrl(extractedPublicId, cloudinarySize);
+      }
+    }
 
     // Si hay versión AVIF específica, usarla
     if (avifSrc) return avifSrc;
@@ -105,8 +116,10 @@ export default function OptimizedImage({
         }
         onLoad={handleImageLoad}
         onError={handleImageError}
-        // Configuración para Cloudinary si es necesario
-        unoptimized={src.includes("cloudinary.com")}
+        // Cloudinary maneja la optimización, no necesitamos que Next.js lo haga
+        unoptimized={
+          isCloudinaryUrl(src) || !!publicId || src.includes("cloudinary.com")
+        }
       />
 
       {imageError && (
@@ -127,15 +140,48 @@ export function ProductImage({
   alt,
   className = "",
   priority = false,
+  publicId,
+  size = "medium",
 }: {
   src: string;
   alt: string;
   className?: string;
   priority?: boolean;
+  publicId?: string;
+  size?: "small" | "medium" | "large" | "thumbnail";
 }) {
+  let imageUrl: string;
+  
+  if (publicId) {
+    imageUrl = getProductImageUrl(publicId, size);
+    console.log("🖼️ ProductImage - publicId:", publicId, "URL generada:", imageUrl);
+  } else if (src && src.trim() !== "") {
+    if (isCloudinaryUrl(src)) {
+      const extractedPublicId = extractPublicIdFromUrl(src);
+      imageUrl = extractedPublicId
+        ? getProductImageUrl(extractedPublicId, size)
+        : src;
+    } else {
+      imageUrl = src;
+    }
+  } else {
+    // Si no hay ni publicId ni src válido, usar placeholder
+    imageUrl = "/images/placeholder-category.jpg";
+  }
+
+  // Si después de todo no hay URL válida, no renderizar
+  if (!imageUrl || imageUrl.trim() === "") {
+    console.warn("⚠️ ProductImage - No hay URL válida para renderizar");
+    return (
+      <div className={`bg-gray-200 flex items-center justify-center ${className}`}>
+        <span className="text-gray-400 text-sm">Sin imagen</span>
+      </div>
+    );
+  }
+
   return (
     <Image
-      src={src}
+      src={imageUrl}
       alt={alt}
       width={800}
       height={800}
@@ -144,7 +190,7 @@ export function ProductImage({
       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
       quality={90}
       placeholder="empty"
-      unoptimized={src.includes("cloudinary.com")}
+      unoptimized={isCloudinaryUrl(src) || !!publicId}
     />
   );
 }

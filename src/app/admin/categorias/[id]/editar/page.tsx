@@ -5,9 +5,11 @@ import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { getCategoryById, updateCategory } from "@/lib/firebase/categories";
+import { getProductImageUrl } from "@/lib/cloudinary";
 
 // Esquema de validación
 const categorySchema = z.object({
@@ -34,6 +36,10 @@ export default function EditarCategoriaPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePublicId, setImagePublicId] = useState<string | null>(null);
+  const [currentImagePublicId, setCurrentImagePublicId] = useState<string | null>(null);
 
   const {
     register,
@@ -61,6 +67,17 @@ export default function EditarCategoriaPage() {
         setValue("description", category.description || "");
         setValue("order", category.order);
         setValue("active", category.active);
+        
+        // Cargar imagen si existe
+        if (category.image) {
+          console.log("🖼️ Cargando imagen de categoría:", category.image);
+          setCurrentImagePublicId(category.image);
+          setImagePublicId(category.image);
+          // Generar URL de preview desde Cloudinary
+          const imageUrl = getProductImageUrl(category.image, "medium");
+          console.log("🖼️ URL generada:", imageUrl);
+          setImagePreview(imageUrl);
+        }
       } catch (err) {
         console.error("Error loading category:", err);
         setError("Error al cargar la categoría");
@@ -74,6 +91,66 @@ export default function EditarCategoriaPage() {
     }
   }, [categoryId, setValue]);
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Por favor, selecciona un archivo de imagen válido");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("La imagen no puede ser mayor a 5MB");
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      setError(null);
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "categories");
+
+      const response = await fetch("/api/upload-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setImagePublicId(result.publicId);
+      } else {
+        throw new Error(result.message || "Error al subir la imagen");
+      }
+    } catch (err) {
+      console.error("Error uploading image:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Error al subir la imagen. Intenta nuevamente."
+      );
+      setImagePreview(null);
+      setImagePublicId(null);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setImagePublicId(null);
+    setCurrentImagePublicId(null);
+  };
+
   const onSubmit = async (data: CategoryFormData) => {
     try {
       setSaving(true);
@@ -82,6 +159,7 @@ export default function EditarCategoriaPage() {
       const categoryData = {
         ...data,
         description: data.description || "",
+        image: imagePublicId || undefined,
       };
 
       await updateCategory(categoryId, categoryData);
@@ -199,6 +277,64 @@ export default function EditarCategoriaPage() {
             </p>
             {errors.slug && (
               <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>
+            )}
+          </div>
+
+          {/* Imagen */}
+          <div>
+            <label
+              htmlFor="image"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Imagen de la Categoría
+            </label>
+            
+            {imagePreview ? (
+              <div className="relative w-full max-w-md">
+                <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-gray-300">
+                  <Image
+                    src={imagePreview}
+                    alt="Preview"
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                {imagePublicId && (
+                  <p className="mt-2 text-sm text-green-600">
+                    ✓ Imagen {currentImagePublicId && currentImagePublicId === imagePublicId ? "actual" : "actualizada"} correctamente
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-[#6B5BB6] transition-colors">
+                <input
+                  type="file"
+                  id="image"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="image"
+                  className="cursor-pointer flex flex-col items-center"
+                >
+                  <ImageIcon className="h-12 w-12 text-gray-400 mb-4" />
+                  <span className="text-gray-600 font-medium mb-2">
+                    {uploadingImage ? "Subiendo..." : "Haz clic para subir o cambiar la imagen"}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    PNG, JPG, WEBP hasta 5MB
+                  </span>
+                </label>
+              </div>
             )}
           </div>
 

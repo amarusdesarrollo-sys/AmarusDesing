@@ -1,10 +1,31 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import AnimatedSection from "@/components/AnimatedSection";
 import AnimatedGrid from "@/components/AnimatedGrid";
 import AnimatedCategory from "@/components/AnimatedCategory";
+import { getActiveCategories } from "@/lib/firebase/categories";
+import type { Category } from "@/types";
 
 export default function TiendaOnlinePage() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const activeCategories = await getActiveCategories();
+        setCategories(activeCategories);
+      } catch (error) {
+        console.error("Error loading categories:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
   return (
     <>
       {/* Hero Section - Tienda Online */}
@@ -18,70 +39,32 @@ export default function TiendaOnlinePage() {
             </AnimatedSection>
 
             {/* Grid de categorías */}
-            <AnimatedGrid
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
-              staggerDelay={0.1}
-            >
-              <AnimatedCategory
-                href="/joyeria-artesanal"
-                src="/images/gallery/colgantes.avif"
-                alt="Colgantes artesanal"
-                title="Colgantes"
-                priority={true}
-              />
-
-              <AnimatedCategory
-                href="/minerales-del-mundo"
-                src="/images/gallery/lotes.avif"
-                alt="Lotes de minerales"
-                title="Lotes"
-                priority={true}
-              />
-
-              <AnimatedCategory
-                href="/macrame"
-                src="/images/gallery/macrame.avif"
-                alt="Macramé hecho a mano"
-                title="Macramé"
-                priority={true}
-              />
-
-              <AnimatedCategory
-                href="/joyeria-artesanal"
-                src="/images/gallery/cabujones.avif"
-                alt="Cabujones artesanal"
-                title="Cabujones"
-                priority={true}
-              />
-
-              <AnimatedCategory
-                href="/minerales-del-mundo"
-                src="/images/gallery/cuarzos maestros.avif"
-                alt="Cuarzos maestros"
-                title="Cuarzos Maestros"
-              />
-
-              <AnimatedCategory
-                href="/ropa-artesanal"
-                src="/images/gallery/ropa artesanal.avif"
-                alt="Ropa artesanal"
-                title="Ropa Artesanal"
-              />
-
-              <AnimatedCategory
-                href="/coleccion-etiopia"
-                src="/images/gallery/coleccion etipopia.avif"
-                alt="Colección Etiopía"
-                title="Colección ETIOPÍA"
-              />
-
-              <AnimatedCategory
-                href="/joyeria-artesanal"
-                src="/images/gallery/anillos.avif"
-                alt="Anillos artesanal"
-                title="Anillos"
-              />
-            </AnimatedGrid>
+            {loading ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]"></div>
+              </div>
+            ) : categories.length > 0 ? (
+              <AnimatedGrid
+                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
+                staggerDelay={0.1}
+              >
+                {categories.map((category, index) => (
+                  <AnimatedCategory
+                    key={category.id}
+                    href={`/categorias/${category.slug}`}
+                    src=""
+                    publicId={category.image || undefined}
+                    alt={category.name}
+                    title={category.name}
+                    priority={index < 4}
+                  />
+                ))}
+              </AnimatedGrid>
+            ) : (
+              <div className="text-gray-600 py-20">
+                <p>No hay categorías disponibles en este momento.</p>
+              </div>
+            )}
           </div>
         </div>
       </section>

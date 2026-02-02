@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Instagram, Mail, Heart } from "lucide-react";
+import { Instagram, Mail, Heart, Settings } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -77,10 +77,19 @@ const Footer = () => {
             <p className="text-gray-400 text-sm">
               © 2024 AmarusDesign. Todos los derechos reservados.
             </p>
-            <div className="flex items-center space-x-1 mt-2 md:mt-0">
-              <span className="text-gray-400 text-sm">Hecho con</span>
-              <Heart className="h-4 w-4 text-red-500" />
-              <span className="text-gray-400 text-sm">para artesanos</span>
+            <div className="flex items-center gap-4 mt-2 md:mt-0">
+              <Link
+                href="/admin/categorias"
+                className="flex items-center gap-1 text-gray-400 hover:text-[#6b5bb6] transition-colors text-sm"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Admin</span>
+              </Link>
+              <div className="flex items-center space-x-1">
+                <span className="text-gray-400 text-sm">Hecho con</span>
+                <Heart className="h-4 w-4 text-red-500" />
+                <span className="text-gray-400 text-sm">para artesanos</span>
+              </div>
             </div>
           </div>
         </div>

@@ -117,7 +117,45 @@ export const getProductsByCategory = async (
     return snapshot.docs.map((doc) =>
       firestoreToProduct(doc.data(), doc.id)
     );
-  } catch (error) {
+  } catch (error: any) {
+    // Detectar si el error es por falta de índice
+    const isIndexError =
+      error?.code === "failed-precondition" ||
+      error?.code === 9 || // Código numérico de failed-precondition
+      (error?.message && (
+        error.message.toLowerCase().includes("index") ||
+        error.message.toLowerCase().includes("requires an index")
+      ));
+
+    if (isIndexError) {
+      // Extraer enlace del error si existe
+      const indexLink = error?.message?.match(/https:\/\/[^\s]+/)?.[0];
+      
+      console.warn("⚠️ Índice de Firestore no encontrado para productos. Usando fallback temporal...");
+      if (indexLink) {
+        console.info("📋 Para crear el índice automáticamente, visita:");
+        console.info(indexLink);
+      } else {
+        console.info("📋 Ve a Firebase Console > Firestore > Indexes");
+        console.info("📝 Crea un índice para: Collection: products, Fields: category (Asc), createdAt (Desc)");
+      }
+      
+      // Fallback: obtener todas y filtrar en memoria (menos eficiente pero funciona)
+      try {
+        const allProducts = await getAllProducts();
+        const categoryProducts = allProducts
+          .filter((product) => product.category === category)
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        console.info(`✅ Fallback exitoso: ${categoryProducts.length} productos encontrados en categoría "${category}"`);
+        return categoryProducts;
+      } catch (fallbackError) {
+        console.error("❌ Error en fallback:", fallbackError);
+        // Si el fallback también falla, retornar array vacío
+        return [];
+      }
+    }
+    
+    // Si no es un error de índice, lanzar el error normalmente
     console.error("Error getting products by category:", error);
     throw error;
   }

@@ -64,6 +64,45 @@ export default function AdminCategoriasPage() {
     }
   };
 
+  const handleInitializeCategories = async () => {
+    if (
+      !confirm(
+        "¿Deseas crear las 6 categorías iniciales automáticamente? (Joyería Artesanal, Minerales del Mundo, Macramé, Tesoros del Mundo, Ropa Artesanal, Colección Etiopía)"
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch("/api/init-categories", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(
+          `✅ ${data.message}\nSe crearon ${data.created} categorías.`
+        );
+        await loadCategories(); // Recargar lista
+      } else {
+        alert(
+          data.message ||
+            "No se pudieron crear las categorías. Puede que ya existan."
+        );
+        if (data.existingCount > 0) {
+          await loadCategories(); // Recargar lista si ya había categorías
+        }
+      }
+    } catch (err) {
+      console.error("Error initializing categories:", err);
+      alert("Error al inicializar categorías");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -111,11 +150,20 @@ export default function AdminCategoriasPage() {
             <p className="text-xl text-gray-600 mb-4">
               No hay categorías creadas aún.
             </p>
-            <Link href="/admin/categorias/nueva">
-              <button className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors">
-                Crear Primera Categoría
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button
+                onClick={handleInitializeCategories}
+                className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors"
+              >
+                Inicializar Categorías Automáticamente
               </button>
-            </Link>
+              <span className="text-gray-400">o</span>
+              <Link href="/admin/categorias/nueva">
+                <button className="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                  Crear Manualmente
+                </button>
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
