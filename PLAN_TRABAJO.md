@@ -325,22 +325,57 @@ Next.js API Routes (Webhooks de pagos - mínima lógica)
 
 - ✅ Store de carrito (Zustand con localStorage)
 - ✅ Funciones Firebase para productos y categorías
-- ✅ Mock data de productos (16 productos)
+- ✅ Mock data de productos
 - ✅ Página dinámica de categorías `/categorias/[slug]`
-- ✅ Navbar dinámico (carga categorías desde Firestore)
-- ✅ Gestión completa de categorías admin (`/admin/categorias`)
+- ✅ Navbar dinámico (categorías desde Firestore)
+- ✅ Gestión completa de categorías admin (listar, crear, editar, imagen, destacada)
+- ✅ Dashboard admin (`/admin` con stats y sidebar)
+- ✅ Página detalle de producto `/productos/[id]`
+- ✅ Tienda online con categorías e imágenes (Cloudinary)
+- ✅ Home con categorías destacadas dinámicas
 
-### PENDIENTE URGENTE:
+### PRÓXIMOS PASOS – ORDEN RECOMENDADO
 
-- ❌ Dashboard Admin Principal (`/admin` con navegación y overview)
-- ❌ Página detalle de producto (`/productos/[id]`)
-- ❌ Gestión de productos admin
-- ❌ Autenticación (NextAuth + Firebase Auth)
-- ❌ Protección de rutas admin
-- ❌ Checkout básico
-- ❌ Órdenes en Firebase
+**1. Cerrar Dashboard Admin** (para poder gestionar todo sin depender del usuario)
 
-Ver `TAREAS_MANANA.md` para plan detallado del día siguiente.
+- Gestión de **productos**: listado, crear, editar, eliminar, subir imágenes a Cloudinary
+- Gestión de **pedidos**: listado, filtrar por estado, ver detalle, actualizar estado (enviado, tracking)
+
+**2. Checkout + Órdenes**
+
+- Página `/checkout` (datos de envío, resumen, “confirmar pedido”)
+- Crear orden en Firestore al confirmar
+- Página de confirmación con número de orden
+
+**3. Autenticación**
+
+- Login, registro, recuperar contraseña (Firebase Auth)
+- Protección de rutas: solo admins en `/admin`
+
+**4. Dashboard Usuario**
+
+- Perfil (nombre, email, teléfono)
+- Direcciones de envío (guardar varias)
+- Lista de deseos / favoritos
+- Historial de pedidos (listado + detalle)
+
+**5. Resto**
+
+- Pasarela de pagos real (Mercado Pago / Stripe / PayPal)
+- Newsletter funcional (opcional)
+- Pulido (loading, errores, SEO)
+
+### PENDIENTE:
+
+- ❌ Admin: gestión de productos (CRUD + imágenes)
+- ❌ Admin: gestión de pedidos
+- ❌ Checkout y creación de órdenes en Firebase
+- ❌ Autenticación y protección de rutas
+- ❌ Dashboard usuario (perfil, direcciones, wishlist, pedidos)
+- ❌ Pasarela de pagos
+- ❌ Newsletter (opcional)
+
+Ver `TAREAS_MANANA.md` para tareas del día.
 
 ---
 

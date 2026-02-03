@@ -48,6 +48,10 @@ const firestoreToProduct = (data: any, id: string): Product => {
     materials: data.materials,
     dimensions: data.dimensions,
     weight: data.weight,
+    attributes:
+      data.attributes && typeof data.attributes === "object"
+        ? data.attributes
+        : undefined,
     artisan: data.artisan,
     createdAt: convertTimestamp(data.createdAt),
     updatedAt: convertTimestamp(data.updatedAt),
@@ -59,13 +63,21 @@ const firestoreToProduct = (data: any, id: string): Product => {
   };
 };
 
-// Convertir Product a formato Firestore
-const productToFirestore = (product: Omit<Product, "id" | "createdAt" | "updatedAt">) => {
-  return {
-    ...product,
+// Convertir Product a formato Firestore (sin undefined, Firestore no los acepta)
+const productToFirestore = (
+  product: Omit<Product, "id" | "createdAt" | "updatedAt">
+) => {
+  const firestoreData: Record<string, unknown> = {
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
   };
+  Object.keys(product).forEach((key) => {
+    const value = (product as Record<string, unknown>)[key];
+    if (value !== undefined) {
+      firestoreData[key] = value;
+    }
+  });
+  return firestoreData;
 };
 
 // Obtener todos los productos
@@ -74,10 +86,8 @@ export const getAllProducts = async (): Promise<Product[]> => {
     const productsRef = collection(db, COLLECTION_NAME);
     const q = query(productsRef, orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map((doc) =>
-      firestoreToProduct(doc.data(), doc.id)
-    );
+
+    return snapshot.docs.map((doc) => firestoreToProduct(doc.data(), doc.id));
   } catch (error) {
     console.error("Error getting products:", error);
     throw error;
@@ -89,11 +99,11 @@ export const getProductById = async (id: string): Promise<Product | null> => {
   try {
     const productRef = doc(db, COLLECTION_NAME, id);
     const snapshot = await getDoc(productRef);
-    
+
     if (!snapshot.exists()) {
       return null;
     }
-    
+
     return firestoreToProduct(snapshot.data(), snapshot.id);
   } catch (error) {
     console.error("Error getting product:", error);
@@ -113,40 +123,43 @@ export const getProductsByCategory = async (
       orderBy("createdAt", "desc")
     );
     const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map((doc) =>
-      firestoreToProduct(doc.data(), doc.id)
-    );
+
+    return snapshot.docs.map((doc) => firestoreToProduct(doc.data(), doc.id));
   } catch (error: any) {
     // Detectar si el error es por falta de índice
     const isIndexError =
       error?.code === "failed-precondition" ||
       error?.code === 9 || // Código numérico de failed-precondition
-      (error?.message && (
-        error.message.toLowerCase().includes("index") ||
-        error.message.toLowerCase().includes("requires an index")
-      ));
+      (error?.message &&
+        (error.message.toLowerCase().includes("index") ||
+          error.message.toLowerCase().includes("requires an index")));
 
     if (isIndexError) {
       // Extraer enlace del error si existe
       const indexLink = error?.message?.match(/https:\/\/[^\s]+/)?.[0];
-      
-      console.warn("⚠️ Índice de Firestore no encontrado para productos. Usando fallback temporal...");
+
+      console.warn(
+        "⚠️ Índice de Firestore no encontrado para productos. Usando fallback temporal..."
+      );
       if (indexLink) {
         console.info("📋 Para crear el índice automáticamente, visita:");
         console.info(indexLink);
       } else {
         console.info("📋 Ve a Firebase Console > Firestore > Indexes");
-        console.info("📝 Crea un índice para: Collection: products, Fields: category (Asc), createdAt (Desc)");
+        console.info(
+          "📝 Crea un índice para: Collection: products, Fields: category (Asc), createdAt (Desc)"
+        );
       }
-      
+
       // Fallback: obtener todas y filtrar en memoria (menos eficiente pero funciona)
       try {
         const allProducts = await getAllProducts();
         const categoryProducts = allProducts
           .filter((product) => product.category === category)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-        console.info(`✅ Fallback exitoso: ${categoryProducts.length} productos encontrados en categoría "${category}"`);
+        console.info(
+          `✅ Fallback exitoso: ${categoryProducts.length} productos encontrados en categoría "${category}"`
+        );
         return categoryProducts;
       } catch (fallbackError) {
         console.error("❌ Error en fallback:", fallbackError);
@@ -154,7 +167,7 @@ export const getProductsByCategory = async (
         return [];
       }
     }
-    
+
     // Si no es un error de índice, lanzar el error normalmente
     console.error("Error getting products by category:", error);
     throw error;
@@ -162,7 +175,9 @@ export const getProductsByCategory = async (
 };
 
 // Obtener productos destacados
-export const getFeaturedProducts = async (limit?: number): Promise<Product[]> => {
+export const getFeaturedProducts = async (
+  limit?: number
+): Promise<Product[]> => {
   try {
     const productsRef = collection(db, COLLECTION_NAME);
     const q = query(
@@ -171,15 +186,15 @@ export const getFeaturedProducts = async (limit?: number): Promise<Product[]> =>
       orderBy("createdAt", "desc")
     );
     const snapshot = await getDocs(q);
-    
+
     let products = snapshot.docs.map((doc) =>
       firestoreToProduct(doc.data(), doc.id)
     );
-    
+
     if (limit) {
       products = products.slice(0, limit);
     }
-    
+
     return products;
   } catch (error) {
     console.error("Error getting featured products:", error);
@@ -197,10 +212,8 @@ export const getInStockProducts = async (): Promise<Product[]> => {
       orderBy("createdAt", "desc")
     );
     const snapshot = await getDocs(q);
-    
-    return snapshot.docs.map((doc) =>
-      firestoreToProduct(doc.data(), doc.id)
-    );
+
+    return snapshot.docs.map((doc) => firestoreToProduct(doc.data(), doc.id));
   } catch (error) {
     console.error("Error getting in-stock products:", error);
     throw error;
@@ -222,17 +235,22 @@ export const createProduct = async (
   }
 };
 
-// Actualizar producto (solo admin)
+// Actualizar producto (solo admin) - sin enviar undefined a Firestore
 export const updateProduct = async (
   id: string,
   updates: Partial<Omit<Product, "id" | "createdAt">>
 ): Promise<void> => {
   try {
     const productRef = doc(db, COLLECTION_NAME, id);
-    const firestoreData: any = {
-      ...updates,
+    const firestoreData: Record<string, unknown> = {
       updatedAt: Timestamp.now(),
     };
+    Object.keys(updates).forEach((key) => {
+      const value = (updates as Record<string, unknown>)[key];
+      if (value !== undefined) {
+        firestoreData[key] = value;
+      }
+    });
     await updateDoc(productRef, firestoreData);
   } catch (error) {
     console.error("Error updating product:", error);

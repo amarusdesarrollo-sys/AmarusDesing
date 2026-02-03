@@ -114,12 +114,15 @@ export default function ProductDetailPage() {
   };
 
   // Función helper para obtener URL de imagen optimizada
-  const getImageUrl = (image: { url: string; publicId?: string }, size: "large" | "medium" | "small" | "thumbnail" = "large") => {
+  const getImageUrl = (
+    image: { url: string; publicId?: string },
+    size: "large" | "medium" | "small" | "thumbnail" = "large"
+  ) => {
     // Si tiene publicId, usar función optimizada de Cloudinary
     if (image.publicId) {
       return getProductImageUrl(image.publicId, size, image.url);
     }
-    
+
     // Si la URL ya es de Cloudinary, intentar extraer publicId
     if (isCloudinaryUrl(image.url)) {
       const publicId = extractPublicIdFromUrl(image.url);
@@ -127,7 +130,7 @@ export default function ProductDetailPage() {
         return getProductImageUrl(publicId, size, image.url);
       }
     }
-    
+
     // Fallback a URL directa
     return image.url;
   };
@@ -154,9 +157,7 @@ export default function ProductDetailPage() {
 
   const nextImage = () => {
     if (product && product.images.length > 0) {
-      setSelectedImageIndex(
-        (prev) => (prev + 1) % product.images.length
-      );
+      setSelectedImageIndex((prev) => (prev + 1) % product.images.length);
     }
   };
 
@@ -184,7 +185,8 @@ export default function ProductDetailPage() {
   }
 
   const selectedImage = product.images[selectedImageIndex] || product.images[0];
-  const primaryImage = product.images.find((img) => img.isPrimary) || product.images[0];
+  const primaryImage =
+    product.images.find((img) => img.isPrimary) || product.images[0];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -192,10 +194,7 @@ export default function ProductDetailPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <nav className="flex items-center space-x-2 text-sm text-gray-600">
-            <Link
-              href="/"
-              className="hover:text-[#6B5BB6] transition-colors"
-            >
+            <Link href="/" className="hover:text-[#6B5BB6] transition-colors">
               Inicio
             </Link>
             <span>/</span>
@@ -244,7 +243,9 @@ export default function ProductDetailPage() {
                     className="object-cover"
                     priority
                     sizes="(max-width: 1024px) 100vw, 50vw"
-                    unoptimized={isCloudinaryUrl(selectedImage?.url || primaryImage?.url || "")}
+                    unoptimized={isCloudinaryUrl(
+                      selectedImage?.url || primaryImage?.url || ""
+                    )}
                   />
 
                   {/* Navegación de imágenes si hay más de una */}
@@ -285,7 +286,11 @@ export default function ProductDetailPage() {
                   )}
                   {product.originalPrice && (
                     <span className="absolute bottom-4 right-4 bg-red-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                      -{Math.round((1 - product.price / product.originalPrice) * 100)}%
+                      -
+                      {Math.round(
+                        (1 - product.price / product.originalPrice) * 100
+                      )}
+                      %
                     </span>
                   )}
                 </>
@@ -443,9 +448,7 @@ export default function ProductDetailPage() {
                       ✓ En stock ({product.stock} disponibles)
                     </span>
                   ) : (
-                    <span className="text-red-600 font-medium">
-                      ✗ Agotado
-                    </span>
+                    <span className="text-red-600 font-medium">✗ Agotado</span>
                   )}
                 </p>
               </div>
@@ -552,7 +555,7 @@ export default function ProductDetailPage() {
                   </Link>
                 )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {relatedProducts.map((relatedProduct) => (
                   <ProductCard
                     key={relatedProduct.id}

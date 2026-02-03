@@ -1,134 +1,14 @@
-import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Users } from "lucide-react";
-import { HeroImage } from "@/components/OptimizedImage";
+import { Users } from "lucide-react";
 import AnimatedSection from "@/components/AnimatedSection";
 import AnimatedButton from "@/components/AnimatedButton";
+import FeaturedCategoriesHero from "@/components/FeaturedCategoriesHero";
 
 export default function Home() {
   return (
     <>
-      {/* Sección Joyería Artesanal */}
-      <section className="hero-section relative overflow-hidden">
-        <HeroImage
-          src="/images/heroes/seccion joyeria artesanal.avif"
-          alt="Joyería artesanal única creada a mano"
-          className="hero-image"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-
-        {/* Contenido centrado */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <AnimatedSection delay={0.2}>
-            <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-6 md:mb-12 leading-tight">
-              <span className="text-white">JOYERÍA</span>
-              <br />
-              <span className="text-black">ARTESANAL</span>
-            </h2>
-          </AnimatedSection>
-
-          <AnimatedSection delay={0.4}>
-            <AnimatedButton
-              href="/joyeria-artesanal"
-              className="px-6 py-3 md:px-8 md:py-4 rounded-lg font-bold text-base md:text-lg"
-            >
-              DESCUBRIR MÁS
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-            </AnimatedButton>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* Sección Minerales del Mundo */}
-      <section className="hero-section relative overflow-hidden">
-        <HeroImage
-          src="/images/heroes/seccion minerales del mundo.avif"
-          alt="Minerales únicos de todo el mundo"
-          className="hero-image"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-
-        {/* Contenido centrado */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <AnimatedSection delay={0.2}>
-            <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-6 md:mb-12 leading-tight">
-              <span className="text-white">MINERALES</span>
-              <br />
-              <span className="text-black">DEL MUNDO</span>
-            </h2>
-          </AnimatedSection>
-
-          <AnimatedSection delay={0.4}>
-            <AnimatedButton
-              href="/minerales-del-mundo"
-              className="px-6 py-3 md:px-8 md:py-4 rounded-lg font-bold text-base md:text-lg"
-            >
-              DESCUBRIR MÁS
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-            </AnimatedButton>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* Sección Macramé */}
-      <section className="hero-section relative overflow-hidden">
-        <HeroImage
-          src="/images/heroes/seccion macrame.avif"
-          alt="Macramé hecho a mano con técnicas tradicionales"
-          className="hero-image"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-
-        {/* Contenido centrado */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <AnimatedSection delay={0.2}>
-            <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-6 md:mb-12 leading-tight">
-              <span className="text-white">MACRAMÉ</span>
-            </h2>
-          </AnimatedSection>
-
-          <AnimatedSection delay={0.4}>
-            <AnimatedButton
-              href="/macrame"
-              className="px-6 py-3 md:px-8 md:py-4 rounded-lg font-bold text-base md:text-lg"
-            >
-              DESCUBRIR MÁS
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-            </AnimatedButton>
-          </AnimatedSection>
-        </div>
-      </section>
-
-      {/* Sección Hand Made Clothing */}
-      <section className="hero-section relative overflow-hidden">
-        <HeroImage
-          src="/images/heroes/seccion han made cloting.avif"
-          alt="Ropa artesanal que combina tradición y estilo contemporáneo"
-          className="hero-image"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-
-        {/* Contenido centrado */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-          <AnimatedSection delay={0.2}>
-            <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-6 md:mb-12 leading-tight">
-              <span className="text-white">HAND MADE</span>
-              <br />
-              <span className="text-black">CLOTHING</span>
-            </h2>
-          </AnimatedSection>
-
-          <AnimatedSection delay={0.4}>
-            <AnimatedButton
-              href="/ropa-artesanal"
-              className="px-6 py-3 md:px-8 md:py-4 rounded-lg font-bold text-base md:text-lg"
-            >
-              DESCUBRIR MÁS
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-            </AnimatedButton>
-          </AnimatedSection>
-        </div>
-      </section>
+      {/* Categorías destacadas (desde admin: marcar "Destacada" en cada categoría) */}
+      <FeaturedCategoriesHero />
 
       {/* Sección Conoce nuestro proyecto familiar */}
       <section className="flex flex-col lg:flex-row min-h-[90vh]">

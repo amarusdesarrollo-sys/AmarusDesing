@@ -84,7 +84,36 @@ export function getCloudinaryUrl(
 
   const transformationString = transformations.join(",");
 
-  return `https://res.cloudinary.com/${cloudName}/image/upload/${transformationString}/${cleanPublicId}`;
+  // Codificar publicId para URLs (espacios → %20, preservar / para carpetas)
+  const encodedPublicId = encodeURIComponent(cleanPublicId).replace(/%2F/g, "/");
+
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${transformationString}/${encodedPublicId}`;
+}
+
+/**
+ * URL de Cloudinary con transformaciones mínimas - más compatible que la versión completa
+ * f_auto = formato automático, q_auto = calidad automática
+ */
+export function getCloudinaryBaseUrl(publicId: string): string {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  if (!cloudName) return "";
+
+  let cleanPublicId = publicId;
+  if (cleanPublicId.includes("/")) {
+    const parts = cleanPublicId.split("/");
+    const cleanedParts: string[] = [];
+    let lastPart = "";
+    for (const part of parts) {
+      if (part !== lastPart) {
+        cleanedParts.push(part);
+        lastPart = part;
+      }
+    }
+    cleanPublicId = cleanedParts.join("/");
+  }
+  const encoded = encodeURIComponent(cleanPublicId).replace(/%2F/g, "/");
+  // f_auto,q_auto son transformaciones mínimas que mejoran compatibilidad
+  return `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto/${encoded}`;
 }
 
 /**
@@ -99,32 +128,20 @@ export function getProductImageUrl(
   size: "small" | "medium" | "large" | "thumbnail" = "medium",
   originalUrl?: string
 ): string {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  // Si es URL completa, devolverla tal cual
+  if (publicId.startsWith("http://") || publicId.startsWith("https://")) {
+    return publicId;
+  }
 
-  // Si Cloudinary no está configurado, usar URL original o retornar vacío
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   if (!cloudName) {
-    console.warn("⚠️ Cloudinary no configurado. No se puede generar URL para:", publicId);
     if (originalUrl) return originalUrl;
-    // Si publicId es una URL completa, retornarla
-    if (publicId.startsWith("http")) return publicId;
-    // Si no, retornar vacío para que el componente use placeholder
     return "";
   }
 
-  const sizes = {
-    thumbnail: { width: 200, height: 200 },
-    small: { width: 400, height: 400 },
-    medium: { width: 800, height: 800 },
-    large: { width: 1200, height: 1200 },
-  };
-
-  return getCloudinaryUrl(publicId, {
-    ...sizes[size],
-    crop: "fill",
-    quality: "auto",
-    format: "auto",
-    gravity: "auto",
-  });
+  // Usar URL base con f_auto,q_auto - misma que funciona en el hero
+  // Las transformaciones complejas (w_, h_, c_fill) fallaban con algunas imágenes
+  return getCloudinaryBaseUrl(publicId);
 }
 
 /**

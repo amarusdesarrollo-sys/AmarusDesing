@@ -134,6 +134,15 @@ export default function OptimizedImage({
   );
 }
 
+// Placeholder para cuando no hay imagen o falla
+function ImagePlaceholder({ className }: { className?: string }) {
+  return (
+    <div className={`bg-gray-200 flex items-center justify-center ${className}`}>
+      <span className="text-gray-400 text-sm">Sin imagen</span>
+    </div>
+  );
+}
+
 // Componente especializado para imágenes de productos
 export function ProductImage({
   src,
@@ -150,11 +159,15 @@ export function ProductImage({
   publicId?: string;
   size?: "small" | "medium" | "large" | "thumbnail";
 }) {
+  const [error, setError] = useState(false);
+
   let imageUrl: string;
   
-  if (publicId) {
+  // Si src es URL completa (http), usarla directamente
+  if (src && (src.startsWith("http://") || src.startsWith("https://"))) {
+    imageUrl = src;
+  } else if (publicId) {
     imageUrl = getProductImageUrl(publicId, size);
-    console.log("🖼️ ProductImage - publicId:", publicId, "URL generada:", imageUrl);
   } else if (src && src.trim() !== "") {
     if (isCloudinaryUrl(src)) {
       const extractedPublicId = extractPublicIdFromUrl(src);
@@ -165,18 +178,11 @@ export function ProductImage({
       imageUrl = src;
     }
   } else {
-    // Si no hay ni publicId ni src válido, usar placeholder
-    imageUrl = "/images/placeholder-category.jpg";
+    return <ImagePlaceholder className={className} />;
   }
 
-  // Si después de todo no hay URL válida, no renderizar
-  if (!imageUrl || imageUrl.trim() === "") {
-    console.warn("⚠️ ProductImage - No hay URL válida para renderizar");
-    return (
-      <div className={`bg-gray-200 flex items-center justify-center ${className}`}>
-        <span className="text-gray-400 text-sm">Sin imagen</span>
-      </div>
-    );
+  if (!imageUrl || imageUrl.trim() === "" || error) {
+    return <ImagePlaceholder className={className} />;
   }
 
   return (
@@ -190,7 +196,8 @@ export function ProductImage({
       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
       quality={90}
       placeholder="empty"
-      unoptimized={isCloudinaryUrl(src) || !!publicId}
+      unoptimized={true}
+      onError={() => setError(true)}
     />
   );
 }

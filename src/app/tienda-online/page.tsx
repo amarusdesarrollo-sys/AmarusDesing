@@ -54,6 +54,7 @@ export default function TiendaOnlinePage() {
                     href={`/categorias/${category.slug}`}
                     src=""
                     publicId={category.image || undefined}
+                    imageUrl={category.imageUrl || undefined}
                     alt={category.name}
                     title={category.name}
                     priority={index < 4}

@@ -38,9 +38,11 @@ const firestoreToCategory = (data: any, id: string): Category => {
     slug: data.slug,
     description: data.description,
     image: data.image,
+    imageUrl: data.imageUrl,
     icon: data.icon,
     order: data.order ?? 0,
     active: data.active ?? true,
+    featured: data.featured ?? false,
     parentId: data.parentId,
     createdAt: convertTimestamp(data.createdAt),
     updatedAt: convertTimestamp(data.updatedAt),
@@ -108,16 +110,11 @@ export const getActiveCategories = async (): Promise<Category[]> => {
       ));
 
     if (isIndexError) {
-      // Extraer enlace del error si existe
-      const indexLink = error?.message?.match(/https:\/\/[^\s]+/)?.[0];
-      
-      console.warn("⚠️ Índice de Firestore no encontrado. Usando fallback temporal...");
-      if (indexLink) {
-        console.info("📋 Para crear el índice automáticamente, visita:");
-        console.info(indexLink);
-      } else {
-        console.info("📋 Ve a Firebase Console > Firestore > Indexes");
-        console.info("📝 O revisa docs/CREAR_INDICE_FIRESTORE.md para instrucciones");
+      // Solo mostrar una vez por sesión para no saturar consola
+      if (typeof window !== "undefined" && !(window as any).__firestoreIndexWarned) {
+        (window as any).__firestoreIndexWarned = true;
+        const indexLink = error?.message?.match(/https:\/\/[^\s]+/)?.[0];
+        console.warn("⚠️ Firestore: falta índice compuesto. Usando fallback. Para eliminarlo:", indexLink || "Firebase Console > Firestore > Indexes");
       }
       
       // Fallback: obtener todas y filtrar en memoria (menos eficiente pero funciona)
@@ -126,7 +123,6 @@ export const getActiveCategories = async (): Promise<Category[]> => {
         const activeCategories = allCategories
           .filter((cat) => cat.active)
           .sort((a, b) => a.order - b.order);
-        console.info(`✅ Fallback exitoso: ${activeCategories.length} categorías activas encontradas`);
         return activeCategories;
       } catch (fallbackError) {
         console.error("❌ Error en fallback:", fallbackError);
@@ -138,6 +134,20 @@ export const getActiveCategories = async (): Promise<Category[]> => {
     // Si no es un error de índice, lanzar el error normalmente
     console.error("Error getting active categories:", error);
     throw error;
+  }
+};
+
+// Obtener categorías destacadas (para página principal)
+// Retorna categorías activas con featured=true, ordenadas por order
+export const getFeaturedCategories = async (): Promise<Category[]> => {
+  try {
+    const activeCategories = await getActiveCategories();
+    return activeCategories
+      .filter((cat) => cat.featured)
+      .sort((a, b) => a.order - b.order);
+  } catch (error) {
+    console.error("Error getting featured categories:", error);
+    return [];
   }
 };
 

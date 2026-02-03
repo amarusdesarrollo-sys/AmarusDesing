@@ -24,6 +24,7 @@ const categorySchema = z.object({
   description: z.string().optional().or(z.literal("")),
   order: z.number().min(0, "El orden debe ser mayor o igual a 0"),
   active: z.boolean(),
+  featured: z.boolean(),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -39,6 +40,7 @@ export default function EditarCategoriaPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imagePublicId, setImagePublicId] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null); // URL completa para hero
   const [currentImagePublicId, setCurrentImagePublicId] = useState<string | null>(null);
 
   const {
@@ -67,16 +69,17 @@ export default function EditarCategoriaPage() {
         setValue("description", category.description || "");
         setValue("order", category.order);
         setValue("active", category.active);
+        setValue("featured", category.featured ?? false);
         
         // Cargar imagen si existe
         if (category.image) {
-          console.log("🖼️ Cargando imagen de categoría:", category.image);
           setCurrentImagePublicId(category.image);
           setImagePublicId(category.image);
-          // Generar URL de preview desde Cloudinary
-          const imageUrl = getProductImageUrl(category.image, "medium");
-          console.log("🖼️ URL generada:", imageUrl);
-          setImagePreview(imageUrl);
+          setImageUrl(category.imageUrl || null);
+          // Preview: preferir imageUrl si existe, sino generar desde publicId
+          setImagePreview(
+            category.imageUrl || getProductImageUrl(category.image, "medium")
+          );
         }
       } catch (err) {
         console.error("Error loading category:", err);
@@ -128,6 +131,7 @@ export default function EditarCategoriaPage() {
 
       if (result.success) {
         setImagePublicId(result.publicId);
+        setImageUrl(result.url || null);
       } else {
         throw new Error(result.message || "Error al subir la imagen");
       }
@@ -148,6 +152,7 @@ export default function EditarCategoriaPage() {
   const handleRemoveImage = () => {
     setImagePreview(null);
     setImagePublicId(null);
+    setImageUrl(null);
     setCurrentImagePublicId(null);
   };
 
@@ -160,6 +165,8 @@ export default function EditarCategoriaPage() {
         ...data,
         description: data.description || "",
         image: imagePublicId || undefined,
+        imageUrl: imageUrl || undefined,
+        featured: data.featured,
       };
 
       await updateCategory(categoryId, categoryData);
@@ -391,6 +398,22 @@ export default function EditarCategoriaPage() {
               className="ml-2 block text-sm text-gray-700"
             >
               Categoría activa (visible en la tienda)
+            </label>
+          </div>
+
+          {/* Destacada */}
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="featured"
+              {...register("featured")}
+              className="h-4 w-4 text-[#6B5BB6] focus:ring-[#6B5BB6] border-gray-300 rounded"
+            />
+            <label
+              htmlFor="featured"
+              className="ml-2 block text-sm text-gray-700"
+            >
+              <span className="font-medium">Destacada</span> — Mostrar en la página principal como sección hero. La imagen de arriba se usará como fondo.
             </label>
           </div>
 

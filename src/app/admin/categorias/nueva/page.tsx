@@ -23,6 +23,7 @@ const categorySchema = z.object({
   description: z.string().optional().or(z.literal("")),
   order: z.number().min(0, "El orden debe ser mayor o igual a 0"),
   active: z.boolean(),
+  featured: z.boolean(),
 });
 
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -34,6 +35,7 @@ export default function NuevaCategoriaPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imagePublicId, setImagePublicId] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null); // URL completa para hero
 
   const {
     register,
@@ -49,6 +51,7 @@ export default function NuevaCategoriaPage() {
       description: "",
       order: 0,
       active: true,
+      featured: false,
     },
   });
 
@@ -107,11 +110,8 @@ export default function NuevaCategoriaPage() {
       const result = await response.json();
 
       if (result.success) {
-        console.log("✅ Imagen subida exitosamente:", {
-          publicId: result.publicId,
-          url: result.url,
-        });
         setImagePublicId(result.publicId);
+        setImageUrl(result.url || null); // Guardar URL completa para hero
       } else {
         console.error("❌ Error al subir imagen:", result);
         throw new Error(result.message || "Error al subir la imagen");
@@ -133,6 +133,7 @@ export default function NuevaCategoriaPage() {
   const handleRemoveImage = () => {
     setImagePreview(null);
     setImagePublicId(null);
+    setImageUrl(null);
   };
 
   const onSubmit = async (data: CategoryFormData) => {
@@ -144,14 +145,9 @@ export default function NuevaCategoriaPage() {
         ...data,
         description: data.description || "",
         image: imagePublicId || undefined,
+        imageUrl: imageUrl || undefined, // URL completa para hero (prioritaria)
+        featured: data.featured,
       };
-
-      console.log("📦 Guardando categoría con datos:", {
-        name: categoryData.name,
-        slug: categoryData.slug,
-        image: categoryData.image,
-        hasImage: !!categoryData.image,
-      });
 
       const categoryId = await createCategory(categoryData);
       
@@ -370,6 +366,22 @@ export default function NuevaCategoriaPage() {
               className="ml-2 block text-sm text-gray-700"
             >
               Categoría activa (visible en la tienda)
+            </label>
+          </div>
+
+          {/* Destacada - aparece en página principal */}
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="featured"
+              {...register("featured")}
+              className="h-4 w-4 text-[#6B5BB6] focus:ring-[#6B5BB6] border-gray-300 rounded"
+            />
+            <label
+              htmlFor="featured"
+              className="ml-2 block text-sm text-gray-700"
+            >
+              <span className="font-medium">Destacada</span> — Mostrar en la página principal como sección grande con imagen. Sube una imagen arriba para que se vea en el hero.
             </label>
           </div>
 

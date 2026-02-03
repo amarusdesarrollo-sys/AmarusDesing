@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAllCategories, createCategory } from "@/lib/firebase/categories";
 
 // Categorías iniciales que se crearán si no existen
+// featured: true = aparece en la página principal como sección hero grande
 const INITIAL_CATEGORIES = [
   {
     name: "Joyería Artesanal",
@@ -10,6 +11,7 @@ const INITIAL_CATEGORIES = [
       "Piezas únicas hechas a mano con los mejores materiales naturales",
     order: 1,
     active: true,
+    featured: true,
   },
   {
     name: "Minerales del Mundo",
@@ -17,6 +19,7 @@ const INITIAL_CATEGORIES = [
     description: "Minerales y cristales únicos de diferentes partes del mundo",
     order: 2,
     active: true,
+    featured: true,
   },
   {
     name: "Macramé",
@@ -25,6 +28,7 @@ const INITIAL_CATEGORIES = [
       "Arte textil hecho a mano con nudos únicos y diseños originales",
     order: 3,
     active: true,
+    featured: true,
   },
   {
     name: "Tesoros del Mundo",
@@ -33,6 +37,7 @@ const INITIAL_CATEGORIES = [
       "Piezas únicas y auténticas de diferentes culturas alrededor del mundo",
     order: 4,
     active: true,
+    featured: true,
   },
   {
     name: "Ropa Artesanal",
@@ -41,6 +46,7 @@ const INITIAL_CATEGORIES = [
       "Prendas hechas a mano con materiales naturales y técnicas tradicionales",
     order: 5,
     active: true,
+    featured: false,
   },
   {
     name: "Colección Etiopía",
@@ -49,6 +55,7 @@ const INITIAL_CATEGORIES = [
       "Piezas únicas de la cultura etíope, elaboradas con técnicas ancestrales",
     order: 6,
     active: true,
+    featured: false,
   },
 ];
 

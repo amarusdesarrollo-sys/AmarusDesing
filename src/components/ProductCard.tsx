@@ -35,7 +35,7 @@ export default function ProductCard({
     if (image.publicId) {
       return getProductImageUrl(image.publicId, "medium", image.url);
     }
-    
+
     // Si la URL ya es de Cloudinary, intentar extraer publicId
     if (isCloudinaryUrl(image.url)) {
       const publicId = extractPublicIdFromUrl(image.url);
@@ -43,7 +43,7 @@ export default function ProductCard({
         return getProductImageUrl(publicId, "medium", image.url);
       }
     }
-    
+
     // Fallback a URL directa
     return image.url;
   };
@@ -70,7 +70,7 @@ export default function ProductCard({
         className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 h-full flex flex-col"
       >
         {/* Imagen del producto */}
-        <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
+        <div className="relative w-full aspect-[4/5] overflow-hidden bg-gray-100">
           <Image
             src={
               primaryImage
@@ -83,9 +83,7 @@ export default function ProductCard({
             priority={priority}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             unoptimized={
-              primaryImage
-                ? isCloudinaryUrl(primaryImage.url)
-                : false
+              primaryImage ? isCloudinaryUrl(primaryImage.url) : false
             }
           />
 
@@ -108,47 +106,47 @@ export default function ProductCard({
         </div>
 
         {/* Información del producto */}
-        <div className="p-4 flex-1 flex flex-col">
-          <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-2 group-hover:text-[#6B5BB6] transition-colors line-clamp-2">
+        <div className="p-3 flex-1 flex flex-col">
+          <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-1 group-hover:text-[#6B5BB6] transition-colors line-clamp-2">
             {product.name}
           </h3>
 
-          <p className="text-sm text-gray-600 mb-4 line-clamp-2 flex-1">
+          <p className="text-xs text-gray-600 mb-2 line-clamp-2 flex-1">
             {product.description}
           </p>
 
           {/* Precio */}
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-2xl font-bold text-[#6B5BB6]">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl font-bold text-[#6B5BB6]">
               €{formatPrice(product.price)}
             </span>
             {product.originalPrice && (
-              <span className="text-lg text-gray-400 line-through">
+              <span className="text-base text-gray-400 line-through">
                 €{formatPrice(product.originalPrice)}
               </span>
             )}
           </div>
 
           {/* Botones */}
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <button
               onClick={handleAddToCart}
               disabled={!product.inStock}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                 product.inStock
                   ? "bg-[#6B5BB6] text-white hover:bg-[#5B4BA5]"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-4 w-4" />
               {product.inStock ? "Agregar" : "Agotado"}
             </button>
 
             <button
-              className="p-2 border-2 border-gray-300 rounded-lg hover:border-[#6B5BB6] hover:text-[#6B5BB6] transition-colors"
+              className="p-1.5 border-2 border-gray-300 rounded-lg hover:border-[#6B5BB6] hover:text-[#6B5BB6] transition-colors"
               aria-label="Agregar a favoritos"
             >
-              <Heart className="h-5 w-5" />
+              <Heart className="h-4 w-4" />
             </button>
           </div>
         </div>

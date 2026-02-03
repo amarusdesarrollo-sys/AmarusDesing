@@ -182,6 +182,9 @@ export default function AdminCategoriasPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Destacada
+                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
@@ -220,6 +223,17 @@ export default function AdminCategoriasPage() {
                         }`}
                       >
                         {category.active ? "Activa" : "Inactiva"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          category.featured
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {category.featured ? "Página principal" : "—"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

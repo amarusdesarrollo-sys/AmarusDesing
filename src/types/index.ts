@@ -15,6 +15,8 @@ export interface Product {
   materials?: string[];
   dimensions?: string;
   weight?: number;
+  /** Atributos libres: ej. { "Color": "Plateado", "Talla": "16", "Piedra": "Cuarzo rosa" } */
+  attributes?: Record<string, string>;
   artisan?: Artisan;
   createdAt: Date;
   updatedAt: Date;
@@ -41,10 +43,12 @@ export interface Category {
   name: string;
   slug: string; // URL-friendly (ej: "joyeria-artesanal")
   description: string;
-  image?: string;
+  image?: string; // Cloudinary public ID - para cards y generar URLs
+  imageUrl?: string; // URL completa (de upload) - prioritaria para hero, garantiza que funciona
   icon?: string;
   order: number; // Orden de visualización
   active: boolean; // Si está visible
+  featured?: boolean; // Si aparece en la página principal como sección hero
   parentId?: string; // Para subcategorías (opcional)
   createdAt: Date;
   updatedAt: Date;
