@@ -2,8 +2,16 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { CartItem, Product } from "@/types";
 
+export interface ShippingConfig {
+  freeShippingThreshold: number;
+  standardShippingCost: number;
+  expressShippingCost: number;
+}
+
 interface CartStore {
   items: CartItem[];
+  shippingConfig: ShippingConfig | null;
+  setShippingConfig: (config: ShippingConfig | null) => void;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -14,13 +22,13 @@ interface CartStore {
   getTotal: () => number;
 }
 
-const FREE_SHIPPING_THRESHOLD = 50000; // Umbral para envío gratis (en centavos)
-const STANDARD_SHIPPING_COST = 5000; // Costo de envío estándar (en centavos)
-
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      shippingConfig: null,
+
+      setShippingConfig: (config) => set({ shippingConfig: config }),
 
       addItem: (product, quantity = 1) => {
         set((state) => {
@@ -88,8 +96,13 @@ export const useCartStore = create<CartStore>()(
       },
 
       getShipping: () => {
+        const config = get().shippingConfig;
+        if (!config) return 0;
         const subtotal = get().getSubtotal();
-        return subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING_COST;
+        const threshold = config.freeShippingThreshold ?? 0;
+        const cost = config.standardShippingCost ?? 0;
+        if (threshold > 0 && subtotal >= threshold) return 0;
+        return cost;
       },
 
       getTotal: () => {
@@ -97,8 +110,9 @@ export const useCartStore = create<CartStore>()(
       },
     }),
     {
-      name: "amarus-cart", // Nombre para localStorage
+      name: "amarus-cart",
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ items: state.items }),
     }
   )
 );

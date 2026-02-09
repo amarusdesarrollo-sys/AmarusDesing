@@ -3,24 +3,45 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Edit, Trash2, Package } from "lucide-react";
+import { Plus, Edit, Trash2, Package, Search, Filter } from "lucide-react";
 import { getAllProducts, deleteProduct } from "@/lib/firebase/products";
+import { getAllCategories } from "@/lib/firebase/categories";
 import { getCloudinaryBaseUrl } from "@/lib/cloudinary";
-import type { Product } from "@/types";
+import type { Product, Category } from "@/types";
 
 export default function AdminProductosPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [stockFilter, setStockFilter] = useState<string>("");
 
   useEffect(() => {
     loadProducts();
+    loadCategories();
   }, []);
+
+  useEffect(() => {
+    filterProducts();
+  }, [searchTerm, categoryFilter, stockFilter, allProducts]);
+
+  const loadCategories = async () => {
+    try {
+      const cats = await getAllCategories();
+      setCategories(cats);
+    } catch (err) {
+      console.error("Error loading categories:", err);
+    }
+  };
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       const list = await getAllProducts();
+      setAllProducts(list);
       setProducts(list);
       setError(null);
     } catch (err) {
@@ -29,6 +50,34 @@ export default function AdminProductosPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterProducts = () => {
+    let filtered = [...allProducts];
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (p) =>
+          p.name.toLowerCase().includes(term) ||
+          p.description?.toLowerCase().includes(term) ||
+          p.tags?.some((tag) => tag.toLowerCase().includes(term))
+      );
+    }
+
+    if (categoryFilter) {
+      filtered = filtered.filter((p) => p.category === categoryFilter);
+    }
+
+    if (stockFilter === "low") {
+      filtered = filtered.filter((p) => p.stock < 10 && p.inStock);
+    } else if (stockFilter === "out") {
+      filtered = filtered.filter((p) => !p.inStock || p.stock === 0);
+    } else if (stockFilter === "in") {
+      filtered = filtered.filter((p) => p.inStock && p.stock > 0);
+    }
+
+    setProducts(filtered);
   };
 
   const handleDelete = async (product: Product) => {
@@ -83,6 +132,64 @@ export default function AdminProductosPage() {
           {error}
         </div>
       )}
+
+      {/* Búsqueda y filtros */}
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, descripción..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+            />
+          </div>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+          >
+            <option value="">Todas las categorías</option>
+            {categories
+              .filter((c) => c.active)
+              .map((cat) => (
+                <option key={cat.id} value={cat.slug}>
+                  {cat.name}
+                </option>
+              ))}
+          </select>
+          <select
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+          >
+            <option value="">Todo el stock</option>
+            <option value="in">En stock</option>
+            <option value="low">Stock bajo (&lt;10)</option>
+            <option value="out">Sin stock</option>
+          </select>
+        </div>
+        {(searchTerm || categoryFilter || stockFilter) && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+            <Filter className="h-4 w-4" />
+            <span>
+              Mostrando {products.length} de {allProducts.length} productos
+            </span>
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setCategoryFilter("");
+                setStockFilter("");
+              }}
+              className="text-[#6B5BB6] hover:underline ml-2"
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        )}
+      </div>
 
       {products.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">

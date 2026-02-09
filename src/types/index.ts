@@ -68,24 +68,44 @@ export interface Artisan {
   };
 }
 
-// Tipos para usuarios
+/** Dirección guardada en perfil de usuario — compatible con Klarna y múltiples direcciones */
+export interface SavedAddress {
+  id: string;
+  type: "shipping" | "billing";
+  street: string;
+  street2?: string;
+  postalCode: string;
+  city: string;
+  region?: string;
+  country: string;
+  isDefault: boolean;
+}
+
+// Tipos para usuarios (perfil para dashboard + Klarna)
 export interface User {
   id: string;
   email: string;
   name: string;
+  lastName?: string;
   phone?: string;
   address?: Address;
+  /** Múltiples direcciones para envío/facturación — modelo recomendado Klarna */
+  addresses?: SavedAddress[];
   loyaltyPoints: number;
   preferences: UserPreferences;
   createdAt: Date;
   lastLogin: Date;
 }
 
+/** Dirección compatible con Klarna (ES): street_address, street_address2, postal_code, city, region, country */
 export interface Address {
   street: string;
+  /** Piso / puerta / bloque (opcional, Klarna: street_address2) */
+  street2?: string;
   city: string;
   postalCode: string;
   country: string;
+  /** Provincia (Klarna: region). Guardar como string. */
   state?: string;
 }
 
@@ -106,10 +126,19 @@ export interface CartItem {
 export interface Order {
   id: string;
   userId: string;
+  /** Datos de contacto para checkout (guest) — mapeo 1:1 Klarna given_name / family_name */
+  customerName?: string;
+  customerGivenName?: string;
+  customerFamilyName?: string;
+  customerEmail?: string;
+  /** Teléfono con prefijo recomendado (ej: +34). Klarna obligatorio. */
+  customerPhone?: string;
   items: OrderItem[];
   total: number;
   shipping: number;
   tax: number;
+  /** Nombre del método de envío para Klarna (ej: "Envío estándar") */
+  shippingOptionName?: string;
   status: OrderStatus;
   paymentMethod: string;
   paymentStatus: PaymentStatus;

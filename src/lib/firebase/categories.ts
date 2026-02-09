@@ -247,7 +247,7 @@ export const updateCategory = async (
   }
 };
 
-// Eliminar categoría (solo admin) - Soft delete
+// Eliminar categoría (solo admin) - Soft delete (marcar como inactiva)
 export const deleteCategory = async (id: string): Promise<void> => {
   try {
     const categoryRef = doc(db, COLLECTION_NAME, id);
@@ -258,6 +258,17 @@ export const deleteCategory = async (id: string): Promise<void> => {
     });
   } catch (error) {
     console.error("Error deleting category:", error);
+    throw error;
+  }
+};
+
+// Eliminar categoría permanentemente (hard delete) - ⚠️ CUIDADO: elimina de Firestore
+export const hardDeleteCategory = async (id: string): Promise<void> => {
+  try {
+    const categoryRef = doc(db, COLLECTION_NAME, id);
+    await deleteDoc(categoryRef);
+  } catch (error) {
+    console.error("Error hard deleting category:", error);
     throw error;
   }
 };

@@ -17,6 +17,7 @@ export default function CarritoPage() {
     getShipping,
     getTotal,
     getTotalItems,
+    shippingConfig,
   } = useCartStore();
 
   const subtotal = getSubtotal();
@@ -186,11 +187,17 @@ export default function CarritoPage() {
                       )}
                     </span>
                   </div>
-                  {shipping > 0 && (
-                    <p className="text-sm text-gray-600">
-                      Falta €{formatPrice(50000 - subtotal)} para envío gratis
-                    </p>
-                  )}
+                  {shipping > 0 && (() => {
+                    const threshold = shippingConfig?.freeShippingThreshold ?? 0;
+                    if (threshold <= 0) return null;
+                    const missing = threshold - subtotal;
+                    if (missing <= 0) return null;
+                    return (
+                      <p className="text-sm text-gray-600">
+                        Falta €{formatPrice(missing)} para envío gratis
+                      </p>
+                    );
+                  })()}
                   <div className="border-t border-gray-300 pt-4">
                     <div className="flex justify-between text-xl font-bold text-gray-800">
                       <span>Total</span>

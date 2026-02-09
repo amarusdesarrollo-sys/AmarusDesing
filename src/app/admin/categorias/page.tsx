@@ -6,6 +6,7 @@ import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import {
   getAllCategories,
   deleteCategory,
+  hardDeleteCategory,
   updateCategory,
 } from "@/lib/firebase/categories";
 import type { Category } from "@/types";
@@ -47,17 +48,39 @@ export default function AdminCategoriasPage() {
   };
 
   const handleDelete = async (categoryId: string, categoryName: string) => {
-    if (
-      !confirm(
-        `¿Estás seguro de que quieres eliminar la categoría "${categoryName}"? Esta acción marcará la categoría como inactiva.`
-      )
-    ) {
+    const action = prompt(
+      `¿Qué acción deseas realizar con "${categoryName}"?\n\n` +
+        `1 - Desactivar (soft delete - se puede reactivar después)\n` +
+        `2 - Eliminar permanentemente (hard delete - NO se puede recuperar)\n\n` +
+        `Escribe "1" o "2":`
+    );
+
+    if (!action || (action !== "1" && action !== "2")) {
       return;
     }
 
     try {
-      await deleteCategory(categoryId);
-      await loadCategories(); // Recargar lista
+      if (action === "1") {
+        // Soft delete
+        if (
+          confirm(
+            `¿Desactivar "${categoryName}"? La categoría dejará de mostrarse pero se puede reactivar después.`
+          )
+        ) {
+          await deleteCategory(categoryId);
+          await loadCategories();
+        }
+      } else {
+        // Hard delete
+        if (
+          confirm(
+            `⚠️ ¿ELIMINAR PERMANENTEMENTE "${categoryName}"?\n\nEsta acción NO se puede deshacer. La categoría será borrada de la base de datos.`
+          )
+        ) {
+          await hardDeleteCategory(categoryId);
+          await loadCategories();
+        }
+      }
     } catch (err) {
       console.error("Error deleting category:", err);
       alert("Error al eliminar categoría");
@@ -117,8 +140,8 @@ export default function AdminCategoriasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="p-8">
+      <div className="w-full">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -167,25 +190,25 @@ export default function AdminCategoriasPage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                     Nombre
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                     Slug
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                     Orden
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                     Estado
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                     Destacada
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">
                     Acciones
                   </th>
                 </tr>
@@ -196,27 +219,27 @@ export default function AdminCategoriasPage() {
                     key={category.id}
                     className={!category.active ? "opacity-50" : ""}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 py-3">
                       <div className="text-sm font-medium text-gray-900">
                         {category.name}
                       </div>
                       {category.description && (
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
                           {category.description}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <code className="text-sm text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                        /categorias/{category.slug}
+                    <td className="px-3 py-3">
+                      <code className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                        {category.slug}
                       </code>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 py-3 text-center text-sm text-gray-500">
                       {category.order}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 py-3 text-center">
                       <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        className={`px-2 py-0.5 inline-flex text-xs font-semibold rounded-full ${
                           category.active
                             ? "bg-green-100 text-green-800"
                             : "bg-gray-100 text-gray-800"
@@ -225,47 +248,48 @@ export default function AdminCategoriasPage() {
                         {category.active ? "Activa" : "Inactiva"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          category.featured
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {category.featured ? "Página principal" : "—"}
-                      </span>
+                    <td className="px-3 py-3 text-center">
+                      {category.featured ? (
+                        <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                          Sí
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-3 py-3 text-right">
+                      <div className="flex justify-end gap-1">
                         <Link href={`/admin/categorias/${category.id}/editar`}>
-                          <button className="text-[#6B5BB6] hover:text-[#5B4BA5] p-2 hover:bg-gray-100 rounded transition-colors">
-                            <Edit className="h-5 w-5" />
+                          <button
+                            className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors"
+                            title="Editar"
+                          >
+                            <Edit className="h-4 w-4" />
                           </button>
                         </Link>
                         <button
                           onClick={() => handleToggleActive(category)}
-                          className="text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded transition-colors"
-                          title={
+                          className={`p-1.5 rounded transition-colors ${
                             category.active
-                              ? "Desactivar categoría"
-                              : "Activar categoría"
-                          }
+                              ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                              : "bg-green-100 text-green-800 hover:bg-green-200"
+                          }`}
+                          title={category.active ? "Desactivar" : "Activar"}
                         >
                           {category.active ? (
-                            <EyeOff className="h-5 w-5" />
+                            <EyeOff className="h-4 w-4" />
                           ) : (
-                            <Eye className="h-5 w-5" />
+                            <Eye className="h-4 w-4" />
                           )}
                         </button>
                         <button
                           onClick={() =>
                             handleDelete(category.id, category.name)
                           }
-                          className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors"
-                          title="Eliminar categoría"
+                          className="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 transition-colors"
+                          title="Eliminar"
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>

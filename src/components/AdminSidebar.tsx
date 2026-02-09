@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import {
   LayoutDashboard,
   Package,
@@ -9,6 +11,8 @@ import {
   ShoppingCart,
   Users,
   Settings,
+  LogOut,
+  Cog,
 } from "lucide-react";
 
 const menuItems = [
@@ -33,6 +37,11 @@ const menuItems = [
     icon: ShoppingCart,
   },
   {
+    name: "Configuración",
+    href: "/admin/configuracion",
+    icon: Cog,
+  },
+  {
     name: "Usuarios",
     href: "/admin/usuarios",
     icon: Users,
@@ -41,6 +50,12 @@ const menuItems = [
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.replace("/admin/login");
+  };
 
   return (
     <aside className="w-64 bg-gray-900 text-white min-h-screen p-6">
@@ -52,7 +67,8 @@ export default function AdminSidebar() {
       <nav className="space-y-2">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+          const isActive =
+            pathname === item.href || pathname?.startsWith(item.href + "/");
 
           return (
             <Link
@@ -71,7 +87,14 @@ export default function AdminSidebar() {
         })}
       </nav>
 
-      <div className="mt-8 pt-8 border-t border-gray-700">
+      <div className="mt-8 pt-8 border-t border-gray-700 space-y-2">
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="font-medium">Cerrar sesión</span>
+        </button>
         <Link
           href="/"
           className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"

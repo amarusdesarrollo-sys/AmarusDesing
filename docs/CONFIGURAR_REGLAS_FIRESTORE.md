@@ -15,27 +15,32 @@ Este error ocurre porque las reglas de seguridad de Firestore no permiten escrib
 
 ### Paso 2: Configurar Reglas Básicas (Desarrollo)
 
-Para desarrollo, puedes usar estas reglas que permiten lectura y escritura:
+Para desarrollo, puedes usar estas reglas (incluyen la colección `config` para envíos y configuración):
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reglas para categorías
+    // Categorías: lectura pública, escritura para desarrollo/admin
     match /categories/{categoryId} {
-      allow read: if true;  // Todos pueden leer
-      allow create, update, delete: if true;  // Todos pueden escribir (solo para desarrollo)
+      allow read, write: if true;
     }
-    
-    // Reglas para productos
+
+    // Productos: lectura pública, escritura para desarrollo/admin
     match /products/{productId} {
-      allow read: if true;  // Todos pueden leer
-      allow create, update, delete: if true;  // Todos pueden escribir (solo para desarrollo)
+      allow read, write: if true;
     }
-    
-    // Reglas para órdenes (más restrictivas)
+
+    // Órdenes: lectura y creación para checkout guest; update/delete para desarrollo
     match /orders/{orderId} {
-      allow read, write: if request.auth != null;  // Solo usuarios autenticados
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
+    }
+
+    // Configuración del sitio (envíos, contacto): carrito y admin la leen y escriben
+    match /config/{documentId} {
+      allow read, write: if true;
     }
   }
 }
@@ -61,28 +66,34 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Función helper para verificar si es admin
     function isAdmin() {
-      return request.auth != null && 
+      return request.auth != null &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-    
+
     // Categorías: lectura pública, escritura solo admin
     match /categories/{categoryId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
-    
+
     // Productos: lectura pública, escritura solo admin
     match /products/{productId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
-    
+
     // Órdenes: solo el usuario puede leer sus propias órdenes
     match /orders/{orderId} {
-      allow read: if request.auth != null && 
+      allow read: if request.auth != null &&
                      resource.data.userId == request.auth.uid;
       allow create: if request.auth != null;
       allow update: if isAdmin();  // Solo admin puede actualizar estado
+    }
+
+    // Configuración del sitio (envíos, contacto): lectura pública, escritura solo admin
+    match /config/{documentId} {
+      allow read: if true;   // Carrito y páginas públicas necesitan leer (ej. envíos)
+      allow create, update, delete: if isAdmin();
     }
   }
 }
@@ -115,6 +126,7 @@ Después de publicar las reglas:
 ### Quiero más seguridad ahora
 
 Si quieres implementar autenticación ahora mismo, puedo ayudarte a:
+
 1. Configurar NextAuth con Firebase
 2. Crear sistema de roles (admin/user)
 3. Proteger las rutas de admin

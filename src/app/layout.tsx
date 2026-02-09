@@ -1,6 +1,7 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ShippingConfigLoader from "@/components/ShippingConfigLoader";
 
 export const metadata = {
   title: "AmarusDesign - Joyería Artesanal y Minerales",
@@ -30,6 +31,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="min-h-screen flex flex-col">
+        <ShippingConfigLoader />
         <Navbar />
         <main className="flex-grow">{children}</main>
         <Footer />
