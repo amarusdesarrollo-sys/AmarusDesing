@@ -82,6 +82,11 @@ Para optimizar todas las consultas, estos son los índices recomendados:
 - Collection: `categories`
 - Fields: `parentId` (Asc), `active` (Asc), `order` (Asc)
 
+### 4. Para `getOrdersByUserId()` (Mis pedidos):
+- Collection: `orders`
+- Fields: `userId` (Asc), `createdAt` (Desc)
+- Si Firebase te muestra un enlace al crear el índice al usar "Mis pedidos", úsalo para crearlo.
+
 ## 🚀 Después de Crear el Índice
 
 1. Recarga la aplicación

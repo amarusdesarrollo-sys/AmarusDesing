@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X, User } from "lucide-react";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import CartIcon from "./CartIcon";
 import { getActiveCategories } from "@/lib/firebase/categories";
 import type { Category } from "@/types";
@@ -12,6 +14,12 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
 
   // Cargar categorías activas desde Firestore
   useEffect(() => {
@@ -224,13 +232,31 @@ const Navbar = () => {
             >
               <span className="text-xl font-medium">Instagram</span>
             </Link>
-            <Link
-              href="/login"
-              className="flex items-center space-x-1.5 text-white hover:text-[#F5EFFF] transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap"
-            >
-              <User className="h-6 w-6" />
-              <span className="text-xl font-medium">Login</span>
-            </Link>
+            {user ? (
+              <Link
+                href="/mi-cuenta"
+                className="flex items-center space-x-1.5 text-white hover:text-[#F5EFFF] transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap"
+              >
+                <User className="h-6 w-6" />
+                <span className="text-xl font-medium">Mi cuenta</span>
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/registro"
+                  className="text-white hover:text-[#F5EFFF] transition-colors duration-200 whitespace-nowrap"
+                >
+                  <span className="text-xl font-medium">Registrarse</span>
+                </Link>
+                <Link
+                  href="/login"
+                  className="flex items-center space-x-1.5 text-white hover:text-[#F5EFFF] transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap"
+                >
+                  <User className="h-6 w-6" />
+                  <span className="text-xl font-medium">Iniciar sesión</span>
+                </Link>
+              </>
+            )}
             <CartIcon />
           </div>
 
@@ -306,12 +332,32 @@ const Navbar = () => {
               >
                 Carrito
               </Link>
-              <Link
-                href="/login"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
-              >
-                Login
-              </Link>
+              {user ? (
+                <Link
+                  href="/mi-cuenta"
+                  className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Mi cuenta
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/registro"
+                    className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Registrarse
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Iniciar sesión
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}

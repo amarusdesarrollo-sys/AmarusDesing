@@ -6,6 +6,7 @@ import {
   addDoc,
   updateDoc,
   query,
+  where,
   orderBy,
   Timestamp,
   deleteField,
@@ -197,6 +198,19 @@ export async function getOrders(status?: OrderStatus): Promise<Order[]> {
     orders = orders.filter((o) => o.status === status);
   }
   return orders;
+}
+
+/** Lista órdenes de un usuario (para Mi cuenta → Mis pedidos). */
+export async function getOrdersByUserId(userId: string): Promise<Order[]> {
+  if (!userId) return [];
+  const ordersRef = collection(db, COLLECTION_NAME);
+  const q = query(
+    ordersRef,
+    where("userId", "==", userId),
+    orderBy("createdAt", "desc")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => firestoreToOrder(d.data(), d.id));
 }
 
 /** Actualiza el estado de una orden y opcionalmente el número de seguimiento. */

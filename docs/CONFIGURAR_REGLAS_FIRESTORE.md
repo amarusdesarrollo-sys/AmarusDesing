@@ -42,6 +42,11 @@ service cloud.firestore {
     match /config/{documentId} {
       allow read, write: if true;
     }
+
+    // Perfiles de usuario (Mi cuenta): cada usuario solo puede leer/escribir su propio documento
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }
 ```
@@ -94,6 +99,11 @@ service cloud.firestore {
     match /config/{documentId} {
       allow read: if true;   // Carrito y páginas públicas necesitan leer (ej. envíos)
       allow create, update, delete: if isAdmin();
+    }
+
+    // Perfiles de usuario (Mi cuenta): cada usuario solo puede leer/escribir su documento
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

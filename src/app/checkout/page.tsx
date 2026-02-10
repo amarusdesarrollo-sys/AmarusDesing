@@ -4,28 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { getUserProfile } from "@/lib/firebase/users";
 import { useCartStore } from "@/store/cartStore";
 import { createOrder } from "@/lib/firebase/orders";
+import { checkoutCustomerSchema, type CheckoutCustomerFormData } from "@/lib/validations/schemas";
 import type { OrderItem } from "@/types";
-
-const checkoutSchema = z.object({
-  nombre: z.string().min(1, "El nombre es requerido"),
-  apellido: z.string().min(1, "El apellido es requerido"),
-  email: z.string().email("Email no válido"),
-  telefono: z.string().min(1, "El teléfono es requerido (ej: +34 600 111 222)"),
-  calle: z.string().min(1, "La dirección es requerida"),
-  pisoPuerta: z.string().optional(),
-  ciudad: z.string().min(1, "La ciudad es requerida"),
-  codigoPostal: z.string().min(1, "El código postal es requerido"),
-  pais: z.string().min(1, "El país es requerido"),
-  estado: z.string().optional(),
-});
-
-type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -37,9 +25,10 @@ export default function CheckoutPage() {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
-  } = useForm<CheckoutFormData>({
-    resolver: zodResolver(checkoutSchema),
+  } = useForm<CheckoutCustomerFormData>({
+    resolver: zodResolver(checkoutCustomerSchema),
     defaultValues: {
       nombre: "",
       apellido: "",
@@ -67,7 +56,34 @@ export default function CheckoutPage() {
     }
   }, [items.length, router]);
 
-  const onSubmit = async (data: CheckoutFormData) => {
+  // Si el usuario está logueado, rellenar con perfil y dirección por defecto (Klarna)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) return;
+      getUserProfile(user.uid).then((profile) => {
+        if (!profile) return;
+        const defaultShipping =
+          profile.addresses?.find((a) => a.type === "shipping" && a.isDefault) ??
+          profile.addresses?.find((a) => a.type === "shipping") ??
+          profile.addresses?.[0];
+        reset({
+          nombre: profile.firstName || "",
+          apellido: profile.lastName || "",
+          email: profile.email || user.email || "",
+          telefono: profile.phone || "",
+          calle: defaultShipping?.street ?? "",
+          pisoPuerta: defaultShipping?.street2 ?? "",
+          ciudad: defaultShipping?.city ?? "",
+          codigoPostal: defaultShipping?.postalCode ?? "",
+          pais: (defaultShipping?.country ?? "ES").toString().toUpperCase().slice(0, 2),
+          estado: defaultShipping?.region ?? "",
+        });
+      });
+    });
+    return () => unsubscribe();
+  }, [reset]);
+
+  const onSubmit = async (data: CheckoutCustomerFormData) => {
     if (items.length === 0) return;
     setLoading(true);
     setError(null);
@@ -78,7 +94,9 @@ export default function CheckoutPage() {
         quantity: item.quantity,
         price: item.product.price,
       }));
+      const user = auth.currentUser;
       const orderId = await createOrder({
+        userId: user?.uid,
         customerName: `${data.nombre.trim()} ${data.apellido.trim()}`.trim(),
         customerGivenName: data.nombre.trim(),
         customerFamilyName: data.apellido.trim(),

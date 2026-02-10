@@ -208,10 +208,11 @@ export default function CarritoPage() {
                   </div>
                 </div>
 
-                <Link href="/checkout" className="block">
-                  <AnimatedButton className="w-full bg-[#6B5BB6] text-white py-4 text-lg font-semibold rounded-lg hover:bg-[#5B4BA5] transition-colors mb-4">
-                    Proceder al Checkout
-                  </AnimatedButton>
+                <Link
+                  href="/checkout"
+                  className="block w-full bg-[#6B5BB6] text-white py-4 text-lg font-semibold rounded-lg hover:bg-[#5B4BA5] transition-colors mb-4 text-center focus:outline-none focus:ring-2 focus:ring-[#6B5BB6] focus:ring-offset-2"
+                >
+                  Proceder al Checkout
                 </Link>
 
                 <Link href="/tienda-online">
