@@ -233,3 +233,23 @@ export async function updateOrderStatus(
   }
   await updateDoc(ref, updateData);
 }
+
+/** Actualiza el estado de pago de una orden (llamado desde webhook de Stripe). */
+export async function updateOrderPaymentStatus(
+  orderId: string,
+  paymentStatus: PaymentStatus,
+  paymentMethod?: string
+): Promise<void> {
+  const ref = doc(db, COLLECTION_NAME, orderId);
+  const updateData: Record<string, unknown> = {
+    paymentStatus,
+    updatedAt: Timestamp.now(),
+  };
+  if (paymentMethod != null) {
+    updateData.paymentMethod = paymentMethod;
+  }
+  if (paymentStatus === "paid") {
+    updateData.status = "confirmed";
+  }
+  await updateDoc(ref, updateData);
+}

@@ -12,6 +12,7 @@ import { auth } from "@/lib/firebase";
 import { getUserProfile } from "@/lib/firebase/users";
 import { useCartStore } from "@/store/cartStore";
 import { createOrder } from "@/lib/firebase/orders";
+import { validateOrderStock } from "@/lib/firebase/products";
 import { checkoutCustomerSchema, type CheckoutCustomerFormData } from "@/lib/validations/schemas";
 import type { OrderItem } from "@/types";
 
@@ -88,6 +89,25 @@ export default function CheckoutPage() {
     setLoading(true);
     setError(null);
     try {
+      const orderItemsForValidation = items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+      }));
+      const { valid, invalidItems } = await validateOrderStock(
+        orderItemsForValidation
+      );
+      if (!valid && invalidItems?.length) {
+        const msg = invalidItems
+          .map(
+            (i) =>
+              `${i.name}: pedido ${i.requested}, disponible ${i.available}`
+          )
+          .join(". ");
+        setError(`Stock insuficiente: ${msg}`);
+        setLoading(false);
+        return;
+      }
+
       const orderItems: OrderItem[] = items.map((item) => ({
         productId: item.productId,
         product: item.product,
@@ -117,9 +137,23 @@ export default function CheckoutPage() {
           state: data.estado?.trim() || undefined,
         },
       });
-      // Redirigir primero; el carrito se vacía en la página de confirmación.
-      // Si vaciáramos aquí, el useEffect de esta página nos mandaría a /carrito.
-      router.push(`/checkout/confirmacion?orderId=${orderId}`);
+
+      const baseUrl =
+        typeof window !== "undefined" ? window.location.origin : "";
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, baseUrl }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Error al crear sesión de pago");
+      }
+      if (json.url) {
+        window.location.href = json.url;
+        return;
+      }
+      throw new Error("No se recibió URL de pago");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al crear el pedido");
     } finally {
@@ -385,7 +419,7 @@ export default function CheckoutPage() {
                 disabled={loading}
                 className="w-full mt-6 bg-[#6B5BB6] text-white py-4 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Procesando..." : "Confirmar pedido"}
+                {loading ? "Procesando…" : "Ir a pagar (Stripe)"}
               </button>
               <p className="text-xs text-gray-500 mt-3 text-center">
                 Al confirmar, tu pedido quedará registrado. Te contactaremos

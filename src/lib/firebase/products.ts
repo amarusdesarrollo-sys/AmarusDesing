@@ -10,6 +10,7 @@ import {
   updateDoc,
   deleteDoc,
   Timestamp,
+  runTransaction,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import type { Product, ProductCategory } from "@/types";
@@ -271,4 +272,71 @@ export const deleteProduct = async (id: string): Promise<void> => {
     console.error("Error deleting product:", error);
     throw error;
   }
+};
+
+/** Valida que haya stock suficiente para los ítems. Devuelve valid y lista de ítems sin stock. */
+export const validateOrderStock = async (
+  items: { productId: string; quantity: number }[]
+): Promise<{
+  valid: boolean;
+  invalidItems?: Array<{
+    productId: string;
+    name: string;
+    requested: number;
+    available: number;
+  }>;
+}> => {
+  const invalidItems: Array<{
+    productId: string;
+    name: string;
+    requested: number;
+    available: number;
+  }> = [];
+  for (const item of items) {
+    const product = await getProductById(item.productId);
+    if (!product) {
+      invalidItems.push({
+        productId: item.productId,
+        name: "Producto no encontrado",
+        requested: item.quantity,
+        available: 0,
+      });
+      continue;
+    }
+    const available = product.stock ?? 0;
+    if (available < item.quantity) {
+      invalidItems.push({
+        productId: item.productId,
+        name: product.name,
+        requested: item.quantity,
+        available,
+      });
+    }
+  }
+  return {
+    valid: invalidItems.length === 0,
+    invalidItems: invalidItems.length > 0 ? invalidItems : undefined,
+  };
+};
+
+/** Descuenta stock al confirmar pago. Usado desde webhook de Stripe. */
+export const decrementStock = async (
+  productId: string,
+  quantity: number
+): Promise<void> => {
+  await runTransaction(db, async (transaction) => {
+    const productRef = doc(db, COLLECTION_NAME, productId);
+    const snap = await transaction.get(productRef);
+    if (!snap.exists()) {
+      throw new Error(`Producto ${productId} no encontrado`);
+    }
+    const data = snap.data();
+    const currentStock = (data?.stock ?? 0) as number;
+    const newStock = Math.max(0, currentStock - quantity);
+    transaction.update(productRef, {
+      stock: newStock,
+      inStock: newStock > 0,
+      updatedAt: Timestamp.now(),
+    });
+  });
 };
