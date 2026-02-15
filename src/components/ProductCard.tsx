@@ -22,6 +22,7 @@ export default function ProductCard({
   priority = false,
 }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
+  const hasStock = product.inStock && (product.stock ?? 0) > 0;
   const primaryImage =
     product.images.find((img) => img.isPrimary) || product.images[0];
 
@@ -51,7 +52,7 @@ export default function ProductCard({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (product.inStock) {
+    if (hasStock) {
       addItem(product, 1);
     }
   };
@@ -93,9 +94,14 @@ export default function ProductCard({
               Destacado
             </span>
           )}
-          {!product.inStock && (
+          {!hasStock && (
             <span className="absolute top-2 right-2 bg-gray-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
               Agotado
+            </span>
+          )}
+          {hasStock && (product.stock ?? 0) <= 5 && (
+            <span className="absolute top-2 right-2 bg-amber-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              Solo quedan {(product.stock ?? 0)}
             </span>
           )}
           {product.originalPrice && (
@@ -131,15 +137,15 @@ export default function ProductCard({
           <div className="flex gap-1.5">
             <button
               onClick={handleAddToCart}
-              disabled={!product.inStock}
+              disabled={!hasStock}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
-                product.inStock
+                hasStock
                   ? "bg-[#6B5BB6] text-white hover:bg-[#5B4BA5]"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
             >
               <ShoppingCart className="h-4 w-4" />
-              {product.inStock ? "Agregar" : "Agotado"}
+              {hasStock ? "Agregar" : "Agotado"}
             </button>
 
             <button

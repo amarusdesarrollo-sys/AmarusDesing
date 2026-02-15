@@ -19,18 +19,24 @@ export default function MiCuentaLayout({
   const [allowed, setAllowed] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.replace("/login");
         setAllowed(false);
         setChecking(false);
         return;
       }
-      if (isAdminEmail(user.email)) {
-        setAllowed(true);
-      } else {
-        setAllowed(true);
+      const { getUserProfile } = await import("@/lib/firebase/users");
+      const profile = await getUserProfile(user.uid);
+      if (profile?.blocked) {
+        const { signOut } = await import("firebase/auth");
+        await signOut(auth);
+        router.replace("/cuenta-bloqueada");
+        setAllowed(false);
+        setChecking(false);
+        return;
       }
+      setAllowed(true);
       setChecking(false);
     });
     return () => unsubscribe();

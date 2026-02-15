@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, User } from "lucide-react";
+import { Menu, X, User, Search } from "lucide-react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import CartIcon from "./CartIcon";
@@ -257,6 +257,13 @@ const Navbar = () => {
                 </Link>
               </>
             )}
+            <Link
+              href="/buscar"
+              className="flex items-center justify-center p-2 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors"
+              aria-label="Buscar productos"
+            >
+              <Search className="h-6 w-6" />
+            </Link>
             <CartIcon />
           </div>
 
@@ -288,8 +295,16 @@ const Navbar = () => {
               <Link
                 href="/tienda-online"
                 className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                onClick={() => setIsMenuOpen(false)}
               >
                 Tienda Online
+              </Link>
+              <Link
+                href="/buscar"
+                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Buscar
               </Link>
               {categories.map((category) => (
                 <Link

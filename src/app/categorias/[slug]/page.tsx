@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import AnimatedSection from "@/components/AnimatedSection";
 import AnimatedGrid from "@/components/AnimatedGrid";
+import { SlidersHorizontal } from "lucide-react";
 import { getCategoryBySlug } from "@/lib/firebase/categories";
 import { getProductsByCategory } from "@/lib/firebase/products";
 import {
@@ -22,6 +23,9 @@ export default function CategoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFoundState, setNotFoundState] = useState(false);
+  const [sort, setSort] = useState<"relevance" | "price-asc" | "price-desc">("relevance");
+  const [minPrice, setMinPrice] = useState<string>("");
+  const [maxPrice, setMaxPrice] = useState<string>("");
 
   useEffect(() => {
     const loadCategoryAndProducts = async () => {
@@ -84,7 +88,17 @@ export default function CategoryPage() {
     }
   }, [slug]);
 
-  // Formatear nombre de categoría desde slug
+  const filteredProducts = useMemo(() => {
+    let list = [...products];
+    const min = minPrice ? Number(minPrice) * 100 : null;
+    const max = maxPrice ? Number(maxPrice) * 100 : null;
+    if (min != null && !isNaN(min)) list = list.filter((p) => p.price >= min);
+    if (max != null && !isNaN(max)) list = list.filter((p) => p.price <= max);
+    if (sort === "price-asc") list.sort((a, b) => a.price - b.price);
+    else if (sort === "price-desc") list.sort((a, b) => b.price - a.price);
+    return list;
+  }, [products, sort, minPrice, maxPrice]);
+
   const formatCategoryName = (slug: string): string => {
     return slug
       .split("-")
@@ -170,12 +184,56 @@ export default function CategoryPage() {
           </div>
         </AnimatedSection>
 
+        {/* Filtros */}
+        <AnimatedSection>
+          <div className="flex flex-wrap items-center gap-4 mb-8 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+            <span className="flex items-center gap-2 text-gray-700 font-medium">
+              <SlidersHorizontal className="h-5 w-5" />
+              Filtros:
+            </span>
+            <select
+              value={sort}
+              onChange={(e) =>
+                setSort(e.target.value as "relevance" | "price-asc" | "price-desc")
+              }
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+            >
+              <option value="relevance">Relevancia</option>
+              <option value="price-asc">Precio: menor a mayor</option>
+              <option value="price-desc">Precio: mayor a menor</option>
+            </select>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                placeholder="Min €"
+                min="0"
+                step="0.01"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+              />
+              <span className="text-gray-500">-</span>
+              <input
+                type="number"
+                placeholder="Max €"
+                min="0"
+                step="0.01"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+              />
+            </div>
+          </div>
+        </AnimatedSection>
+
         {/* Grid de productos */}
-        {products.length === 0 ? (
+        {filteredProducts.length === 0 ? (
           <AnimatedSection>
             <div className="text-center py-20">
               <p className="text-xl text-gray-600 mb-4">
-                No hay productos disponibles en esta categoría.
+                {products.length === 0
+                ? "No hay productos disponibles en esta categoría."
+                : "No hay productos que coincidan con los filtros."}
               </p>
               <Link href="/tienda-online">
                 <button className="text-[#6B5BB6] hover:text-[#5B4BA5] font-medium transition-colors">
@@ -186,7 +244,7 @@ export default function CategoryPage() {
           </AnimatedSection>
         ) : (
           <AnimatedGrid className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-            {products.map((product, index) => (
+            {filteredProducts.map((product, index) => (
               <ProductCard
                 key={product.id}
                 product={product}

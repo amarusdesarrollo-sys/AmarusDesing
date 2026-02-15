@@ -135,8 +135,10 @@ export default function ProductDetailPage() {
     return image.url;
   };
 
+  const hasStock = product && product.inStock && (product.stock ?? 0) > 0;
+
   const handleAddToCart = () => {
-    if (!product || !product.inStock) return;
+    if (!product || !hasStock) return;
 
     addItem(product, quantity);
     setAddedToCart(true);
@@ -144,7 +146,8 @@ export default function ProductDetailPage() {
   };
 
   const increaseQuantity = () => {
-    if (product && quantity < product.stock) {
+    const maxQty = product?.stock ?? 0;
+    if (product && quantity < maxQty) {
       setQuantity(quantity + 1);
     }
   };
@@ -279,7 +282,7 @@ export default function ProductDetailPage() {
                       Destacado
                     </span>
                   )}
-                  {!product.inStock && (
+                  {!hasStock && (
                     <span className="absolute top-4 right-4 bg-gray-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
                       Agotado
                     </span>
@@ -443,9 +446,9 @@ export default function ProductDetailPage() {
               {/* Stock */}
               <div className="pt-4 border-t border-gray-200">
                 <p className="text-sm text-gray-600">
-                  {product.inStock ? (
+                  {hasStock ? (
                     <span className="text-green-600 font-medium">
-                      ✓ En stock ({product.stock} disponibles)
+                      ✓ Solo quedan {(product.stock ?? 0)} unidades
                     </span>
                   ) : (
                     <span className="text-red-600 font-medium">✗ Agotado</span>
@@ -473,7 +476,7 @@ export default function ProductDetailPage() {
                     </span>
                     <button
                       onClick={increaseQuantity}
-                      disabled={!product.inStock || quantity >= product.stock}
+                      disabled={!hasStock || quantity >= (product.stock ?? 0)}
                       className="p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       aria-label="Aumentar cantidad"
                     >
@@ -485,11 +488,11 @@ export default function ProductDetailPage() {
                 <div className="flex gap-3">
                   <motion.button
                     onClick={handleAddToCart}
-                    disabled={!product.inStock}
+                    disabled={!hasStock}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-lg font-semibold text-lg transition-all ${
-                      product.inStock
+                      hasStock
                         ? addedToCart
                           ? "bg-green-500 text-white"
                           : "bg-[#6B5BB6] text-white hover:bg-[#5B4BA5]"
@@ -504,7 +507,7 @@ export default function ProductDetailPage() {
                     ) : (
                       <>
                         <ShoppingCart className="h-5 w-5" />
-                        {product.inStock ? "Agregar al carrito" : "Agotado"}
+                        {hasStock ? "Agregar al carrito" : "Agotado"}
                       </>
                     )}
                   </motion.button>

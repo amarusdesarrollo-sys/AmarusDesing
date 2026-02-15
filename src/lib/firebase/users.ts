@@ -1,4 +1,12 @@
-import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  Timestamp,
+  deleteField,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import type { SavedAddress } from "@/types";
 
@@ -13,6 +21,10 @@ export interface UserProfile {
   addresses: SavedAddress[];
   /** Si true, usar la dirección de envío por defecto también para facturación. */
   useSameAddressForBilling: boolean;
+  /** Si true, el usuario está bloqueado (borrado lógico). No puede acceder a mi-cuenta. */
+  blocked?: boolean;
+  /** Fecha en que se bloqueó (opcional). */
+  blockedAt?: Date;
   updatedAt: Date;
 }
 
@@ -33,6 +45,9 @@ function firestoreToProfile(data: Record<string, unknown> | null): UserProfile |
     isDefault: Boolean(a.isDefault),
   }));
   const firstName = (data.firstName as string) ?? (data.name as string) ?? "";
+  const blockedAt = data.blockedAt && typeof (data.blockedAt as any).toDate === "function"
+    ? (data.blockedAt as { toDate: () => Date }).toDate()
+    : undefined;
   return {
     firstName,
     lastName: (data.lastName as string) ?? "",
@@ -40,6 +55,8 @@ function firestoreToProfile(data: Record<string, unknown> | null): UserProfile |
     phone: (data.phone as string) ?? "",
     addresses,
     useSameAddressForBilling: Boolean(data.useSameAddressForBilling),
+    blocked: Boolean(data.blocked),
+    blockedAt,
     updatedAt: data.updatedAt && typeof (data.updatedAt as any).toDate === "function"
       ? (data.updatedAt as { toDate: () => Date }).toDate()
       : new Date(),
@@ -55,6 +72,8 @@ function profileToFirestore(p: Partial<UserProfile>): Record<string, unknown> {
   if (p.email !== undefined) out.email = p.email;
   if (p.phone !== undefined) out.phone = p.phone;
   if (p.useSameAddressForBilling !== undefined) out.useSameAddressForBilling = p.useSameAddressForBilling;
+  if (p.blocked !== undefined) out.blocked = p.blocked;
+  if (p.blockedAt !== undefined) out.blockedAt = p.blockedAt ? Timestamp.fromDate(p.blockedAt) : null;
   if (p.addresses !== undefined) {
     out.addresses = p.addresses.map((a) => ({
       id: a.id,
@@ -96,4 +115,35 @@ export async function setUserProfile(
     ...profile,
   };
   await setDoc(ref, profileToFirestore(merged), { merge: true });
+}
+
+/** Bloquea o desbloquea un usuario (solo admin). Requiere reglas Firestore que permitan a admin escribir en users/{uid}. */
+export async function setUserBlocked(
+  uid: string,
+  blocked: boolean
+): Promise<void> {
+  const ref = doc(db, COLLECTION, uid);
+  await setDoc(
+    ref,
+    {
+      blocked,
+      blockedAt: blocked ? Timestamp.now() : deleteField(),
+      updatedAt: Timestamp.now(),
+    },
+    { merge: true }
+  );
+}
+
+/** Lista todos los perfiles de usuario (para admin). */
+export async function getAllUserProfiles(): Promise<
+  Array<{ uid: string; profile: UserProfile }>
+> {
+  const ref = collection(db, COLLECTION);
+  const snap = await getDocs(ref);
+  return snap.docs
+    .map((d) => {
+      const profile = firestoreToProfile(d.data() as Record<string, unknown>);
+      return profile ? { uid: d.id, profile } : null;
+    })
+    .filter((x): x is { uid: string; profile: UserProfile } => x != null);
 }

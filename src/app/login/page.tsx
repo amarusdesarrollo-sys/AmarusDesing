@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { isAdminEmail } from "@/lib/auth-admin";
+import { getUserProfile } from "@/lib/firebase/users";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,7 +29,13 @@ export default function LoginPage() {
       if (isAdminEmail(user.email)) {
         router.replace("/admin");
       } else {
-        router.replace("/mi-cuenta");
+        const profile = await getUserProfile(user.uid);
+        if (profile?.blocked) {
+          await signOut(auth);
+          router.replace("/cuenta-bloqueada");
+        } else {
+          router.replace("/mi-cuenta");
+        }
       }
       router.refresh();
     } catch (err: unknown) {
