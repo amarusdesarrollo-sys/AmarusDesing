@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import type { Order } from "@/types";
 import { SITE_NAME } from "./seo";
+import { ADMIN_EMAIL } from "./auth-admin";
 
 const formatPrice = (cents: number) => (cents / 100).toFixed(2);
 
@@ -106,6 +107,73 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<{
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     console.error("Error enviando email de confirmación:", err);
+    return { ok: false, error: msg };
+  }
+}
+
+/** Envía al admin un aviso de nuevo pedido (tras pago exitoso). */
+export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return { ok: false, error: "Email no configurado" };
+  }
+
+  const to = process.env.ADMIN_NOTIFY_EMAIL || ADMIN_EMAIL;
+  if (!to?.trim()) {
+    return { ok: false, error: "No hay email de admin" };
+  }
+
+  const resend = new Resend(apiKey);
+  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+
+  const itemsList = order.items
+    .map((i) => `• ${i.product.name} × ${i.quantity} — €${formatPrice(i.price * i.quantity)}`)
+    .join("\n");
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Nuevo pedido</title></head>
+<body style="margin:0; padding:0; font-family: system-ui, sans-serif; background:#f5f5f5;">
+  <div style="max-width:560px; margin:0 auto; padding:24px;">
+    <div style="background:white; border-radius:12px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      <h1 style="margin:0 0 16px; font-size:20px; color:#1a1a1a;">🛒 Nuevo pedido recibido</h1>
+      <p style="margin:0 0 12px; color:#333;"><strong>Pedido #${order.id}</strong></p>
+      <p style="margin:0 0 8px; color:#666;">Cliente: ${order.customerName || "—"} &lt;${order.customerEmail || "—"}&gt;</p>
+      ${order.customerPhone ? `<p style="margin:0 0 12px; color:#666;">Tel: ${order.customerPhone}</p>` : ""}
+      <p style="margin:0 0 4px; color:#666; font-size:14px;">Productos:</p>
+      <pre style="margin:0 0 12px; padding:12px; background:#f9f9f9; border-radius:8px; font-size:13px; white-space:pre-wrap;">${itemsList}</pre>
+      <p style="margin:0 0 4px; color:#666;">Total: <strong style="color:#6B5BB6;">€${formatPrice(order.total)}</strong></p>
+      <p style="margin:12px 0 0; color:#888; font-size:13px;">
+        Dirección: ${order.shippingAddress.street}, ${order.shippingAddress.postalCode} ${order.shippingAddress.city}, ${order.shippingAddress.country}
+      </p>
+      <p style="margin:16px 0 0;">
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://amarus-desing.vercel.app"}/admin/pedidos/${order.id}" style="display:inline-block; background:#6B5BB6; color:white; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600;">Ver pedido en el admin</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: `${SITE_NAME} <${from}>`,
+      to: [to.trim()],
+      subject: `[${SITE_NAME}] Nuevo pedido #${order.id} — €${formatPrice(order.total)}`,
+      html,
+    });
+    if (error) {
+      console.error("Error enviando aviso a admin:", error);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido";
+    console.error("Error enviando aviso a admin:", err);
     return { ok: false, error: msg };
   }
 }

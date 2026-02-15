@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getOrderById, updateOrderPaymentStatus } from "@/lib/firebase/orders";
 import { decrementStock } from "@/lib/firebase/products";
-import { sendOrderConfirmationEmail } from "@/lib/email";
+import { sendOrderConfirmationEmail, sendNewOrderAlertToAdmin } from "@/lib/email";
 
 /**
  * Webhook de Stripe. Recibe eventos (p. ej. checkout.session.completed)
@@ -82,13 +82,17 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Enviar email de confirmación (opcional si RESEND_API_KEY está configurada)
+      // Emails: confirmación al cliente y aviso al admin
       if (order) {
         try {
           await sendOrderConfirmationEmail(order);
         } catch (emailErr) {
           console.error("Error enviando email de confirmación:", emailErr);
-          // No fallar el webhook
+        }
+        try {
+          await sendNewOrderAlertToAdmin(order);
+        } catch (alertErr) {
+          console.error("Error enviando aviso a admin:", alertErr);
         }
       }
     } catch (err) {
