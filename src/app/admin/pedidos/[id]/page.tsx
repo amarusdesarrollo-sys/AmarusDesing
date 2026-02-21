@@ -9,7 +9,7 @@ import { getOrderById, updateOrderStatus } from "@/lib/firebase/orders";
 import type { Order, OrderStatus } from "@/types";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: "Pendiente",
+  pending: "Pendiente de pago",
   confirmed: "Confirmado",
   processing: "En proceso",
   shipped: "Enviado",

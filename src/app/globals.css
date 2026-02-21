@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 /* Estilos específicos para las secciones hero */
 .hero-section {
   height: 60vh;

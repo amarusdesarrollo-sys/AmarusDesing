@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   Cog,
+  FileText,
 } from "lucide-react";
 
 const menuItems = [
@@ -35,6 +36,11 @@ const menuItems = [
     name: "Pedidos",
     href: "/admin/pedidos",
     icon: ShoppingCart,
+  },
+  {
+    name: "Contenido",
+    href: "/admin/contenido",
+    icon: FileText,
   },
   {
     name: "Configuración",

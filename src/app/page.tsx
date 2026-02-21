@@ -3,8 +3,36 @@ import { Users } from "lucide-react";
 import AnimatedSection from "@/components/AnimatedSection";
 import AnimatedButton from "@/components/AnimatedButton";
 import FeaturedCategoriesHero from "@/components/FeaturedCategoriesHero";
+import { getHomeContent } from "@/lib/firebase/content";
+import { getHistoriaContent } from "@/lib/firebase/content";
 
-export default function Home() {
+export default async function Home() {
+  const [homeContent, historiaContent] = await Promise.all([
+    getHomeContent().catch(() => null),
+    getHistoriaContent().catch(() => null),
+  ]);
+
+  const pf = homeContent?.proyectoFamiliar;
+  const pfTitle = pf?.title ?? "CONOCE NUESTRO PROYECTO FAMILIAR";
+  const pfParagraphs = pf?.paragraphs ?? [
+    "Con mucha ilusión presentamos nuestro proyecto, que representa nuestra filosofía de vida",
+    '"La felicidad solo es real si es compartida"',
+    "Por ello y muchas razones más incluimos a más artesan@s amig@s en AmarusDesign",
+    "Ofreciéndote así más variedad, conociendo siempre el origen de tu joya, ropa o accesorio",
+  ];
+
+  const histTitle = historiaContent?.title ?? homeContent?.historia?.title ?? "¿Cómo llegamos aquí?";
+  const histParagraphs = historiaContent?.paragraphs?.length
+    ? historiaContent.paragraphs
+    : homeContent?.historia?.paragraphs ?? [
+        "Nos conocimos viajando hace ya unos años, hoy en día, aparte de ser los creadores de AmarusDesign, somos mama y papa de Amaru. Que como el nombre ya indica es la razón por la que hemos creado esta empresa.",
+        "Amaru lleva un nombre Aimara porque nos conocimos a orillas del Lago Titicaca.",
+        "Durante años seguimos en la ruta, vendiendo nuestras artesanías, en ocasiones ya siendo una familia. Por diferentes razones volvimos a Europa para trabajar de forma convencional, siempre con la ilusión de volver a nuestro lado más creativo.",
+        "El tiempo ha pasado y casi sin planearlo, hemos vuelto a nuestra esencia creando este proyecto.",
+        "Un sueño para resolver un sustento económico, pero a la vez armoniosa con la familia, que nos permita disfrutar de la crianza de nuestro hijo e incluso integrarlo en nuestro día a día.",
+        "Invertimos nuestra energía y cariño, en atender a nuestros clientes cómo se merecen, siempre sin perder el amor al detalle. Buscamos reinventarnos cada día, incluyendo en nuestro equipo a más artesanos que comparten nuestra pasión por los minerales.",
+      ];
+
   return (
     <>
       {/* Categorías destacadas (desde admin: marcar "Destacada" en cada categoría) */}
@@ -35,36 +63,29 @@ export default function Home() {
           <div className="max-w-lg text-center w-full my-auto">
             <AnimatedSection delay={0.2}>
               <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4 lg:mb-6 leading-tight">
-                <span className="text-white">CONOCE</span>
-                <br />
-                <span className="text-white">NUESTRO</span>
-                <br />
-                <span className="text-black">PROYECTO</span>
-                <br />
-                <span className="text-black">FAMILIAR</span>
+                {pfTitle.split(" ").map((w, i) => (
+                  <span key={i}>
+                    <span className={i < 2 ? "text-white" : "text-black"}>{w}</span>
+                    {i < pfTitle.split(" ").length - 1 && <br />}
+                  </span>
+                ))}
               </h2>
             </AnimatedSection>
 
             <AnimatedSection delay={0.4}>
               <div className="text-gray-700 mb-6 lg:mb-8 text-base md:text-lg lg:text-xl leading-relaxed text-center space-y-3">
-                <p>
-                  Con mucha ilusión presentamos nuestro proyecto, que representa
-                  nuestra filosofía de vida
-                </p>
-
-                <p className="italic font-medium text-lg md:text-xl lg:text-2xl">
-                  "La felicidad solo es real si es compartida"
-                </p>
-
-                <p>
-                  Por ello y muchas razones más incluimos a más artesan@s amig@s
-                  en AmarusDesign
-                </p>
-
-                <p>
-                  Ofreciéndote así más variedad, conociendo siempre el origen de
-                  tu joya, ropa o accesorio
-                </p>
+                {pfParagraphs.map((p, i) => (
+                  <p
+                    key={i}
+                    className={
+                      p.includes('"') || p.includes("La felicidad")
+                        ? "italic font-medium text-lg md:text-xl lg:text-2xl"
+                        : ""
+                    }
+                  >
+                    {p}
+                  </p>
+                ))}
               </div>
             </AnimatedSection>
 
@@ -116,51 +137,15 @@ export default function Home() {
           <div className="max-w-4xl mx-auto">
             <AnimatedSection delay={0.2}>
               <h3 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8 text-center">
-                ¿Cómo llegamos aquí?
+                {histTitle}
               </h3>
             </AnimatedSection>
 
             <AnimatedSection delay={0.4}>
               <div className="prose prose-lg max-w-none text-gray-700 leading-relaxed space-y-6 text-base md:text-lg lg:text-xl">
-                <p>
-                  Nos conocimos viajando hace ya unos años, hoy en día, aparte
-                  de ser los creadores de AmarusDesign, somos mama y papa de
-                  Amaru. Que como el nombre ya indica es la razón por la que
-                  hemos creado esta empresa.
-                </p>
-
-                <p>
-                  Amaru lleva un nombre Aimara porque nos conocimos a orillas
-                  del Lago Titicaca.
-                </p>
-
-                <p>
-                  Durante años seguimos en la ruta, vendiendo nuestras
-                  artesanías, en ocasiones ya siendo una familia. Por diferentes
-                  razones volvimos a Europa para trabajar de forma convencional,
-                  siempre con la ilusión de volver a nuestro lado más creativo.
-                </p>
-
-                <p>
-                  El tiempo ha pasado y casi sin planearlo, hemos vuelto a
-                  nuestra esencia creando este proyecto.
-                </p>
-
-                <p>
-                  Un sueño para resolver un sustento económico, pero a la vez
-                  armoniosa con la familia, que nos permita disfrutar de la
-                  crianza de nuestro hijo e incluso integrarlo en nuestro día a
-                  día.
-                </p>
-
-                <p>
-                  Invertimos nuestra energía y cariño, en atender a nuestros
-                  clientes cómo se merecen, siempre sin perder el amor al
-                  detalle. Buscamos reinventarnos cada día, incluyendo en
-                  nuestro equipo a más artesanos que comparten nuestra pasión
-                  por los minerales.
-                </p>
-
+                {histParagraphs.map((p, i) => (
+                  <p key={i}>{p}</p>
+                ))}
                 <p className="text-2xl font-bold text-center text-gray-800 mt-8">
                   AmarusDesign
                 </p>

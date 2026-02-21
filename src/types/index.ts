@@ -194,6 +194,67 @@ export interface BlogPost {
   seo: SEOData;
 }
 
+// Tipos para CMS (Equipo, Historia, Políticas, etc.)
+export interface TeamMember {
+  id: string;
+  name: string;
+  imagePublicId?: string;
+  imageUrl?: string;
+  bio: string;
+  order: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface HistoriaContent {
+  title: string;
+  subtitle?: string;
+  imagePublicId?: string;
+  imageUrl?: string;
+  paragraphs: string[];
+}
+
+export interface PoliticasSection {
+  title: string;
+  content: string;
+}
+
+export interface PoliticasContent {
+  heroTitle: string;
+  heroImagePublicId?: string;
+  heroImageUrl?: string;
+  intro: string;
+  sections: PoliticasSection[];
+}
+
+export interface HomeProyectoFamiliar {
+  title: string;
+  paragraphs: string[];
+}
+
+export interface HomeHistoria {
+  title: string;
+  imagePublicId?: string;
+  imageUrl?: string;
+  paragraphs: string[];
+}
+
+export interface HomeContent {
+  proyectoFamiliar: HomeProyectoFamiliar;
+  historia: HomeHistoria;
+}
+
+export interface EquipoCierreContent {
+  title: string;
+  paragraphs: string[];
+}
+
+export interface ContactoContent {
+  heroTitle: string;
+  heroSubtitle: string;
+}
+
 // Tipos para configuración
 export interface SiteConfig {
   name: string;

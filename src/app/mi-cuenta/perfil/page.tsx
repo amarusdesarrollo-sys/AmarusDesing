@@ -3,18 +3,30 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+  updateEmail,
+} from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { getUserProfile, setUserProfile } from "@/lib/firebase/users";
 import { profileSchema, type ProfileFormData } from "@/lib/validations/schemas";
 
 /**
- * Mi perfil: firstName, lastName (requeridos), email (solo lectura), phone (opcional).
- * Persistido en users/{uid}. Compatible con Klarna (given_name / family_name).
+ * Mi perfil: firstName, lastName (requeridos), email editable, phone (opcional), cambiar contraseña.
  */
 export default function PerfilPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<"ok" | "error" | null>(null);
+  const [emailEditable, setEmailEditable] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [passwordCurrent, setPasswordCurrent] = useState("");
+  const [passwordNew, setPasswordNew] = useState("");
+  const [passwordMessage, setPasswordMessage] = useState<"ok" | "error" | null>(null);
+  const [emailMessage, setEmailMessage] = useState<"ok" | "error" | null>(null);
 
   const {
     register,
@@ -87,7 +99,7 @@ export default function PerfilPage() {
             readOnly
             className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-500"
           />
-          <p className="text-xs text-gray-400 mt-1">El email no se puede cambiar aquí.</p>
+          <p className="text-xs text-gray-400 mt-1">Para cambiar el email, usa la sección de abajo.</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
@@ -134,6 +146,132 @@ export default function PerfilPage() {
           {saving ? "Guardando…" : "Guardar cambios"}
         </button>
       </form>
+
+      {/* Cambiar email */}
+      <div className="mt-10 pt-8 border-t border-gray-200">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Cambiar email</h2>
+        {emailEditable ? (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const user = auth.currentUser;
+              if (!user || !emailPassword.trim() || !newEmail.trim()) return;
+              setEmailMessage(null);
+              try {
+                const cred = EmailAuthProvider.credential(user.email!, emailPassword.trim());
+                await reauthenticateWithCredential(user, cred);
+                await updateEmail(user, newEmail.trim());
+                await setUserProfile(user.uid, { email: newEmail.trim() });
+                setEmailMessage("ok");
+                setEmailEditable(false);
+                setEmailPassword("");
+                setNewEmail("");
+              } catch (err: unknown) {
+                setEmailMessage("error");
+                console.error("Error cambiando email:", err);
+              }
+            }}
+            className="space-y-3 max-w-md"
+          >
+            <input
+              type="password"
+              value={emailPassword}
+              onChange={(e) => setEmailPassword(e.target.value)}
+              placeholder="Contraseña actual"
+              required
+              className="w-full px-4 py-2 rounded-lg border border-gray-300"
+            />
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="Nuevo email"
+              required
+              className="w-full px-4 py-2 rounded-lg border border-gray-300"
+            />
+            <div className="flex gap-2">
+              <button type="submit" className="bg-[#6B5BB6] text-white px-4 py-2 rounded-lg text-sm font-medium">
+                Guardar
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEmailEditable(false); setEmailPassword(""); setNewEmail(""); setEmailMessage(null); }}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm"
+              >
+                Cancelar
+              </button>
+            </div>
+            {emailMessage === "ok" && <p className="text-sm text-green-600">Email actualizado.</p>}
+            {emailMessage === "error" && <p className="text-sm text-red-600">Error. Verifica la contraseña.</p>}
+          </form>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="text-gray-600">{auth.currentUser?.email ?? "—"}</span>
+            <button
+              type="button"
+              onClick={() => { setEmailEditable(true); setNewEmail(auth.currentUser?.email ?? ""); setEmailMessage(null); }}
+              className="text-sm text-[#6B5BB6] hover:underline"
+            >
+              Cambiar email
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Cambiar contraseña */}
+      <div className="mt-6 pt-6 border-t border-gray-200">
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Cambiar contraseña</h2>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const user = auth.currentUser;
+            if (!user || !passwordCurrent.trim() || !passwordNew.trim()) return;
+            if (passwordNew.length < 6) {
+              setPasswordMessage("error");
+              return;
+            }
+            setPasswordMessage(null);
+            try {
+              const cred = EmailAuthProvider.credential(user.email!, passwordCurrent.trim());
+              await reauthenticateWithCredential(user, cred);
+              await updatePassword(user, passwordNew.trim());
+              setPasswordMessage("ok");
+              setPasswordCurrent("");
+              setPasswordNew("");
+              (e.target as HTMLFormElement).reset();
+            } catch (err: unknown) {
+              setPasswordMessage("error");
+              console.error("Error cambiando contraseña:", err);
+            }
+          }}
+          className="space-y-3 max-w-md"
+        >
+          <input
+            type="password"
+            name="currentPassword"
+            value={passwordCurrent}
+            onChange={(e) => setPasswordCurrent(e.target.value)}
+            placeholder="Contraseña actual"
+            required
+            className="w-full px-4 py-2 rounded-lg border border-gray-300"
+          />
+          <input
+            type="password"
+            name="newPassword"
+            value={passwordNew}
+            onChange={(e) => setPasswordNew(e.target.value)}
+            placeholder="Nueva contraseña (mín. 6 caracteres)"
+            required
+            minLength={6}
+            className="w-full px-4 py-2 rounded-lg border border-gray-300"
+          />
+          <button type="submit" className="bg-[#6B5BB6] text-white px-4 py-2 rounded-lg text-sm font-medium">
+            Cambiar contraseña
+          </button>
+          {passwordMessage === "ok" && <p className="text-sm text-green-600">Contraseña actualizada.</p>}
+          {passwordMessage === "error" && <p className="text-sm text-red-600">Error. Verifica la contraseña actual.</p>}
+        </form>
+      </div>
     </div>
   );
 }

@@ -44,7 +44,7 @@ export default function MiCuentaLayout({
 
   const handleSignOut = async () => {
     await signOut(auth);
-    router.replace("/");
+    router.replace("/login");
     router.refresh();
   };
 

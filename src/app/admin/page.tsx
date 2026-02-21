@@ -93,7 +93,7 @@ export default function AdminDashboard() {
     try {
       const orders = await getOrders();
       const STATUS_LABELS: Record<string, string> = {
-        pending: "Pendiente",
+        pending: "Pendiente de pago",
         confirmed: "Confirmado",
         processing: "En proceso",
         shipped: "Enviado",

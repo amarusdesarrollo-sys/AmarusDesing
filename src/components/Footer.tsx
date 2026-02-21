@@ -1,47 +1,54 @@
 import Link from "next/link";
 import { Instagram, Mail, Heart, Settings } from "lucide-react";
+import { getSiteConfig } from "@/lib/firebase/site-config";
 
-const Footer = () => {
+export default async function Footer() {
+  const config = await getSiteConfig().catch(() => null);
+  const email = config?.contact?.email || config?.socialMedia?.email || "amarusdesign2014@gmail.com";
+  const instagram = config?.socialMedia?.instagram || "amarusdesign";
+  const instagramUrl = instagram.startsWith("http") ? instagram : `https://instagram.com/${instagram.replace(/^@/, "")}`;
+
   return (
     <footer className="bg-gray-900 text-white">
       {/* Main Footer */}
-      <div className="py-3 md:py-6">
+      <div className="py-2 md:py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             {/* Brand */}
             <div className="text-center md:text-left">
-              <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-3">
+              <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">
                 AmarusDesign
               </h3>
 
               {/* Contacto de AmarusDesign */}
-              <div className="mb-4">
+              <div className="mb-2 md:mb-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-center md:justify-start space-x-2">
                     <Mail className="h-3 w-3 md:h-4 md:w-4 text-[#6b5bb6]" />
                     <a
-                      href="mailto:amarusdesign2014@gmail.com"
-                      className="text-gray-300 hover:text-white transition-colors text-sm md:text-base"
+                      href={`mailto:${email}`}
+                      className="text-gray-300 hover:text-white transition-colors text-xs md:text-sm"
                     >
-                      amarusdesign2014@gmail.com
+                      {email}
                     </a>
                   </div>
                   <div className="flex items-center justify-center md:justify-start space-x-2">
                     <Instagram className="h-4 w-4 md:h-5 md:w-5 text-[#6b5bb6]" />
-                    <Link
-                      href="https://instagram.com/amarusdesign"
+                    <a
+                      href={instagramUrl}
                       target="_blank"
-                      className="text-gray-300 hover:text-white transition-colors text-sm md:text-base"
+                      rel="noopener noreferrer"
+                      className="text-gray-300 hover:text-white transition-colors text-xs md:text-sm"
                     >
-                      @amarusdesign
-                    </Link>
+                      {instagram ? (instagram.startsWith("@") ? instagram : `@${instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/\/$/, "")}`) : "@amarusdesign"}
+                    </a>
                   </div>
                 </div>
               </div>
 
               {/* Mis créditos y contacto */}
-              <div className="border-t border-gray-700 pt-4">
-                <p className="text-gray-300 mb-3 text-sm md:text-base">
+              <div className="border-t border-gray-700 pt-2 md:pt-3">
+                <p className="text-gray-300 mb-1 md:mb-2 text-xs md:text-sm">
                   Desarrollo web realizado por{" "}
                   <a
                     href="https://www.iarabaudinodev.com.ar/"
@@ -71,7 +78,7 @@ const Footer = () => {
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-gray-800 py-2 md:py-4">
+      <div className="border-t border-gray-800 py-2 md:py-3">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
@@ -96,6 +103,4 @@ const Footer = () => {
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}

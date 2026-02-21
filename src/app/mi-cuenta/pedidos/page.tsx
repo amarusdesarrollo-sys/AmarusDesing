@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { CreditCard } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { getOrdersByUserId } from "@/lib/firebase/orders";
 import type { Order, OrderStatus } from "@/types";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: "Pendiente",
+  pending: "Pendiente de pago",
   confirmed: "Confirmado",
   processing: "En preparación",
   shipped: "Enviado",
@@ -96,6 +97,34 @@ export default function MisPedidosPage() {
                   <span className="text-gray-500"> · Pago: {PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}</span>
                 </p>
               </Link>
+              {order.status === "pending" && order.paymentStatus === "pending" && (
+                <button
+                  type="button"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                      const res = await fetch("/api/create-checkout-session", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          orderId: order.id,
+                          baseUrl: typeof window !== "undefined" ? window.location.origin : "",
+                        }),
+                      });
+                      const json = await res.json();
+                      if (json.url) window.location.href = json.url;
+                      else throw new Error(json.error || "Error");
+                    } catch {
+                      alert("Error al iniciar el pago. Inténtalo de nuevo.");
+                    }
+                  }}
+                  className="mt-3 w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-[#6B5BB6] text-white rounded-lg text-sm font-medium hover:bg-[#5B4BA5] transition-colors"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Pagar ahora
+                </button>
+              )}
             </li>
           ))}
         </ul>

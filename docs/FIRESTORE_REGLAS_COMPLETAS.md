@@ -42,6 +42,18 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Contenido CMS (historia, políticas, home, equipo, contacto): lectura pública, solo admin puede escribir
+    match /content/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Miembros del equipo: lectura pública, solo admin puede escribir
+    match /teamMembers/{memberId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Perfiles de usuario: cada uno lee/escribe el suyo; admin puede leer y bloquear a cualquiera
     match /users/{userId} {
       allow read: if request.auth != null

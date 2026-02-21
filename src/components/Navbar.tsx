@@ -123,33 +123,33 @@ const Navbar = () => {
     >
       {/* Navbar principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
+        <div className="flex justify-between items-center h-14 md:h-16">
           {/* Logo */}
           <Link
             href="/"
-            className="flex items-center group transition-transform duration-300 hover:scale-105"
+            className="flex items-center group transition-transform duration-300 hover:scale-105 shrink-0"
           >
-            <span className="text-2xl md:text-3xl font-bold text-white group-hover:text-[#F5EFFF] transition-all duration-300 whitespace-nowrap">
+            <span className="text-xl md:text-2xl font-bold text-white group-hover:text-[#F5EFFF] transition-all duration-300 whitespace-nowrap">
               AmarusDesign
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-8 flex items-baseline space-x-6">
+          <div className="hidden md:block min-w-0 overflow-hidden">
+            <div className="ml-4 flex items-baseline space-x-3">
               <Link
                 href="/"
-                className="text-white hover:text-[#F5EFFF] px-3 py-2.5 text-xl font-medium relative group transition-colors duration-200 whitespace-nowrap"
+                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
               >
                 Inicio
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
               </Link>
 
               {/* Tienda Online Dropdown */}
-              <div className="relative group">
+              <div className="relative group shrink-0">
                 <Link
                   href="/tienda-online"
-                  className="text-white hover:text-[#F5EFFF] px-3 py-2.5 text-xl font-medium flex items-center relative transition-colors duration-200 whitespace-nowrap"
+                  className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium flex items-center relative transition-colors duration-200 whitespace-nowrap"
                 >
                   Tienda Online
                   <svg
@@ -167,11 +167,11 @@ const Navbar = () => {
                   </svg>
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
                 </Link>
-                <div className="absolute left-0 mt-2 w-72 bg-white/95 backdrop-blur-md rounded-lg shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
-                  <div className="py-2">
+                <div className="absolute left-0 mt-2 w-60 bg-white/95 backdrop-blur-md rounded-lg shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                  <div className="py-1.5">
                     <Link
                       href="/tienda-online"
-                      className="block px-4 py-2.5 text-xl text-gray-700 hover:bg-[#F5EFFF] font-semibold transition-colors duration-200 rounded-md mx-1"
+                      className="block px-3 py-2 text-sm text-gray-700 hover:bg-[#F5EFFF] font-semibold transition-colors duration-200 rounded-md mx-1"
                     >
                       Ver todas las categorías
                     </Link>
@@ -182,7 +182,7 @@ const Navbar = () => {
                           <Link
                             key={category.id}
                             href={`/categorias/${category.slug}`}
-                            className="block px-4 py-2 text-xl text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
+                            className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
                           >
                             {category.name}
                           </Link>
@@ -195,21 +195,21 @@ const Navbar = () => {
 
               <Link
                 href="/equipo"
-                className="text-white hover:text-[#F5EFFF] px-3 py-2.5 text-xl font-medium relative group transition-colors duration-200 whitespace-nowrap"
+                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
               >
                 Equipo
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
               </Link>
               <a
                 href="/#historia"
-                className="text-white hover:text-[#F5EFFF] px-3 py-2.5 text-xl font-medium relative group transition-colors duration-200 whitespace-nowrap"
+                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
               >
                 Historia
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
               </a>
               <Link
                 href="/politicas"
-                className="text-white hover:text-[#F5EFFF] px-3 py-2.5 text-xl font-medium relative group transition-colors duration-200 whitespace-nowrap"
+                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
               >
                 Políticas
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
@@ -218,27 +218,27 @@ const Navbar = () => {
           </div>
 
           {/* Right side icons */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden md:flex items-center space-x-2 shrink-0">
             <Link
               href="/contacto"
               className="text-white hover:text-[#F5EFFF] transition-colors duration-200 whitespace-nowrap"
             >
-              <span className="text-xl font-medium">Contacto</span>
+              <span className="text-sm font-medium">Contacto</span>
             </Link>
             <Link
               href="https://instagram.com/amarusdesign"
               target="_blank"
               className="text-white hover:text-[#F5EFFF] transition-colors duration-200 whitespace-nowrap"
             >
-              <span className="text-xl font-medium">Instagram</span>
+              <span className="text-sm font-medium">Instagram</span>
             </Link>
             {user ? (
               <Link
                 href="/mi-cuenta"
-                className="flex items-center space-x-1.5 text-white hover:text-[#F5EFFF] transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap"
+                className="flex items-center space-x-1 text-white hover:text-[#F5EFFF] transition-colors duration-200 px-2 py-1.5 rounded-lg hover:bg-white/10 whitespace-nowrap"
               >
-                <User className="h-6 w-6" />
-                <span className="text-xl font-medium">Mi cuenta</span>
+                <User className="h-5 w-5" />
+                <span className="text-sm font-medium">Mi cuenta</span>
               </Link>
             ) : (
               <>
@@ -246,37 +246,37 @@ const Navbar = () => {
                   href="/registro"
                   className="text-white hover:text-[#F5EFFF] transition-colors duration-200 whitespace-nowrap"
                 >
-                  <span className="text-xl font-medium">Registrarse</span>
+                  <span className="text-sm font-medium">Registrarse</span>
                 </Link>
                 <Link
                   href="/login"
-                  className="flex items-center space-x-1.5 text-white hover:text-[#F5EFFF] transition-colors duration-200 px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap"
+                  className="flex items-center space-x-1 text-white hover:text-[#F5EFFF] transition-colors duration-200 px-2 py-1.5 rounded-lg hover:bg-white/10 whitespace-nowrap"
                 >
-                  <User className="h-6 w-6" />
-                  <span className="text-xl font-medium">Iniciar sesión</span>
+                  <User className="h-5 w-5" />
+                  <span className="text-sm font-medium">Iniciar sesión</span>
                 </Link>
               </>
             )}
             <Link
               href="/buscar"
-              className="flex items-center justify-center p-2 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors"
+              className="flex items-center justify-center p-1.5 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
               aria-label="Buscar productos"
             >
-              <Search className="h-6 w-6" />
+              <Search className="h-5 w-5" />
             </Link>
             <CartIcon />
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden shrink-0">
             <button
               onClick={toggleMenu}
               className="text-white hover:text-[#F5EFFF] focus:outline-none focus:text-[#F5EFFF]"
             >
               {isMenuOpen ? (
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <Menu className="h-5 w-5" />
               )}
             </button>
           </div>
@@ -285,23 +285,23 @@ const Navbar = () => {
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-[#6B5BB6] border-t border-[#7B6BC7]">
+            <div className="px-2 pt-2 pb-2 space-y-0.5 sm:px-3 bg-[#6B5BB6] border-t border-[#7B6BC7]">
               <Link
                 href="/"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
               >
                 Inicio
               </Link>
               <Link
                 href="/tienda-online"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Tienda Online
               </Link>
               <Link
                 href="/buscar"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Buscar
@@ -310,7 +310,7 @@ const Navbar = () => {
                 <Link
                   key={category.id}
                   href={`/categorias/${category.slug}`}
-                  className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                  className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {category.name}
@@ -318,39 +318,39 @@ const Navbar = () => {
               ))}
               <Link
                 href="/equipo"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
               >
                 Equipo
               </Link>
               <a
                 href="/#historia"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Historia
               </a>
               <Link
                 href="/politicas"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
               >
                 Políticas
               </Link>
               <Link
                 href="/contacto"
-                className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
               >
                 Contacto
               </Link>
               <Link
                 href="/carrito"
-                className="flex items-center px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="flex items-center px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
               >
                 Carrito
               </Link>
               {user ? (
                 <Link
                   href="/mi-cuenta"
-                  className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                  className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Mi cuenta
@@ -359,14 +359,14 @@ const Navbar = () => {
                 <>
                   <Link
                     href="/registro"
-                    className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                    className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Registrarse
                   </Link>
                   <Link
                     href="/login"
-                    className="block px-3 py-2 text-lg font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                    className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Iniciar sesión
