@@ -145,7 +145,15 @@ export default function CheckoutPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId, baseUrl }),
       });
-      const json = await res.json();
+      const text = await res.text();
+      let json: { url?: string; error?: string } = {};
+      try {
+        json = text ? JSON.parse(text) : {};
+      } catch {
+        setError("Error inesperado del servidor. Intenta de nuevo.");
+        setLoading(false);
+        return;
+      }
       if (!res.ok) {
         throw new Error(json.error || "Error al crear sesión de pago");
       }
@@ -419,12 +427,8 @@ export default function CheckoutPage() {
                 disabled={loading}
                 className="w-full mt-6 bg-[#6B5BB6] text-white py-4 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Procesando…" : "Ir a pagar (Stripe)"}
+                {loading ? "Procesando…" : "Ir a pagar"}
               </button>
-              <p className="text-xs text-gray-500 mt-3 text-center">
-                Al confirmar, tu pedido quedará registrado. Te contactaremos
-                para el pago y el envío.
-              </p>
             </div>
           </div>
         </form>
