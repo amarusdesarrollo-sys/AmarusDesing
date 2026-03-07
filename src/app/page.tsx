@@ -122,9 +122,9 @@ export default async function Home() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
 
             {/* Título posicionado a la derecha y abajo */}
-            <div className="absolute top-12 right-1 md:top-32 md:right-12 px-4 z-10">
+            <div className="absolute inset-0 flex items-end justify-end pb-8 pr-4 md:pb-16 md:pr-12 z-10">
               <AnimatedSection delay={0.3} direction="right">
-                <h2 className="text-xl md:text-5xl font-light leading-tight tracking-wider">
+                <h2 className="text-2xl md:text-5xl lg:text-6xl font-light leading-tight text-white drop-shadow-lg">
                   <span className="text-white">AMARUSDESIGN</span>
                 </h2>
               </AnimatedSection>

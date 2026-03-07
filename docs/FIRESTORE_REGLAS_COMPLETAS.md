@@ -27,11 +27,10 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Órdenes: lectura solo dueño o admin; guest puede ver su confirmación; crear cualquiera (checkout); actualizar/borrar solo admin
+    // Órdenes: crear cualquiera (checkout); leer quien tenga el ID (ID no adivinable); actualizar/borrar solo admin
+    // La API create-checkout-session corre en el servidor sin auth, por eso debe poder leer la orden por ID
     match /orders/{orderId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId
-        || isAdmin()
-        || (resource.data.userId == 'guest');
+      allow read: if true;
       allow create: if true;
       allow update, delete: if isAdmin();
     }

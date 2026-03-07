@@ -77,7 +77,7 @@ function CategoryHeroSection({
       />
       {/* Contenido (título + botón) - z-10 para estar encima, sin AnimatedSection para evitar whileInView que deja opacity 0 */}
       <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-4">
-        <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-6 md:mb-12 leading-tight drop-shadow-lg">
+        <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold mb-6 md:mb-12 leading-tight drop-shadow-lg tracking-[0.35em] md:tracking-[0.5em] lg:tracking-[0.6em]">
           {category.name.split(" ").length > 1 ? (
             <>
               <span className="text-white">
@@ -95,7 +95,7 @@ function CategoryHeroSection({
 
         <AnimatedButton
           href={`/categorias/${category.slug}`}
-          className="px-6 py-3 md:px-8 md:py-4 rounded-lg font-bold text-base md:text-lg border-2 border-white text-white bg-white/10 hover:bg-white hover:text-black backdrop-blur-sm"
+          className="px-6 py-3 md:px-8 md:py-4 rounded-lg font-bold text-base md:text-lg border-2 border-white text-white bg-white/10 hover:bg-white hover:text-black backdrop-blur-sm tracking-[0.25em] md:tracking-[0.35em]"
         >
           DESCUBRIR MÁS
           <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />

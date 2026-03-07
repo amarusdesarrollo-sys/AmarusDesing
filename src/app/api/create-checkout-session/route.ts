@@ -8,55 +8,55 @@ import { getOrderById } from "@/lib/firebase/orders";
  * La orden debe existir en Firestore y tener total en céntimos.
  */
 export async function POST(request: NextRequest) {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) {
-    return NextResponse.json(
-      { error: "STRIPE_SECRET_KEY no configurada" },
-      { status: 500 }
-    );
-  }
-
-  let body: { orderId?: string; baseUrl?: string };
   try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: "Cuerpo JSON inválido" },
-      { status: 400 }
-    );
-  }
+    const secret = process.env.STRIPE_SECRET_KEY;
+    if (!secret || !secret.startsWith("sk_")) {
+      return NextResponse.json(
+        { error: "STRIPE_SECRET_KEY no configurada o inválida en el servidor" },
+        { status: 500 }
+      );
+    }
 
-  const { orderId, baseUrl } = body;
-  if (!orderId || typeof orderId !== "string") {
-    return NextResponse.json(
-      { error: "orderId es requerido" },
-      { status: 400 }
-    );
-  }
+    let body: { orderId?: string; baseUrl?: string };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Cuerpo JSON inválido" },
+        { status: 400 }
+      );
+    }
 
-  const order = await getOrderById(orderId);
-  if (!order) {
-    return NextResponse.json(
-      { error: "Orden no encontrada" },
-      { status: 404 }
-    );
-  }
+    const { orderId, baseUrl } = body;
+    if (!orderId || typeof orderId !== "string") {
+      return NextResponse.json(
+        { error: "orderId es requerido" },
+        { status: 400 }
+      );
+    }
 
-  if (order.total <= 0) {
-    return NextResponse.json(
-      { error: "El total de la orden debe ser mayor que 0" },
-      { status: 400 }
-    );
-  }
+    const order = await getOrderById(orderId);
+    if (!order) {
+      return NextResponse.json(
+        { error: "Orden no encontrada" },
+        { status: 404 }
+      );
+    }
 
-  const origin =
-    baseUrl && typeof baseUrl === "string"
-      ? baseUrl.replace(/\/$/, "")
-      : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    if (order.total <= 0) {
+      return NextResponse.json(
+        { error: "El total de la orden debe ser mayor que 0" },
+        { status: 400 }
+      );
+    }
 
-  const stripe = new Stripe(secret);
+    const origin =
+      baseUrl && typeof baseUrl === "string"
+        ? baseUrl.replace(/\/$/, "")
+        : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-  try {
+    const stripe = new Stripe(secret);
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card", "klarna"],
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         {
           price_data: {
             currency: "eur",
-            unit_amount: order.total, // ya en céntimos
+            unit_amount: order.total,
             product_data: {
               name: `Pedido #${orderId.slice(0, 8)}`,
               description: `${order.items.length} producto(s) - Envío incluido`,
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error("Stripe create session error:", err);
+    console.error("create-checkout-session error:", err);
     const message =
       err instanceof Error ? err.message : "Error al crear sesión de pago";
     return NextResponse.json({ error: message }, { status: 500 });

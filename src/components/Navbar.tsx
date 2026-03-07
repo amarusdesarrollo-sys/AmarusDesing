@@ -134,8 +134,8 @@ const Navbar = () => {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:block min-w-0 overflow-hidden">
+          {/* Desktop Navigation - overflow-visible para que el desplegable de Tienda Online no se recorte */}
+          <div className="hidden md:block min-w-0 overflow-visible">
             <div className="ml-4 flex items-baseline space-x-3">
               <Link
                 href="/"
@@ -145,7 +145,7 @@ const Navbar = () => {
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
               </Link>
 
-              {/* Tienda Online Dropdown */}
+              {/* Tienda Online Dropdown: pegado al enlace para que al pasar el ratón no se cierre y se pueda hacer clic en cada categoría */}
               <div className="relative group shrink-0">
                 <Link
                   href="/tienda-online"
@@ -167,7 +167,7 @@ const Navbar = () => {
                   </svg>
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
                 </Link>
-                <div className="absolute left-0 mt-2 w-60 bg-white/95 backdrop-blur-md rounded-lg shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform group-hover:translate-y-0 translate-y-2">
+                <div className="absolute left-0 top-full pt-1 w-60 bg-white shadow-xl rounded-b-lg border border-gray-200 border-t-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100]">
                   <div className="py-1.5">
                     <Link
                       href="/tienda-online"
@@ -177,12 +177,12 @@ const Navbar = () => {
                     </Link>
                     {categories.length > 0 && (
                       <>
-                        <div className="border-t border-gray-200 my-2"></div>
+                        <div className="border-t border-gray-200 my-2" />
                         {categories.map((category) => (
                           <Link
                             key={category.id}
                             href={`/categorias/${category.slug}`}
-                            className="block px-3 py-1.5 text-sm text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
+                            className="block px-3 py-2 text-sm text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
                           >
                             {category.name}
                           </Link>
