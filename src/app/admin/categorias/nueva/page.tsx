@@ -9,6 +9,7 @@ import { ArrowLeft, Save, Upload, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { createCategory } from "@/lib/firebase/categories";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 // Esquema de validación
 const categorySchema = z.object({
@@ -104,6 +105,7 @@ export default function NuevaCategoriaPage() {
 
       const response = await fetch("/api/upload-image", {
         method: "POST",
+        headers: await getAuthHeaders(),
         body: formData,
       });
 

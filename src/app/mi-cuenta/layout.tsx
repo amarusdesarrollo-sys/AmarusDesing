@@ -17,11 +17,16 @@ export default function MiCuentaLayout({
   const router = useRouter();
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        router.replace("/login");
+        // Si el usuario no está logueado y no estamos en proceso de logout manual,
+        // mandamos a la pantalla de login. En logout manual redirigimos a inicio.
+        if (!loggingOut) {
+          router.replace("/login");
+        }
         setAllowed(false);
         setChecking(false);
         return;
@@ -40,11 +45,12 @@ export default function MiCuentaLayout({
       setChecking(false);
     });
     return () => unsubscribe();
-  }, [router]);
+  }, [loggingOut, router]);
 
   const handleSignOut = async () => {
+    setLoggingOut(true);
     await signOut(auth);
-    router.replace("/login");
+    router.replace("/");
     router.refresh();
   };
 

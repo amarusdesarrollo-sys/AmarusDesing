@@ -4,7 +4,7 @@ import { getOrderById } from "@/lib/firebase/orders";
 
 /**
  * Crea una sesión de Stripe Checkout para pagar una orden.
- * POST body: { orderId: string, baseUrl?: string }
+ * POST body: { orderId: string }
  * La orden debe existir en Firestore y tener total en céntimos.
  */
 export async function POST(request: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let body: { orderId?: string; baseUrl?: string };
+    let body: { orderId?: string };
     try {
       body = await request.json();
     } catch {
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { orderId, baseUrl } = body;
+    const { orderId } = body;
     if (!orderId || typeof orderId !== "string") {
       return NextResponse.json(
         { error: "orderId es requerido" },
@@ -50,10 +50,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Origen solo desde servidor para evitar redirección a dominio malicioso tras el pago
     const origin =
-      baseUrl && typeof baseUrl === "string"
-        ? baseUrl.replace(/\/$/, "")
-        : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+      "http://localhost:3000";
 
     const stripe = new Stripe(secret);
 

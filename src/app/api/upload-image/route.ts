@@ -1,16 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudinary } from "@/lib/cloudinary-server";
+import { requireAdmin } from "@/lib/firebase-admin";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_FOLDERS = ["categories", "products", "team"];
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAdmin(request);
+    if (authResult && "json" in authResult) return authResult;
     const cloudinary = getCloudinary();
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    const folder = formData.get("folder") as string || "categories";
+    const folderRaw = formData.get("folder");
+    const folder = typeof folderRaw === "string" && folderRaw.trim()
+      ? folderRaw.trim().toLowerCase()
+      : "categories";
+
+    if (!ALLOWED_FOLDERS.includes(folder)) {
+      return NextResponse.json(
+        { success: false, message: "Carpeta no permitida" },
+        { status: 400 }
+      );
+    }
 
     if (!file) {
       return NextResponse.json(
         { success: false, message: "No se proporcionó ningún archivo" },
+        { status: 400 }
+      );
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, message: "El archivo no puede superar 5 MB" },
+        { status: 400 }
+      );
+    }
+
+    const mime = (file.type || "").toLowerCase();
+    if (!ALLOWED_TYPES.includes(mime) && !mime.startsWith("image/")) {
+      return NextResponse.json(
+        { success: false, message: "Solo se permiten imágenes (JPEG, PNG, WebP, GIF)" },
         { status: 400 }
       );
     }
@@ -32,7 +64,6 @@ export async function POST(request: NextRequest) {
         {
           folder: folder,
           resource_type: "image",
-          // No duplicar el folder en public_id, Cloudinary ya lo agrega automáticamente
           public_id: `${Date.now()}-${cleanFileName}`,
         },
         (error, result) => {

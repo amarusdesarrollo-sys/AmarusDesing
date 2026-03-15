@@ -11,6 +11,7 @@ import Image from "next/image";
 import { createProduct } from "@/lib/firebase/products";
 import { getActiveCategories } from "@/lib/firebase/categories";
 import type { ProductImage as ProductImageType } from "@/types";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 const productSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -97,6 +98,7 @@ export default function NuevoProductoPage() {
       formData.append("folder", "products");
       const res = await fetch("/api/upload-image", {
         method: "POST",
+        headers: await getAuthHeaders(),
         body: formData,
       });
       const data = await res.json();

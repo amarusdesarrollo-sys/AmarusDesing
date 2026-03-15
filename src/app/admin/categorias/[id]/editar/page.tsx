@@ -10,6 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getCategoryById, updateCategory } from "@/lib/firebase/categories";
 import { getProductImageUrl } from "@/lib/cloudinary";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 // Esquema de validación
 const categorySchema = z.object({
@@ -124,6 +125,7 @@ export default function EditarCategoriaPage() {
 
       const response = await fetch("/api/upload-image", {
         method: "POST",
+        headers: await getAuthHeaders(),
         body: formData,
       });
 

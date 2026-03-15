@@ -21,6 +21,7 @@ import {
   updateEquipoCierreContent,
 } from "@/lib/firebase/content";
 import { getCloudinaryUrl } from "@/lib/cloudinary";
+import { getAuthHeaders } from "@/lib/auth-headers";
 import OptimizedImage from "@/components/OptimizedImage";
 import type { TeamMember, EquipoCierreContent } from "@/types";
 
@@ -351,7 +352,11 @@ function MemberForm({
       const fd = new FormData();
       fd.append("file", file);
       fd.append("folder", "team");
-      const res = await fetch("/api/upload-image", { method: "POST", body: fd });
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: fd,
+      });
       const data = await res.json();
       if (data.success) {
         setImagePublicId(data.publicId);

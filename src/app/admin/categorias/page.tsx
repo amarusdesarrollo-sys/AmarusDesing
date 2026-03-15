@@ -10,6 +10,7 @@ import {
   updateCategory,
 } from "@/lib/firebase/categories";
 import type { Category } from "@/types";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 export default function AdminCategoriasPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -98,8 +99,10 @@ export default function AdminCategoriasPage() {
 
     try {
       setLoading(true);
+      const headers = await getAuthHeaders();
       const response = await fetch("/api/init-categories", {
         method: "POST",
+        headers,
       });
 
       const data = await response.json();

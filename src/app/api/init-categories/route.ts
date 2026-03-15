@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAllCategories, createCategory } from "@/lib/firebase/categories";
+import { requireAdmin } from "@/lib/firebase-admin";
 
 // Categorías iniciales que se crearán si no existen
 // featured: true = aparece en la página principal como sección hero grande
@@ -59,8 +60,10 @@ const INITIAL_CATEGORIES = [
   },
 ];
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const authResult = await requireAdmin(request);
+    if (authResult && "json" in authResult) return authResult;
     // Verificar si ya existen categorías
     const existingCategories = await getAllCategories();
 
