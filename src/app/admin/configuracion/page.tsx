@@ -8,6 +8,12 @@ import { Save } from "lucide-react";
 import { getSiteConfig, updateSiteConfig } from "@/lib/firebase/site-config";
 import type { SiteConfig } from "@/types";
 
+const shippingZoneSchema = z.object({
+  label: z.string().min(1),
+  freeShippingThreshold: z.number().min(0),
+  standardShippingCost: z.number().min(0),
+});
+
 const configSchema = z.object({
   socialMedia: z.object({
     instagram: z.string().optional(),
@@ -28,6 +34,12 @@ const configSchema = z.object({
     freeShippingThreshold: z.number().min(0),
     standardShippingCost: z.number().min(0),
     expressShippingCost: z.number().min(0),
+    zones: z.object({
+      spainPeninsula: shippingZoneSchema,
+      canarias: shippingZoneSchema,
+      europe: shippingZoneSchema,
+      world: shippingZoneSchema,
+    }),
   }),
 });
 
@@ -77,6 +89,36 @@ export default function AdminConfiguracionPage() {
           freeShippingThreshold: (config.shipping.freeShippingThreshold ?? 0) / 100,
           standardShippingCost: (config.shipping.standardShippingCost ?? 0) / 100,
           expressShippingCost: (config.shipping.expressShippingCost ?? 0) / 100,
+          zones: {
+            spainPeninsula: {
+              label: config.shipping.zones?.spainPeninsula.label ?? "España peninsular",
+              freeShippingThreshold:
+                (config.shipping.zones?.spainPeninsula.freeShippingThreshold ?? 0) / 100,
+              standardShippingCost:
+                (config.shipping.zones?.spainPeninsula.standardShippingCost ?? 0) / 100,
+            },
+            canarias: {
+              label: config.shipping.zones?.canarias.label ?? "Canarias",
+              freeShippingThreshold:
+                (config.shipping.zones?.canarias.freeShippingThreshold ?? 0) / 100,
+              standardShippingCost:
+                (config.shipping.zones?.canarias.standardShippingCost ?? 0) / 100,
+            },
+            europe: {
+              label: config.shipping.zones?.europe.label ?? "Europa",
+              freeShippingThreshold:
+                (config.shipping.zones?.europe.freeShippingThreshold ?? 0) / 100,
+              standardShippingCost:
+                (config.shipping.zones?.europe.standardShippingCost ?? 0) / 100,
+            },
+            world: {
+              label: config.shipping.zones?.world.label ?? "Resto del mundo",
+              freeShippingThreshold:
+                (config.shipping.zones?.world.freeShippingThreshold ?? 0) / 100,
+              standardShippingCost:
+                (config.shipping.zones?.world.standardShippingCost ?? 0) / 100,
+            },
+          },
         },
       });
     } catch (err) {
@@ -112,6 +154,44 @@ export default function AdminConfiguracionPage() {
           freeShippingThreshold: Math.round((data.shipping.freeShippingThreshold ?? 0) * 100),
           standardShippingCost: Math.round((data.shipping.standardShippingCost ?? 0) * 100),
           expressShippingCost: Math.round((data.shipping.expressShippingCost ?? 0) * 100),
+          zones: {
+            spainPeninsula: {
+              label: data.shipping.zones.spainPeninsula.label,
+              freeShippingThreshold: Math.round(
+                (data.shipping.zones.spainPeninsula.freeShippingThreshold ?? 0) * 100
+              ),
+              standardShippingCost: Math.round(
+                (data.shipping.zones.spainPeninsula.standardShippingCost ?? 0) * 100
+              ),
+            },
+            canarias: {
+              label: data.shipping.zones.canarias.label,
+              freeShippingThreshold: Math.round(
+                (data.shipping.zones.canarias.freeShippingThreshold ?? 0) * 100
+              ),
+              standardShippingCost: Math.round(
+                (data.shipping.zones.canarias.standardShippingCost ?? 0) * 100
+              ),
+            },
+            europe: {
+              label: data.shipping.zones.europe.label,
+              freeShippingThreshold: Math.round(
+                (data.shipping.zones.europe.freeShippingThreshold ?? 0) * 100
+              ),
+              standardShippingCost: Math.round(
+                (data.shipping.zones.europe.standardShippingCost ?? 0) * 100
+              ),
+            },
+            world: {
+              label: data.shipping.zones.world.label,
+              freeShippingThreshold: Math.round(
+                (data.shipping.zones.world.freeShippingThreshold ?? 0) * 100
+              ),
+              standardShippingCost: Math.round(
+                (data.shipping.zones.world.standardShippingCost ?? 0) * 100
+              ),
+            },
+          },
         },
       });
       setSuccess(true);
@@ -270,58 +350,91 @@ export default function AdminConfiguracionPage() {
           <h2 className="text-xl font-bold text-gray-800 mb-4">
             Configuración de Envíos
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-6">
+            <p className="text-sm text-gray-500">
+              Para cada zona indica el <span className="font-semibold">costo de envío fijo</span> en euros.
+              Si pones <span className="font-semibold">0</span>, el envío será gratuito para esa zona.
+            </p>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Umbral para envío gratis (€)
-              </label>
-              <input
-                {...register("shipping.freeShippingThreshold", {
-                  valueAsNumber: true,
-                })}
-                type="number"
-                step="0.01"
-                min="0"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                0 = no hay envío gratis. Si pones un monto (ej. 50), los pedidos que superen ese importe tendrán envío gratis.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Costo envío estándar (€)
-                </label>
-                <input
-                  {...register("shipping.standardShippingCost", {
-                    valueAsNumber: true,
-                  })}
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Coste que se cobra si el pedido no alcanza el umbral de envío gratis. 0 = envío gratis siempre.
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Costo envío express (€)
-                </label>
-                <input
-                  {...register("shipping.expressShippingCost", {
-                    valueAsNumber: true,
-                  })}
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Por si más adelante ofreces envío express (opcional).
-                </p>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                Zonas de envío
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* España (envío nacional peninsular) */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                    España
+                  </h4>
+                  <div className="space-y-2">
+                    <input
+                      {...register("shipping.zones.spainPeninsula.standardShippingCost", {
+                        valueAsNumber: true,
+                      })}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="Costo envío (€) — 0 = envío gratuito"
+                    />
+                  </div>
+                </div>
+
+                {/* Canarias */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                    Canarias
+                  </h4>
+                  <div className="space-y-2">
+                    <input
+                      {...register("shipping.zones.canarias.standardShippingCost", {
+                        valueAsNumber: true,
+                      })}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="Costo envío (€) — 0 = envío gratuito"
+                    />
+                  </div>
+                </div>
+
+                {/* Europa */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                    Europa
+                  </h4>
+                  <div className="space-y-2">
+                    <input
+                      {...register("shipping.zones.europe.standardShippingCost", {
+                        valueAsNumber: true,
+                      })}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="Costo envío (€) — 0 = envío gratuito"
+                    />
+                  </div>
+                </div>
+
+                {/* Resto del mundo */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-800 mb-2">
+                    Internacional (resto del mundo)
+                  </h4>
+                  <div className="space-y-2">
+                    <input
+                      {...register("shipping.zones.world.standardShippingCost", {
+                        valueAsNumber: true,
+                      })}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="Costo envío (€) — 0 = envío gratuito"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

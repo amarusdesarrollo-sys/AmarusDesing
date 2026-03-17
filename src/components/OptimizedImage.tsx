@@ -55,14 +55,6 @@ export default function OptimizedImage({
       return getProductImageUrl(publicId, cloudinarySize);
     }
 
-    // Si la URL es de Cloudinary, intentar extraer publicId
-    if (isCloudinaryUrl(src)) {
-      const extractedPublicId = extractPublicIdFromUrl(src);
-      if (extractedPublicId) {
-        return getProductImageUrl(extractedPublicId, cloudinarySize);
-      }
-    }
-
     // Si hay versión AVIF específica, usarla
     if (avifSrc) return avifSrc;
 
@@ -75,7 +67,7 @@ export default function OptimizedImage({
     // Si la imagen original es WebP, usarla
     if (src.endsWith(".webp")) return src;
 
-    // Por defecto, usar la imagen original
+    // Por defecto, usar la imagen original (incluye URLs directas de Cloudinary)
     return src;
   };
 

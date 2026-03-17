@@ -15,7 +15,8 @@ export default function TiendaOnlinePage() {
     const loadCategories = async () => {
       try {
         const activeCategories = await getActiveCategories();
-        setCategories(activeCategories);
+        // En Tienda Online solo mostramos categorías principales (sin parentId)
+        setCategories(activeCategories.filter((c) => !c.parentId));
       } catch (error) {
         console.error("Error loading categories:", error);
       } finally {

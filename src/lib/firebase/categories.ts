@@ -293,3 +293,12 @@ export const getSubcategories = async (
     throw error;
   }
 };
+
+// Obtener subcategorías a partir del slug de la categoría padre (helper para admin/productos)
+export const getSubcategoriesByParentSlug = async (
+  parentSlug: string
+): Promise<Category[]> => {
+  const parent = await getCategoryBySlug(parentSlug);
+  if (!parent) return [];
+  return await getSubcategories(parent.id);
+};

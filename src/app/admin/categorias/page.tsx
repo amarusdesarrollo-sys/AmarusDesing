@@ -6,7 +6,6 @@ import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import {
   getAllCategories,
   deleteCategory,
-  hardDeleteCategory,
   updateCategory,
 } from "@/lib/firebase/categories";
 import type { Category } from "@/types";
@@ -78,7 +77,18 @@ export default function AdminCategoriasPage() {
             `⚠️ ¿ELIMINAR PERMANENTEMENTE "${categoryName}"?\n\nEsta acción NO se puede deshacer. La categoría será borrada de la base de datos.`
           )
         ) {
-          await hardDeleteCategory(categoryId);
+          const res = await fetch("/api/admin/delete-category", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(await getAuthHeaders()),
+            },
+            body: JSON.stringify({ categoryId }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data?.success) {
+            throw new Error(data?.message || "Error al eliminar definitivamente");
+          }
           await loadCategories();
         }
       }

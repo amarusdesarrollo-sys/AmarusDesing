@@ -14,6 +14,7 @@ import {
   LogOut,
   Cog,
   FileText,
+  TicketPercent,
 } from "lucide-react";
 
 const menuItems = [
@@ -36,6 +37,11 @@ const menuItems = [
     name: "Pedidos",
     href: "/admin/pedidos",
     icon: ShoppingCart,
+  },
+  {
+    name: "Cupones",
+    href: "/admin/cupones",
+    icon: TicketPercent,
   },
   {
     name: "Contenido",

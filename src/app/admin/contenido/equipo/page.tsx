@@ -14,7 +14,6 @@ import {
   getTeamMembers,
   createTeamMember,
   updateTeamMember,
-  deleteTeamMember,
 } from "@/lib/firebase/team";
 import {
   getEquipoCierreContent,
@@ -43,10 +42,17 @@ export default function AdminEquipoPage() {
   const load = async () => {
     try {
       setLoading(true);
-      const [membersData, cierreData] = await Promise.all([
+      let [membersData, cierreData] = await Promise.all([
         getTeamMembers(),
         getEquipoCierreContent(),
       ]);
+
+      // Si no hay miembros aún, sembramos el contenido por defecto de la web actual
+      if (membersData.length === 0) {
+        await seedDefaultTeamMembers();
+        membersData = await getTeamMembers();
+      }
+
       setMembers(membersData);
       setCierre(cierreData);
     } catch (err) {
@@ -142,7 +148,18 @@ export default function AdminEquipoPage() {
                 }}
                 onDelete={async () => {
                   if (confirm(`¿Eliminar a ${m.name}?`)) {
-                    await deleteTeamMember(m.id);
+                    const res = await fetch("/api/admin/delete-team-member", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        ...(await getAuthHeaders()),
+                      },
+                      body: JSON.stringify({ teamMemberId: m.id }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || !data?.success) {
+                      throw new Error(data?.message || "Error al eliminar definitivamente");
+                    }
                     load();
                   }
                 }}
@@ -255,6 +272,87 @@ export default function AdminEquipoPage() {
   );
 }
 
+// Contenido por defecto basado en la página actual de Wix / EquipoStatic
+async function seedDefaultTeamMembers() {
+  const defaults: Array<{
+    name: string;
+    imageUrl?: string;
+    bio: string;
+    order: number;
+  }> = [
+    {
+      name: "Meli",
+      imageUrl: "/images/equipo/melina.JPG",
+      order: 0,
+      bio:
+        "Conocimos a Meli desde la distancia, se ha convertido en un persona muy importante de este proyecto. Además de realizar parte de nuestra colección en macramé, nos ayuda en la organización.\n\n" +
+        "Me encantan las artesanías desde chica, por ello aprendí de forma autodidacta en un viaje a Brasil en 2018. Combino actualmente mi pasión por los hilos con los estudios.",
+    },
+    {
+      name: "Tincho",
+      imageUrl: "/images/equipo/tincho.jpg",
+      order: 1,
+      bio:
+        "Vivo haciendo artesanía desde mi adolescencia, no me imagino otra forma de vida. Trabajo diferentes técnicas con metal y macramé, teniendo presente la tradición artesanal Latinoamericana.",
+    },
+    {
+      name: "Franco",
+      imageUrl: "/images/equipo/PHOTO-2023-02-06-22-46-41.jpg",
+      order: 2,
+      bio:
+        "Afortunados de contar con Franco, como apoyo para la creación de nuestras colecciones con técnica en soldadura. Trabaja con precisión y acabados de calidad.\n\n" +
+        "Hago joyería en el taller que tengo en mi casa junto a mi familia.\n\n" +
+        "Mi gran sueño es seguir especializando me cada vez más en este rubro, asistiendo a reconocidas escuelas de orfebrería en Argentina.",
+    },
+    {
+      name: "Chiara",
+      imageUrl: "/images/equipo/PHOTO-2023-02-06-21-42-47_edited.jpg",
+      order: 3,
+      bio:
+        "Nuestra querida fotógrafa, es todo un honor contar con ella como profesional y amiga.\n\n" +
+        "Gracias a ella, l@s modelos muestran su belleza natural llevando nuestras joyas.\n\n" +
+        "@chiara_fotografia_grancanaria\n\n" +
+        "Al principio he aprendido por mi cuenta, pero con el tiempo empecé a asistir a diferentes cursos.\n\n" +
+        "Me encanta poder expresar emociones a través de mis fotografías.",
+    },
+    {
+      name: "Mati",
+      imageUrl:
+        "/images/equipo/Captura de pantalla 2021-06-17 a las 19.21_edited.jpg",
+      order: 4,
+      bio:
+        "Tenemos mucha suerte al contar con Mati, gran amigo y profesional del macramé.\n\n" +
+        "Amante de las piedras y artesano de corazón, hace ya muchos años, destaca por un estilo único y detallista.\n\n" +
+        "Mi rubro es el tejido. A la edad de 19 años me enseñaron los puntos básicos, es mi sustento desde entonces. Soy artesano porque es el ambiente donde me siento más a gusto.",
+    },
+    {
+      name: "Uschi",
+      imageUrl: "/images/equipo/4a0d465e-a481-4a03-bf34-1ee1f69ba33f.JPG",
+      order: 5,
+      bio:
+        "Les presento con mucho orgullo a mi mama, recuerdo con cariño sus abrigos de mi infancia.\n\n" +
+        "Siempre le ha gustado la moda, por que no crear un poco de moda hecha a mano.\n\n" +
+        "Siempre me gustó la moda y el diseño, era mi gran sueño. Finalmente estudié otra cosa totalmente diferente, pero sigo disfrutando de mi parte más creativa a diario. Ya sea haciendo ropa, restaurando muebles...",
+    },
+    {
+      name: "Amigo de la familia",
+      order: 6,
+      bio:
+        "Amigo de la familia, con más de dos décadas de experiencia en la artesanía y venta callejera. Viajero, padre y hermano de la vida. Muy agradecidos por contar con este compañero, en nuestro proyecto familiar.",
+    },
+  ];
+
+  for (const def of defaults) {
+    await createTeamMember({
+      name: def.name,
+      bio: def.bio,
+      imageUrl: def.imageUrl,
+      order: def.order,
+      active: true,
+    });
+  }
+}
+
 function MemberRow({
   member,
   onEdit,
@@ -279,9 +377,13 @@ function MemberRow({
       />
     );
   }
-  const imgSrc = member.imagePublicId
-    ? getCloudinaryUrl(member.imagePublicId, { width: 80, height: 80 })
-    : member.imageUrl;
+  // Preferimos la URL directa (secure_url) devuelta por Cloudinary.
+  // Solo si no existe, generamos una URL transformada a partir del publicId.
+  const imgSrc =
+    member.imageUrl ||
+    (member.imagePublicId
+      ? getCloudinaryUrl(member.imagePublicId, { width: 80, height: 80 })
+      : "");
   return (
     <div className="flex items-center gap-4 p-4 border rounded-lg">
       <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-200 shrink-0">
@@ -341,6 +443,7 @@ function MemberForm({
   const [bio, setBio] = useState(initial?.bio ?? "");
   const [imagePublicId, setImagePublicId] = useState(initial?.imagePublicId ?? "");
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
+  const [originalImagePublicId] = useState(initial?.imagePublicId ?? "");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -374,6 +477,17 @@ function MemberForm({
     if (!name.trim()) return;
     setSaving(true);
     try {
+      // Si se reemplazó o eliminó la imagen, borrar la anterior en Cloudinary
+      if (originalImagePublicId && originalImagePublicId !== imagePublicId) {
+        await fetch("/api/admin/delete-cloudinary-assets", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await getAuthHeaders()),
+          },
+          body: JSON.stringify({ publicIds: [originalImagePublicId] }),
+        }).catch(() => null);
+      }
       await onSave({
         name: name.trim(),
         bio: bio.trim(),
@@ -416,15 +530,36 @@ function MemberForm({
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Imagen
         </label>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageUpload}
-          disabled={uploading}
-          className="block w-full text-sm"
-        />
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "image/*";
+              input.onchange = handleImageUpload as any;
+              input.click();
+            }}
+            disabled={uploading}
+            className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-60"
+          >
+            {uploading ? "Subiendo imagen..." : imageUrl ? "Cambiar imagen" : "Seleccionar imagen"}
+          </button>
+          {imageUrl && (
+            <button
+              type="button"
+              onClick={() => {
+                setImagePublicId("");
+                setImageUrl("");
+              }}
+              className="px-3 py-2 text-sm rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
+            >
+              Quitar imagen
+            </button>
+          )}
+        </div>
         {imageUrl && (
-          <div className="mt-2 w-24 h-24 rounded overflow-hidden">
+          <div className="mt-3 w-24 h-24 rounded overflow-hidden border border-gray-200">
             <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
           </div>
         )}

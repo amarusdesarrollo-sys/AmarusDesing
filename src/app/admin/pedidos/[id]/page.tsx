@@ -265,6 +265,18 @@ export default function AdminPedidoDetallePage() {
                 {order.shipping === 0 ? "Gratis" : formatPrice(order.shipping)}
               </span>
             </div>
+            {order.promoCode && (
+              <div className="flex justify-between text-gray-700">
+                <span>Cupón</span>
+                <span className="font-semibold">{order.promoCode}</span>
+              </div>
+            )}
+            {order.discount != null && order.discount > 0 && (
+              <div className="flex justify-between text-gray-700">
+                <span>Descuento</span>
+                <span className="text-green-700">-{formatPrice(order.discount)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-lg font-bold text-gray-800">
               <span>Total</span>
               <span className="text-[#6B5BB6]">{formatPrice(order.total)}</span>

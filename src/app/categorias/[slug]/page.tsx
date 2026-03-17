@@ -26,6 +26,7 @@ export default function CategoryPage() {
   const [sort, setSort] = useState<"relevance" | "price-asc" | "price-desc">("relevance");
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
+  const [subcategory, setSubcategory] = useState<string>("");
 
   useEffect(() => {
     const loadCategoryAndProducts = async () => {
@@ -94,10 +95,16 @@ export default function CategoryPage() {
     const max = maxPrice ? Number(maxPrice) * 100 : null;
     if (min != null && !isNaN(min)) list = list.filter((p) => p.price >= min);
     if (max != null && !isNaN(max)) list = list.filter((p) => p.price <= max);
+    if (subcategory) list = list.filter((p) => (p.subcategory || "") === subcategory);
     if (sort === "price-asc") list.sort((a, b) => a.price - b.price);
     else if (sort === "price-desc") list.sort((a, b) => b.price - a.price);
     return list;
-  }, [products, sort, minPrice, maxPrice]);
+  }, [products, sort, minPrice, maxPrice, subcategory]);
+
+  const subcategoryOptions = useMemo(() => {
+    const uniq = Array.from(new Set(products.map((p) => p.subcategory).filter(Boolean))) as string[];
+    return uniq.sort((a, b) => a.localeCompare(b));
+  }, [products]);
 
   const formatCategoryName = (slug: string): string => {
     return slug
@@ -201,6 +208,22 @@ export default function CategoryPage() {
               <option value="relevance">Relevancia</option>
               <option value="price-asc">Precio: menor a mayor</option>
               <option value="price-desc">Precio: mayor a menor</option>
+            </select>
+            <select
+              value={subcategory}
+              onChange={(e) => setSubcategory(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+              disabled={subcategoryOptions.length === 0}
+              title={subcategoryOptions.length === 0 ? "No hay subcategorías en esta categoría" : "Filtrar por subcategoría"}
+            >
+              <option value="">
+                {subcategoryOptions.length === 0 ? "Sin subcategorías" : "Todas las subcategorías"}
+              </option>
+              {subcategoryOptions.map((s) => (
+                <option key={s} value={s}>
+                  {formatCategoryName(s)}
+                </option>
+              ))}
             </select>
             <div className="flex items-center gap-2">
               <input

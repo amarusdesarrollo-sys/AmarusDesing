@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/firebase-admin";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const ALLOWED_FOLDERS = ["categories", "products", "team"];
+const ALLOWED_FOLDERS = ["categories", "products", "team", "blog"];
 
 export async function POST(request: NextRequest) {
   try {

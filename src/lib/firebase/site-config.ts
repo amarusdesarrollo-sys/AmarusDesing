@@ -5,7 +5,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import type { SiteConfig } from "@/types";
+import type { ShippingZoneConfig, SiteConfig } from "@/types";
 
 const DOC_ID = "site-config";
 
@@ -17,6 +17,12 @@ const convertTimestamp = (timestamp: unknown): Date => {
   if (typeof timestamp === "string") return new Date(timestamp);
   return new Date();
 };
+
+const defaultZone = (label: string): ShippingZoneConfig => ({
+  label,
+  freeShippingThreshold: 0,
+  standardShippingCost: 0,
+});
 
 function firestoreToSiteConfig(data: any): SiteConfig {
   return {
@@ -43,6 +49,24 @@ function firestoreToSiteConfig(data: any): SiteConfig {
       freeShippingThreshold: data.shipping?.freeShippingThreshold ?? 0,
       standardShippingCost: data.shipping?.standardShippingCost ?? 0,
       expressShippingCost: data.shipping?.expressShippingCost ?? 0,
+      zones: {
+        spainPeninsula: {
+          ...defaultZone("España peninsular"),
+          ...(data.shipping?.zones?.spainPeninsula || {}),
+        },
+        canarias: {
+          ...defaultZone("Canarias"),
+          ...(data.shipping?.zones?.canarias || {}),
+        },
+        europe: {
+          ...defaultZone("Europa"),
+          ...(data.shipping?.zones?.europe || {}),
+        },
+        world: {
+          ...defaultZone("Resto del mundo"),
+          ...(data.shipping?.zones?.world || {}),
+        },
+      },
     },
   };
 }
@@ -74,6 +98,36 @@ function siteConfigToFirestore(config: SiteConfig): Record<string, unknown> {
       freeShippingThreshold: config.shipping?.freeShippingThreshold ?? 0,
       standardShippingCost: config.shipping?.standardShippingCost ?? 0,
       expressShippingCost: config.shipping?.expressShippingCost ?? 0,
+      zones: {
+        spainPeninsula: {
+          label: config.shipping?.zones?.spainPeninsula?.label ?? "España peninsular",
+          freeShippingThreshold:
+            config.shipping?.zones?.spainPeninsula?.freeShippingThreshold ?? 0,
+          standardShippingCost:
+            config.shipping?.zones?.spainPeninsula?.standardShippingCost ?? 0,
+        },
+        canarias: {
+          label: config.shipping?.zones?.canarias?.label ?? "Canarias",
+          freeShippingThreshold:
+            config.shipping?.zones?.canarias?.freeShippingThreshold ?? 0,
+          standardShippingCost:
+            config.shipping?.zones?.canarias?.standardShippingCost ?? 0,
+        },
+        europe: {
+          label: config.shipping?.zones?.europe?.label ?? "Europa",
+          freeShippingThreshold:
+            config.shipping?.zones?.europe?.freeShippingThreshold ?? 0,
+          standardShippingCost:
+            config.shipping?.zones?.europe?.standardShippingCost ?? 0,
+        },
+        world: {
+          label: config.shipping?.zones?.world?.label ?? "Resto del mundo",
+          freeShippingThreshold:
+            config.shipping?.zones?.world?.freeShippingThreshold ?? 0,
+          standardShippingCost:
+            config.shipping?.zones?.world?.standardShippingCost ?? 0,
+        },
+      },
     },
     updatedAt: Timestamp.now(),
   };

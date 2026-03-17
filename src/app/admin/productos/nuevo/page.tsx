@@ -9,7 +9,7 @@ import { ArrowLeft, Save, Plus, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { createProduct } from "@/lib/firebase/products";
-import { getActiveCategories } from "@/lib/firebase/categories";
+import { getActiveCategories, getSubcategoriesByParentSlug } from "@/lib/firebase/categories";
 import type { ProductImage as ProductImageType } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
 
@@ -17,7 +17,7 @@ const productSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   description: z.string().min(1, "La descripción es requerida"),
   price: z.number().min(0, "El precio debe ser mayor o igual a 0"),
-  discountPercent: z.number().min(0).max(99).optional().nullable(),
+  discountPercent: z.number().min(0).max(99).optional(),
   category: z.string().min(1, "Selecciona una categoría"),
   subcategory: z.string().optional(),
   inStock: z.boolean(),
@@ -47,6 +47,9 @@ export default function NuevoProductoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<
+    { id: string; name: string; slug: string }[]
+  >([]);
+  const [subcategories, setSubcategories] = useState<
     { id: string; name: string; slug: string }[]
   >([]);
   const [images, setImages] = useState<UploadedImage[]>([]);
@@ -79,9 +82,24 @@ export default function NuevoProductoPage() {
 
   useEffect(() => {
     getActiveCategories().then((cats) =>
-      setCategories(cats.map((c) => ({ id: c.id, name: c.name, slug: c.slug })))
+      setCategories(
+        cats
+          .filter((c) => !c.parentId)
+          .map((c) => ({ id: c.id, name: c.name, slug: c.slug }))
+      )
     );
   }, []);
+
+  const selectedCategory = watch("category");
+  useEffect(() => {
+    if (!selectedCategory) {
+      setSubcategories([]);
+      return;
+    }
+    getSubcategoriesByParentSlug(selectedCategory)
+      .then((subs) => setSubcategories(subs.map((s) => ({ id: s.id, name: s.name, slug: s.slug }))))
+      .catch(() => setSubcategories([]));
+  }, [selectedCategory]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -308,7 +326,9 @@ export default function NuevoProductoPage() {
                 min="0"
                 max="99"
                 step="1"
-                {...register("discountPercent", { valueAsNumber: true })}
+                {...register("discountPercent", {
+                  setValueAs: (v) => (v === "" ? undefined : v),
+                })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
                 placeholder="Ej: 10"
               />
@@ -350,6 +370,33 @@ export default function NuevoProductoPage() {
                 {errors.category.message}
               </p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Subcategoría (opcional)
+            </label>
+            <select
+              {...register("subcategory")}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+              disabled={!selectedCategory || subcategories.length === 0}
+            >
+              <option value="">
+                {selectedCategory
+                  ? subcategories.length > 0
+                    ? "— Sin subcategoría —"
+                    : "No hay subcategorías para esta categoría"
+                  : "Selecciona una categoría primero"}
+              </option>
+              {subcategories.map((s) => (
+                <option key={s.id} value={s.slug}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Si no eliges ninguna, el producto se guardará solo en la categoría.
+            </p>
           </div>
 
           <div>
@@ -462,16 +509,7 @@ export default function NuevoProductoPage() {
               Rellena solo los que apliquen a este producto.
             </p>
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subcategoría
-                </label>
-                <input
-                  {...register("subcategory")}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
-                  placeholder="Ej: anillos, colgantes"
-                />
-              </div>
+              {/* Subcategoría se gestiona arriba como dropdown */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Materiales (separados por coma)
@@ -495,13 +533,13 @@ export default function NuevoProductoPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Peso (gramos)
+                    Peso (gramos) – opcional
                   </label>
                   <input
                     type="number"
                     min="0"
                     step="1"
-                    {...register("weight", { valueAsNumber: true })}
+                    {...register("weight", { valueAsNumber: true, setValueAs: (v) => (v === "" || Number.isNaN(v) ? undefined : v) })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
                     placeholder="Ej: 15"
                   />

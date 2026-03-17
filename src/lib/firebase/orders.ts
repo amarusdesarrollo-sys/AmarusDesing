@@ -51,6 +51,8 @@ function firestoreToOrder(data: any, id: string): Order {
     customerEmail: data.customerEmail,
     customerPhone: data.customerPhone,
     items,
+    discount: data.discount ?? undefined,
+    promoCode: data.promoCode ?? undefined,
     total: data.total ?? 0,
     shipping: data.shipping ?? 0,
     tax: data.tax ?? 0,
@@ -130,6 +132,9 @@ function orderToFirestore(
   if (order.shippingOptionName != null)
     out.shippingOptionName = order.shippingOptionName;
   if (order.trackingNumber != null) out.trackingNumber = order.trackingNumber;
+  if (order.discount != null) out.discount = order.discount;
+  if (order.promoCode != null && order.promoCode.trim() !== "")
+    out.promoCode = order.promoCode.trim();
   return removeUndefined(out);
 }
 
@@ -141,9 +146,14 @@ export interface CreateOrderInput {
   customerEmail: string;
   customerPhone?: string;
   items: OrderItem[];
+  /** Total en céntimos, ya con descuentos aplicados. */
   total: number;
   shipping: number;
   tax?: number;
+  /** Descuento en céntimos aplicado al subtotal (si hay cupón). */
+  discount?: number;
+  /** Código promocional aplicado (si hay). */
+  promoCode?: string;
   paymentMethod?: string;
   /** Nombre del envío para Klarna (ej: "Envío estándar"). Precio en cents en `shipping`. */
   shippingOptionName?: string;
@@ -170,6 +180,8 @@ export async function createOrder(input: CreateOrderInput): Promise<string> {
     total: input.total,
     shipping: input.shipping,
     tax: input.tax ?? 0,
+    discount: input.discount,
+    promoCode: input.promoCode,
     shippingOptionName: input.shippingOptionName,
     status: "pending",
     paymentMethod: input.paymentMethod ?? "pending",

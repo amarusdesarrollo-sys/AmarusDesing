@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Plus, Edit, Trash2, Package, Search, Filter } from "lucide-react";
-import { getAllProducts, deleteProduct } from "@/lib/firebase/products";
+import { getAllProducts, deactivateProduct, activateProduct } from "@/lib/firebase/products";
 import { getAllCategories } from "@/lib/firebase/categories";
 import { getCloudinaryBaseUrl } from "@/lib/cloudinary";
 import type { Product, Category } from "@/types";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 export default function AdminProductosPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -18,6 +19,7 @@ export default function AdminProductosPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [stockFilter, setStockFilter] = useState<string>("");
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   useEffect(() => {
     loadProducts();
@@ -80,19 +82,39 @@ export default function AdminProductosPage() {
     setProducts(filtered);
   };
 
-  const handleDelete = async (product: Product) => {
-    if (
-      !confirm(
-        `¿Desactivar "${product.name}"? El producto ya no se mostrará en la tienda.`
-      )
-    )
-      return;
+  const handleToggleStock = async (product: Product) => {
+    const action = product.inStock ? "desactivar" : "activar";
+    if (!confirm(`¿${action === "desactivar" ? "Desactivar" : "Activar"} "${product.name}"?`)) return;
     try {
-      await deleteProduct(product.id);
+      if (product.inStock) {
+        await deactivateProduct(product.id);
+      } else {
+        await activateProduct(product.id);
+      }
       await loadProducts();
     } catch (err) {
-      console.error("Error deleting product:", err);
-      alert("Error al desactivar el producto");
+      console.error("Error al cambiar estado:", err);
+      alert(`Error al ${action} el producto`);
+    }
+  };
+
+  const handleDeletePermanently = async () => {
+    if (!productToDelete) return;
+    try {
+      const res = await fetch("/api/admin/delete-product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        body: JSON.stringify({ productId: productToDelete.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || "Error al eliminar definitivamente");
+      }
+      setProductToDelete(null);
+      await loadProducts();
+    } catch (err) {
+      console.error("Error eliminando producto:", err);
+      alert("Error al eliminar el producto");
     }
   };
 
@@ -283,7 +305,7 @@ export default function AdminProductosPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end items-center gap-2">
                         <Link href={`/admin/productos/${product.id}/editar`}>
                           <button
                             className="p-2 text-[#6B5BB6] hover:bg-[#6B5BB6]/10 rounded-lg transition-colors"
@@ -293,9 +315,20 @@ export default function AdminProductosPage() {
                           </button>
                         </Link>
                         <button
-                          onClick={() => handleDelete(product)}
+                          onClick={() => handleToggleStock(product)}
+                          className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors ${
+                            product.inStock
+                              ? "text-amber-600 hover:bg-amber-50"
+                              : "text-green-600 hover:bg-green-50"
+                          }`}
+                          title={product.inStock ? "Desactivar (no se verá en la tienda)" : "Activar"}
+                        >
+                          {product.inStock ? "Desactivar" : "Activar"}
+                        </button>
+                        <button
+                          onClick={() => setProductToDelete(product)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Desactivar"
+                          title="Eliminar permanentemente"
                         >
                           <Trash2 className="h-5 w-5" />
                         </button>
@@ -305,6 +338,38 @@ export default function AdminProductosPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmación borrado definitivo */}
+      {productToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              ¿Eliminar permanentemente?
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Vas a eliminar <strong>"{productToDelete.name}"</strong> de forma definitiva.
+              Esta acción no se puede deshacer. El producto se borrará de la base de datos.
+            </p>
+            <p className="text-sm text-amber-600 mb-6">
+              Si solo quieres ocultarlo en la tienda, usa "Desactivar" en lugar de eliminar.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setProductToDelete(null)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeletePermanently}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              >
+                Sí, eliminar permanentemente
+              </button>
+            </div>
           </div>
         </div>
       )}

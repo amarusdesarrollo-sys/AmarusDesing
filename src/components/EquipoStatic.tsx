@@ -5,22 +5,22 @@ import AnimatedSection from "@/components/AnimatedSection";
 export default function EquipoStatic() {
   return (
     <div className="min-h-screen bg-white">
-      <section className="bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2] py-16 md:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-4 md:py-6">
           <AnimatedSection delay={0.2}>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-4">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">
               NUESTRO EQUIPO
             </h1>
           </AnimatedSection>
         </div>
       </section>
 
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto space-y-24">
+      <section className="py-16 md:py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 pt-12 md:pt-16 pb-12 md:pb-16">
           <AnimatedSection delay={0.2}>
-            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
-              <div className="w-full md:w-1/2">
-                <div className="relative aspect-square rounded-lg overflow-hidden shadow-lg">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="flex justify-center">
+                <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-full overflow-hidden shadow-lg">
                   <Image
                     src="/images/equipo/melina.JPG"
                     alt="Meli"
@@ -30,7 +30,7 @@ export default function EquipoStatic() {
                   />
                 </div>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full">
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                   Meli
                 </h2>
@@ -52,9 +52,9 @@ export default function EquipoStatic() {
           </AnimatedSection>
 
           <AnimatedSection delay={0.3}>
-            <div className="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-12">
-              <div className="w-full md:w-1/2">
-                <div className="relative aspect-square rounded-lg overflow-hidden shadow-lg">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="flex justify-center">
+                <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-full overflow-hidden shadow-lg">
                   <Image
                     src="/images/equipo/tincho.jpg"
                     alt="Tincho"
@@ -64,7 +64,7 @@ export default function EquipoStatic() {
                   />
                 </div>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full">
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                   Tincho
                 </h2>
@@ -81,9 +81,9 @@ export default function EquipoStatic() {
           </AnimatedSection>
 
           <AnimatedSection delay={0.4}>
-            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
-              <div className="w-full md:w-1/2">
-                <div className="relative aspect-square rounded-lg overflow-hidden shadow-lg">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="flex justify-center">
+                <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-full overflow-hidden shadow-lg">
                   <Image
                     src="/images/equipo/PHOTO-2023-02-06-22-46-41.jpg"
                     alt="Franco"
@@ -93,7 +93,7 @@ export default function EquipoStatic() {
                   />
                 </div>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full">
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                   Franco
                 </h2>
@@ -118,9 +118,9 @@ export default function EquipoStatic() {
           </AnimatedSection>
 
           <AnimatedSection delay={0.5}>
-            <div className="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-12">
-              <div className="w-full md:w-1/2">
-                <div className="relative aspect-square rounded-lg overflow-hidden shadow-lg">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="flex justify-center">
+                <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-full overflow-hidden shadow-lg">
                   <Image
                     src="/images/equipo/PHOTO-2023-02-06-21-42-47_edited.jpg"
                     alt="Chiara"
@@ -130,7 +130,7 @@ export default function EquipoStatic() {
                   />
                 </div>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full">
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                   Chiara
                 </h2>
@@ -157,9 +157,9 @@ export default function EquipoStatic() {
           </AnimatedSection>
 
           <AnimatedSection delay={0.6}>
-            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12">
-              <div className="w-full md:w-1/2">
-                <div className="relative aspect-square rounded-lg overflow-hidden shadow-lg">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="flex justify-center">
+                <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-full overflow-hidden shadow-lg">
                   <Image
                     src="/images/equipo/Captura de pantalla 2021-06-17 a las 19.21_edited.jpg"
                     alt="Mati"
@@ -169,7 +169,7 @@ export default function EquipoStatic() {
                   />
                 </div>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full">
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                   Mati
                 </h2>
@@ -193,9 +193,9 @@ export default function EquipoStatic() {
           </AnimatedSection>
 
           <AnimatedSection delay={0.7}>
-            <div className="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-12">
-              <div className="w-full md:w-1/2">
-                <div className="relative aspect-square rounded-lg overflow-hidden shadow-lg">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="flex justify-center">
+                <div className="relative w-56 h-56 md:w-64 md:h-64 rounded-full overflow-hidden shadow-lg">
                   <Image
                     src="/images/equipo/4a0d465e-a481-4a03-bf34-1ee1f69ba33f.JPG"
                     alt="Uschi"
@@ -205,7 +205,7 @@ export default function EquipoStatic() {
                   />
                 </div>
               </div>
-              <div className="w-full md:w-1/2">
+              <div className="w-full">
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
                   Uschi
                 </h2>
@@ -256,8 +256,8 @@ export default function EquipoStatic() {
         </div>
       </section>
 
-      <section className="bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2] py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
+      <section className="bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2] px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto text-center py-10 md:py-16">
           <AnimatedSection delay={0.3}>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8">
               Amarus Design

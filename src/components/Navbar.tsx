@@ -214,6 +214,13 @@ const Navbar = () => {
                 Políticas
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
               </Link>
+              <Link
+                href="/blog"
+                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
+              >
+                Blog
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
+              </Link>
             </div>
           </div>
 
@@ -334,6 +341,13 @@ const Navbar = () => {
                 className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
               >
                 Políticas
+              </Link>
+              <Link
+                href="/blog"
+                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Blog
               </Link>
               <Link
                 href="/contacto"

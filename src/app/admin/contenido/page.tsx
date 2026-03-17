@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Users, BookOpen, FileText, Home, Mail } from "lucide-react";
+import { Users, BookOpen, FileText, Home, Mail, Newspaper } from "lucide-react";
 
 const sections = [
   { name: "Equipo", href: "/admin/contenido/equipo", icon: Users },
   { name: "Historia", href: "/admin/contenido/historia", icon: BookOpen },
   { name: "Políticas", href: "/admin/contenido/politicas", icon: FileText },
+  { name: "Blog", href: "/admin/contenido/blog", icon: Newspaper },
   { name: "Home", href: "/admin/contenido/home", icon: Home },
   { name: "Contacto", href: "/admin/contenido/contacto", icon: Mail },
 ];
@@ -19,7 +20,7 @@ export default function AdminContenidoPage() {
           Contenido del Sitio
         </h1>
         <p className="text-gray-600">
-          Edita el contenido de equipo, historia, políticas, home y contacto.
+          Edita el contenido de equipo, historia, políticas, blog, home y contacto.
           Los datos de contacto (email, teléfono, dirección) se gestionan en{" "}
           <Link
             href="/admin/configuracion"

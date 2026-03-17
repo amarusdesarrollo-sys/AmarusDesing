@@ -18,6 +18,7 @@ export default function ShippingConfigLoader() {
           freeShippingThreshold: config.shipping.freeShippingThreshold ?? 0,
           standardShippingCost: config.shipping.standardShippingCost ?? 0,
           expressShippingCost: config.shipping.expressShippingCost ?? 0,
+          zones: config.shipping.zones,
         });
       })
       .catch(() => {

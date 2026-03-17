@@ -1,11 +1,17 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { CartItem, Product } from "@/types";
+import type { CartItem, Product, ShippingZoneConfig } from "@/types";
 
 export interface ShippingConfig {
   freeShippingThreshold: number;
   standardShippingCost: number;
   expressShippingCost: number;
+  zones?: {
+    spainPeninsula: ShippingZoneConfig;
+    canarias: ShippingZoneConfig;
+    europe: ShippingZoneConfig;
+    world: ShippingZoneConfig;
+  };
 }
 
 interface CartStore {
@@ -18,6 +24,11 @@ interface CartStore {
   clearCart: () => void;
   getTotalItems: () => number;
   getSubtotal: () => number;
+  /** Calcula el envío sin zona (fallback antiguo) */
+  getShippingLegacy: () => number;
+  /** Calcula el envío según zona y subtotal */
+  getShippingForZone: (zoneKey: keyof NonNullable<ShippingConfig["zones"]>) => number;
+  /** Envío actual (usado en checkout): por defecto legacy hasta que pasemos zona explícita */
   getShipping: () => number;
   getTotal: () => number;
 }
@@ -95,7 +106,7 @@ export const useCartStore = create<CartStore>()(
         );
       },
 
-      getShipping: () => {
+      getShippingLegacy: () => {
         const config = get().shippingConfig;
         if (!config) return 0;
         const subtotal = get().getSubtotal();
@@ -103,6 +114,20 @@ export const useCartStore = create<CartStore>()(
         const cost = config.standardShippingCost ?? 0;
         if (threshold > 0 && subtotal >= threshold) return 0;
         return cost;
+      },
+
+      getShippingForZone: (zoneKey) => {
+        const config = get().shippingConfig;
+        if (!config?.zones) return get().getShippingLegacy();
+        const zone = config.zones[zoneKey];
+        if (!zone) return get().getShippingLegacy();
+        // Para Amarus: usamos solo un coste fijo por zona. 0 = envío gratuito.
+        return zone.standardShippingCost;
+      },
+
+      // Por compatibilidad: mientras no indiquemos zona, usamos el cálculo antiguo
+      getShipping: () => {
+        return get().getShippingLegacy();
       },
 
       getTotal: () => {

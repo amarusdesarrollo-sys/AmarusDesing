@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,12 +15,16 @@ import { createOrder } from "@/lib/firebase/orders";
 import { validateOrderStock } from "@/lib/firebase/products";
 import { checkoutCustomerSchema, type CheckoutCustomerFormData } from "@/lib/validations/schemas";
 import type { OrderItem } from "@/types";
+import { getCouponByCode } from "@/lib/firebase/coupons";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { items, getSubtotal, getShipping, getTotal, getTotalItems } =
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const { items, getSubtotal, getShippingForZone, getTotalItems } =
     useCartStore();
 
   const {
@@ -28,6 +32,7 @@ export default function CheckoutPage() {
     handleSubmit,
     reset,
     formState: { errors },
+    watch,
   } = useForm<CheckoutCustomerFormData>({
     resolver: zodResolver(checkoutCustomerSchema),
     defaultValues: {
@@ -45,11 +50,104 @@ export default function CheckoutPage() {
   });
 
   const subtotal = getSubtotal();
-  const shipping = getShipping();
-  const total = getTotal();
+  // Determinar zona de envío según la dirección introducida
+  const watchPais = watch("pais");
+  const watchProvincia = watch("estado");
+  const watchCP = watch("codigoPostal");
+
+  const getZoneKey = (): "spainPeninsula" | "canarias" | "europe" | "world" => {
+    const country = (watchPais || "ES").toString().toUpperCase();
+    const province = (watchProvincia || "").toLowerCase();
+    const cp = (watchCP || "").trim();
+
+    // Canarias por provincia o por código postal 35xxx / 38xxx
+    if (
+      country === "ES" &&
+      (province.includes("palmas") ||
+        province.includes("tenerife") ||
+        cp.startsWith("35") ||
+        cp.startsWith("38"))
+    ) {
+      return "canarias";
+    }
+
+    // España peninsular (cualquier otra provincia de ES)
+    if (country === "ES") {
+      return "spainPeninsula";
+    }
+
+    // Europa (lista ampliada de países de la UE / EEE)
+    const europeCountries = [
+      "PT",
+      "FR",
+      "DE",
+      "IT",
+      "BE",
+      "NL",
+      "LU",
+      "AT",
+      "IE",
+      "DK",
+      "SE",
+      "NO",
+      "FI",
+      "PL",
+      "CZ",
+      "SK",
+      "HU",
+      "RO",
+      "BG",
+      "GR",
+      "SI",
+      "HR",
+      "EE",
+      "LV",
+      "LT",
+      "CY",
+      "MT",
+    ];
+    if (europeCountries.includes(country)) {
+      return "europe";
+    }
+
+    // Resto del mundo
+    return "world";
+  };
+
+  const zoneKey = getZoneKey();
+  const shipping = getShippingForZone(zoneKey);
+  const discount = appliedPromo?.discount ?? 0;
+  const total = Math.max(0, subtotal - discount) + shipping;
   const totalItems = getTotalItems();
 
   const formatPrice = (cents: number) => (cents / 100).toFixed(2);
+
+  const calculateDiscount = useMemo(() => {
+    return (coupon: any): number => {
+      if (!coupon?.active) return 0;
+      const eligibleItems = items.filter((i) => {
+        if (coupon.scope === "product") {
+          return Array.isArray(coupon.productIds) && coupon.productIds.includes(i.productId);
+        }
+        if (coupon.scope === "category") {
+          return Array.isArray(coupon.categorySlugs) && coupon.categorySlugs.includes(i.product.category);
+        }
+        return false;
+      });
+      const eligibleSubtotal = eligibleItems.reduce(
+        (sum, i) => sum + i.product.price * i.quantity,
+        0
+      );
+      if (eligibleSubtotal <= 0) return 0;
+      if (coupon.discountType === "percent") {
+        const pct = Math.min(99, Math.max(0, Number(coupon.value) || 0));
+        return Math.round((eligibleSubtotal * pct) / 100);
+      }
+      // fixed
+      const fixed = Math.max(0, Number(coupon.value) || 0);
+      return Math.min(eligibleSubtotal, fixed);
+    };
+  }, [items]);
 
   useEffect(() => {
     if (items.length === 0) {
@@ -124,6 +222,8 @@ export default function CheckoutPage() {
         customerPhone: data.telefono.trim(),
         shippingOptionName: "Envío estándar",
         items: orderItems,
+        discount,
+        promoCode: appliedPromo?.code,
         total,
         shipping,
         tax: 0,
@@ -344,8 +444,59 @@ export default function CheckoutPage() {
                     {...register("pais")}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6] focus:border-transparent"
                   >
+                    {/* Europa */}
                     <option value="ES">España</option>
+                    <option value="PT">Portugal</option>
+                    <option value="FR">Francia</option>
+                    <option value="IT">Italia</option>
+                    <option value="DE">Alemania</option>
+                    <option value="BE">Bélgica</option>
+                    <option value="NL">Países Bajos</option>
+                    <option value="LU">Luxemburgo</option>
+                    <option value="AT">Austria</option>
+                    <option value="IE">Irlanda</option>
+                    <option value="DK">Dinamarca</option>
+                    <option value="SE">Suecia</option>
+                    <option value="NO">Noruega</option>
+                    <option value="FI">Finlandia</option>
+                    <option value="PL">Polonia</option>
+                    <option value="CZ">Chequia</option>
+                    <option value="SK">Eslovaquia</option>
+                    <option value="HU">Hungría</option>
+                    <option value="RO">Rumanía</option>
+                    <option value="BG">Bulgaria</option>
+                    <option value="GR">Grecia</option>
+                    <option value="SI">Eslovenia</option>
+                    <option value="HR">Croacia</option>
+                    <option value="EE">Estonia</option>
+                    <option value="LV">Letonia</option>
+                    <option value="LT">Lituania</option>
+                    <option value="CY">Chipre</option>
+                    <option value="MT">Malta</option>
+                    <option value="GB">Reino Unido</option>
+                    {/* América */}
+                    <option value="US">Estados Unidos</option>
+                    <option value="CA">Canadá</option>
+                    <option value="MX">México</option>
+                    <option value="AR">Argentina</option>
+                    <option value="CL">Chile</option>
+                    <option value="BR">Brasil</option>
+                    <option value="CO">Colombia</option>
+                    <option value="PE">Perú</option>
+                    <option value="UY">Uruguay</option>
+                    {/* Asia / Oceanía / África */}
+                    <option value="AU">Australia</option>
+                    <option value="NZ">Nueva Zelanda</option>
+                    <option value="JP">Japón</option>
+                    <option value="CN">China</option>
+                    <option value="IN">India</option>
+                    <option value="ZA">Sudáfrica</option>
+                    <option value="MA">Marruecos</option>
+                    <option value="OTHER">Otro país</option>
                   </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Si tu país no aparece, elige &quot;Otro país&quot;. Se aplicará la tarifa Internacional.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -407,6 +558,65 @@ export default function CheckoutPage() {
                   <span>Subtotal</span>
                   <span>€{formatPrice(subtotal)}</span>
                 </div>
+                <div className="pt-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código promocional
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      className="flex-1 px-3 py-2 border rounded-lg"
+                      placeholder="AMARUS10"
+                    />
+                    <button
+                      type="button"
+                      disabled={promoLoading}
+                      onClick={async () => {
+                        const c = promoCode.trim().toUpperCase();
+                        if (!c) return;
+                        setPromoLoading(true);
+                        try {
+                          const coupon = await getCouponByCode(c);
+                          if (!coupon || !coupon.active) {
+                            setAppliedPromo(null);
+                            alert("Cupón no válido");
+                            return;
+                          }
+                          const disc = calculateDiscount(coupon);
+                          if (disc <= 0) {
+                            setAppliedPromo(null);
+                            alert("Este cupón no aplica a los productos del carrito");
+                            return;
+                          }
+                          setAppliedPromo({ code: coupon.code, discount: disc });
+                        } finally {
+                          setPromoLoading(false);
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      {promoLoading ? "..." : "Aplicar"}
+                    </button>
+                  </div>
+                  {appliedPromo && (
+                    <div className="mt-2 flex items-center justify-between text-sm">
+                      <span className="text-green-700">
+                        Cupón aplicado: <strong>{appliedPromo.code}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAppliedPromo(null);
+                          setPromoCode("");
+                        }}
+                        className="text-red-600 hover:underline"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <div className="flex justify-between text-gray-700">
                   <span>Envío</span>
                   <span>
@@ -417,6 +627,12 @@ export default function CheckoutPage() {
                     )}
                   </span>
                 </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-gray-700">
+                    <span>Descuento</span>
+                    <span className="text-green-700">-€{formatPrice(discount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold text-gray-800 pt-2">
                   <span>Total</span>
                   <span className="text-[#6B5BB6]">€{formatPrice(total)}</span>

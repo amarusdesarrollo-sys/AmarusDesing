@@ -259,20 +259,32 @@ export const updateProduct = async (
   }
 };
 
-// Eliminar producto (solo admin) - Soft delete
-export const deleteProduct = async (id: string): Promise<void> => {
-  try {
-    const productRef = doc(db, COLLECTION_NAME, id);
-    // Soft delete: marcar como no disponible en lugar de eliminar
-    await updateDoc(productRef, {
-      inStock: false,
-      updatedAt: Timestamp.now(),
-    });
-  } catch (error) {
-    console.error("Error deleting product:", error);
-    throw error;
-  }
+/** Desactivar producto (soft delete) - deja de mostrarse en la tienda */
+export const deactivateProduct = async (id: string): Promise<void> => {
+  const productRef = doc(db, COLLECTION_NAME, id);
+  await updateDoc(productRef, {
+    inStock: false,
+    updatedAt: Timestamp.now(),
+  });
 };
+
+/** Reactivar producto - vuelve a mostrarse en la tienda */
+export const activateProduct = async (id: string): Promise<void> => {
+  const productRef = doc(db, COLLECTION_NAME, id);
+  await updateDoc(productRef, {
+    inStock: true,
+    updatedAt: Timestamp.now(),
+  });
+};
+
+/** Eliminar producto permanentemente de Firestore. No se puede deshacer. */
+export const deleteProductPermanently = async (id: string): Promise<void> => {
+  const productRef = doc(db, COLLECTION_NAME, id);
+  await deleteDoc(productRef);
+};
+
+/** @deprecated Use deactivateProduct para desactivar. Se mantiene por compatibilidad. */
+export const deleteProduct = deactivateProduct;
 
 /** Valida que haya stock suficiente para los ítems. Devuelve valid y lista de ítems sin stock. */
 export const validateOrderStock = async (

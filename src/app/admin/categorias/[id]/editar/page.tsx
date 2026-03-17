@@ -8,9 +8,15 @@ import { z } from "zod";
 import { ArrowLeft, Save, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { getCategoryById, updateCategory } from "@/lib/firebase/categories";
+import {
+  createCategory,
+  getCategoryById,
+  getSubcategories,
+  updateCategory,
+} from "@/lib/firebase/categories";
 import { getProductImageUrl } from "@/lib/cloudinary";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import type { Category } from "@/types";
 
 // Esquema de validación
 const categorySchema = z.object({
@@ -43,6 +49,13 @@ export default function EditarCategoriaPage() {
   const [imagePublicId, setImagePublicId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null); // URL completa para hero
   const [currentImagePublicId, setCurrentImagePublicId] = useState<string | null>(null);
+  const [subcategories, setSubcategoriesList] = useState<Category[]>([]);
+  const [subcatLoading, setSubcatLoading] = useState(false);
+  const [showNewSubcat, setShowNewSubcat] = useState(false);
+  const [subcatName, setSubcatName] = useState("");
+  const [subcatSlug, setSubcatSlug] = useState("");
+  const [subcatOrder, setSubcatOrder] = useState(0);
+  const [subcatActive, setSubcatActive] = useState(true);
 
   const {
     register,
@@ -94,6 +107,25 @@ export default function EditarCategoriaPage() {
       loadCategory();
     }
   }, [categoryId, setValue]);
+
+  const loadSubcategories = async () => {
+    try {
+      setSubcatLoading(true);
+      const subs = await getSubcategories(categoryId);
+      setSubcategoriesList(subs);
+      // sugerir próximo orden
+      const maxOrder = subs.reduce((m, s) => Math.max(m, s.order ?? 0), 0);
+      setSubcatOrder(subs.length ? maxOrder + 1 : 0);
+    } catch {
+      setSubcategoriesList([]);
+    } finally {
+      setSubcatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (categoryId) loadSubcategories();
+  }, [categoryId]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -163,6 +195,18 @@ export default function EditarCategoriaPage() {
       setSaving(true);
       setError(null);
 
+      // Si se cambió o eliminó la imagen, borrar la anterior en Cloudinary
+      if (currentImagePublicId && currentImagePublicId !== imagePublicId) {
+        await fetch("/api/admin/delete-cloudinary-assets", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await getAuthHeaders()),
+          },
+          body: JSON.stringify({ publicIds: [currentImagePublicId] }),
+        }).catch(() => null);
+      }
+
       const categoryData = {
         ...data,
         description: data.description || "",
@@ -181,6 +225,42 @@ export default function EditarCategoriaPage() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const generateSubcatSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  };
+
+  const handleCreateSubcategory = async () => {
+    if (!subcatName.trim()) return;
+    const slug = (subcatSlug || generateSubcatSlug(subcatName)).trim();
+    if (!slug) return;
+    try {
+      setSubcatLoading(true);
+      await createCategory({
+        name: subcatName.trim(),
+        slug,
+        description: "",
+        order: subcatOrder,
+        active: subcatActive,
+        featured: false,
+        parentId: categoryId,
+      });
+      setShowNewSubcat(false);
+      setSubcatName("");
+      setSubcatSlug("");
+      setSubcatActive(true);
+      await loadSubcategories();
+    } catch (e) {
+      alert("Error al crear subcategoría (revisa que el slug no esté duplicado)");
+    } finally {
+      setSubcatLoading(false);
     }
   };
 
@@ -286,6 +366,162 @@ export default function EditarCategoriaPage() {
             </p>
             {errors.slug && (
               <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>
+            )}
+          </div>
+
+          {/* Subcategorías */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Subcategorías
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Crea subcategorías dentro de esta categoría (ej: Anillos, Aros, Cabujones).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewSubcat((v) => !v)}
+                className="px-4 py-2 rounded-lg bg-[#6B5BB6] text-white hover:bg-[#5B4BA5]"
+              >
+                {showNewSubcat ? "Cancelar" : "Nueva subcategoría"}
+              </button>
+            </div>
+
+            {showNewSubcat && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre *
+                    </label>
+                    <input
+                      type="text"
+                      value={subcatName}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setSubcatName(v);
+                        setSubcatSlug(generateSubcatSlug(v));
+                      }}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="Ej: Anillos"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Slug (URL) *
+                    </label>
+                    <input
+                      type="text"
+                      value={subcatSlug}
+                      onChange={(e) => setSubcatSlug(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="ej: anillos"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Orden
+                    </label>
+                    <input
+                      type="number"
+                      value={subcatOrder}
+                      onChange={(e) => setSubcatOrder(Number(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      min={0}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-7">
+                    <input
+                      id="subcatActive"
+                      type="checkbox"
+                      checked={subcatActive}
+                      onChange={(e) => setSubcatActive(e.target.checked)}
+                      className="h-4 w-4 text-[#6B5BB6] border-gray-300 rounded"
+                    />
+                    <label htmlFor="subcatActive" className="text-sm text-gray-700">
+                      Activa
+                    </label>
+                  </div>
+                  <div className="pt-6">
+                    <button
+                      type="button"
+                      disabled={subcatLoading}
+                      onClick={handleCreateSubcategory}
+                      className="w-full px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      {subcatLoading ? "Creando..." : "Crear subcategoría"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {subcatLoading ? (
+              <p className="text-sm text-gray-500">Cargando subcategorías...</p>
+            ) : subcategories.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                Aún no hay subcategorías en esta categoría.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {subcategories.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between gap-3 border rounded-lg p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-800 truncate">{s.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{s.slug}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          s.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {s.active ? "Activa" : "Inactiva"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await updateCategory(s.id, { active: !s.active });
+                          await loadSubcategories();
+                        }}
+                        className="px-3 py-1.5 text-xs rounded-lg border hover:bg-gray-50"
+                      >
+                        {s.active ? "Desactivar" : "Activar"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!confirm(`¿Eliminar definitivamente "${s.name}"?`)) return;
+                          const res = await fetch("/api/admin/delete-category", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              ...(await getAuthHeaders()),
+                            },
+                            body: JSON.stringify({ categoryId: s.id }),
+                          });
+                          const data = await res.json().catch(() => ({}));
+                          if (!res.ok || !data?.success) {
+                            alert(data?.message || "Error al eliminar definitivamente");
+                            return;
+                          }
+                          await loadSubcategories();
+                        }}
+                        className="px-3 py-1.5 text-xs rounded-lg bg-red-600 text-white hover:bg-red-700"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

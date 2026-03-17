@@ -179,25 +179,10 @@ export default function CarritoPage() {
                   </div>
                   <div className="flex justify-between text-gray-700">
                     <span>Envío</span>
-                    <span className="font-semibold">
-                      {shipping === 0 ? (
-                        <span className="text-green-600">Gratis</span>
-                      ) : (
-                        `€${formatPrice(shipping)}`
-                      )}
+                    <span className="font-semibold text-sm text-gray-500 text-right">
+                      El coste de envío se calculará al completar tus datos de dirección.
                     </span>
                   </div>
-                  {shipping > 0 && (() => {
-                    const threshold = shippingConfig?.freeShippingThreshold ?? 0;
-                    if (threshold <= 0) return null;
-                    const missing = threshold - subtotal;
-                    if (missing <= 0) return null;
-                    return (
-                      <p className="text-sm text-gray-600">
-                        Falta €{formatPrice(missing)} para envío gratis
-                      </p>
-                    );
-                  })()}
                   <div className="border-t border-gray-300 pt-4">
                     <div className="flex justify-between text-xl font-bold text-gray-800">
                       <span>Total</span>

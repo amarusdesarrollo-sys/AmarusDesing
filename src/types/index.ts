@@ -134,6 +134,10 @@ export interface Order {
   /** Teléfono con prefijo recomendado (ej: +34). Klarna obligatorio. */
   customerPhone?: string;
   items: OrderItem[];
+  /** Descuento aplicado en céntimos (cupón/código promocional). */
+  discount?: number;
+  /** Código promocional aplicado (si corresponde). */
+  promoCode?: string;
   total: number;
   shipping: number;
   tax: number;
@@ -144,6 +148,26 @@ export interface Order {
   paymentStatus: PaymentStatus;
   shippingAddress: Address;
   trackingNumber?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Tipos para códigos promocionales (cupones)
+export type CouponScope = "category" | "product";
+export type CouponDiscountType = "percent" | "fixed";
+
+export interface Coupon {
+  id: string;
+  code: string; // en mayúsculas
+  active: boolean;
+  scope: CouponScope;
+  discountType: CouponDiscountType;
+  /** Si percent: 1-99. Si fixed: céntimos. */
+  value: number;
+  /** Slugs de categorías a las que aplica (scope=category) */
+  categorySlugs?: string[];
+  /** IDs de productos a los que aplica (scope=product) */
+  productIds?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -179,19 +203,20 @@ export interface SEOData {
   };
 }
 
-// Tipos para blog/contenido
+// Tipos para blog
 export interface BlogPost {
   id: string;
   title: string;
   slug: string;
   content: string;
   excerpt: string;
-  featuredImage: string;
+  imagePublicId?: string;
+  imageUrl?: string;
   author: string;
   publishedAt: Date;
   updatedAt: Date;
+  published: boolean; // Si false, no se muestra en la web (borrador)
   tags: string[];
-  seo: SEOData;
 }
 
 // Tipos para CMS (Equipo, Historia, Políticas, etc.)
@@ -256,6 +281,15 @@ export interface ContactoContent {
 }
 
 // Tipos para configuración
+export interface ShippingZoneConfig {
+  /** Nombre interno de la zona (no visible al cliente) */
+  label: string;
+  /** Umbral de envío gratis en céntimos (ej: 5000 = 50 €) */
+  freeShippingThreshold: number;
+  /** Coste de envío estándar en céntimos */
+  standardShippingCost: number;
+}
+
 export interface SiteConfig {
   name: string;
   description: string;
@@ -271,8 +305,16 @@ export interface SiteConfig {
     address: Address;
   };
   shipping: {
+    /** Configuración global antigua (fallback si no hay zonas definidas) */
     freeShippingThreshold: number;
     standardShippingCost: number;
     expressShippingCost: number;
+    /** Configuración por zonas de envío (opcional) */
+    zones?: {
+      spainPeninsula: ShippingZoneConfig;
+      canarias: ShippingZoneConfig;
+      europe: ShippingZoneConfig;
+      world: ShippingZoneConfig;
+    };
   };
 }

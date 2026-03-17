@@ -178,6 +178,9 @@ export default function AdminPedidosPage() {
                     Total
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Cupón
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Estado
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
@@ -206,6 +209,20 @@ export default function AdminPedidosPage() {
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-900">
                       {formatPrice(order.total)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {order.promoCode ? (
+                        <div>
+                          <div className="font-semibold">{order.promoCode}</div>
+                          {order.discount && order.discount > 0 ? (
+                            <div className="text-xs text-green-700">
+                              -{formatPrice(order.discount)}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <span
