@@ -26,6 +26,7 @@ export default function ContactoClient({
     email: "",
     subject: "",
     message: "",
+    website: "", // honeypot
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
@@ -44,12 +45,28 @@ export default function ContactoClient({
     setIsSubmitting(true);
     setSubmitStatus("idle");
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          website: formData.website,
+        }),
+      });
+      if (!res.ok) throw new Error("No se pudo enviar");
       setSubmitStatus("success");
-      setFormData({ name: "", email: "", subject: "", message: "" });
+      setFormData({ name: "", email: "", subject: "", message: "", website: "" });
       setTimeout(() => setSubmitStatus("idle"), 5000);
-    }, 1000);
+    } catch {
+      setSubmitStatus("error");
+      setTimeout(() => setSubmitStatus("idle"), 5000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const instagramUrl = instagram.startsWith("http")
@@ -154,6 +171,16 @@ export default function ContactoClient({
                   Envíanos un mensaje
                 </h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* honeypot */}
+                  <input
+                    type="text"
+                    name="website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={formData.website}
+                    onChange={handleChange}
+                    className="hidden"
+                  />
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                       Nombre *

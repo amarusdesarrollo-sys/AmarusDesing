@@ -5,6 +5,8 @@ import AnimatedButton from "@/components/AnimatedButton";
 import FeaturedCategoriesHero from "@/components/FeaturedCategoriesHero";
 import { getHomeContent } from "@/lib/firebase/content";
 import { getHistoriaContent } from "@/lib/firebase/content";
+import OptimizedImage from "@/components/OptimizedImage";
+import { getCloudinaryUrl } from "@/lib/cloudinary";
 
 export default async function Home() {
   const [homeContent, historiaContent] = await Promise.all([
@@ -32,6 +34,21 @@ export default async function Home() {
         "Un sueño para resolver un sustento económico, pero a la vez armoniosa con la familia, que nos permita disfrutar de la crianza de nuestro hijo e incluso integrarlo en nuestro día a día.",
         "Invertimos nuestra energía y cariño, en atender a nuestros clientes cómo se merecen, siempre sin perder el amor al detalle. Buscamos reinventarnos cada día, incluyendo en nuestro equipo a más artesanos que comparten nuestra pasión por los minerales.",
       ];
+
+  const histHeroImageSrc =
+    historiaContent?.imageUrl ||
+    homeContent?.historia?.imageUrl ||
+    (historiaContent?.imagePublicId
+      ? getCloudinaryUrl(historiaContent.imagePublicId, {
+          width: 1920,
+          height: 1080,
+        })
+      : homeContent?.historia?.imagePublicId
+        ? getCloudinaryUrl(homeContent.historia.imagePublicId, {
+            width: 1920,
+            height: 1080,
+          })
+        : "/images/heroes/seccion como llegamos aqui.avif");
 
   return (
     <>
@@ -109,15 +126,14 @@ export default async function Home() {
         {/* Imagen con altura ajustada para verse completa */}
         <div className="relative w-full bg-gray-200">
           <div className="relative w-full">
-            <Image
-              src="/images/heroes/seccion como llegamos aqui.avif"
+            <OptimizedImage
+              src={histHeroImageSrc}
               alt="¿Cómo llegamos aquí? - Historia de AmarusDesign"
               width={1920}
               height={1080}
               className="w-full h-auto object-contain"
               priority={true}
               sizes="100vw"
-              quality={90}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
 

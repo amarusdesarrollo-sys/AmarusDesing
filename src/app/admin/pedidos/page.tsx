@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Eye, ShoppingCart, Search, Calendar } from "lucide-react";
+import { Eye, ShoppingCart, Trash2 } from "lucide-react";
 import { getOrders } from "@/lib/firebase/orders";
+import { getAuthHeaders } from "@/lib/auth-headers";
 import type { Order, OrderStatus } from "@/types";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -32,6 +33,7 @@ export default function AdminPedidosPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "">("");
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all");
+  const [deletingAll, setDeletingAll] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -100,6 +102,41 @@ export default function AdminPedidosPage() {
       minute: "2-digit",
     });
 
+  const handleDeleteAllOrders = async () => {
+    const ok = confirm(
+      "Vas a eliminar TODOS los pedidos. Esta acción es irreversible y se usa solo para limpiar pruebas. ¿Continuar?"
+    );
+    if (!ok) return;
+    try {
+      setDeletingAll(true);
+      const res = await fetch("/api/admin/delete-orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await getAuthHeaders()),
+        },
+        body: JSON.stringify({ all: true }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { success?: boolean; message?: string; error?: string; deleted?: number }
+        | null;
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || data?.error || "Error al eliminar pedidos");
+      }
+      await loadOrders();
+      setStatusFilter("");
+      setSearchTerm("");
+      setDateFilter("all");
+      setError(null);
+      alert(`Pedidos eliminados: ${data.deleted ?? 0}`);
+    } catch (err) {
+      console.error("Error deleting orders:", err);
+      setError(err instanceof Error ? err.message : "Error al eliminar pedidos");
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-8">
@@ -117,6 +154,15 @@ export default function AdminPedidosPage() {
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Pedidos</h1>
           <p className="text-gray-600">Gestiona los pedidos de la tienda</p>
         </div>
+        <button
+          onClick={handleDeleteAllOrders}
+          disabled={deletingAll}
+          className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+          title="Eliminar todos los pedidos de prueba"
+        >
+          <Trash2 className="h-4 w-4" />
+          {deletingAll ? "Eliminando..." : "Eliminar todos"}
+        </button>
       </div>
 
       {error && (

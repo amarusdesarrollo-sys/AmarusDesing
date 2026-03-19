@@ -28,6 +28,10 @@ export const metadata = {
     title: "AmarusDesign - Joyería Artesanal y Minerales",
     description: SITE_DESCRIPTION,
   },
+  icons: {
+    icon: [{ url: "/images/logo.avif", type: "image/avif" }],
+    apple: "/images/logo.avif",
+  },
 };
 
 export default function RootLayout({

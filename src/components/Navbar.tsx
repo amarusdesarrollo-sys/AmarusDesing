@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, User, Search } from "lucide-react";
+import Image from "next/image";
+import { Menu, X, User, Search, Instagram, Mail } from "lucide-react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import CartIcon from "./CartIcon";
@@ -129,9 +130,19 @@ const Navbar = () => {
             href="/"
             className="flex items-center group transition-transform duration-300 hover:scale-105 shrink-0"
           >
-            <span className="text-xl md:text-2xl font-bold text-white group-hover:text-[#F5EFFF] transition-all duration-300 whitespace-nowrap">
-              AmarusDesign
-            </span>
+            <div className="flex items-center gap-2">
+              <Image
+                src="/images/logo.avif"
+                alt="Amarus Design"
+                width={40}
+                height={40}
+                priority
+                className="w-9 h-9 rounded-full object-cover bg-white/10"
+              />
+              <span className="text-lg md:text-xl font-bold text-white group-hover:text-[#F5EFFF] transition-all duration-300 whitespace-nowrap">
+                Amarus Design
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Navigation - overflow-visible para que el desplegable de Tienda Online no se recorte */}
@@ -228,16 +239,19 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-2 shrink-0">
             <Link
               href="/contacto"
-              className="text-white hover:text-[#F5EFFF] transition-colors duration-200 whitespace-nowrap"
+              className="flex items-center justify-center p-1.5 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
+              aria-label="Contacto"
             >
-              <span className="text-sm font-medium">Contacto</span>
+              <Mail className="h-5 w-5" />
             </Link>
             <Link
               href="https://instagram.com/amarusdesign"
               target="_blank"
-              className="text-white hover:text-[#F5EFFF] transition-colors duration-200 whitespace-nowrap"
+              className="flex items-center justify-center p-1.5 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
             >
-              <span className="text-sm font-medium">Instagram</span>
+              <Instagram className="h-5 w-5" />
             </Link>
             {user ? (
               <Link
@@ -349,6 +363,16 @@ const Navbar = () => {
               >
                 Blog
               </Link>
+              <a
+                href="https://instagram.com/amarusdesign"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+                aria-label="Instagram"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
               <Link
                 href="/contacto"
                 className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"

@@ -9,6 +9,7 @@ import {
   MapPin,
   Ban,
   CheckCircle,
+  Trash2,
   X,
   ChevronDown,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   getAllUserProfiles,
   setUserBlocked,
 } from "@/lib/firebase/users";
+import { getAuthHeaders } from "@/lib/auth-headers";
 import type { Order } from "@/types";
 import type { UserProfile } from "@/lib/firebase/users";
 
@@ -41,6 +43,7 @@ export default function AdminUsuariosPage() {
   const [detailUser, setDetailUser] = useState<AdminUserRow | null>(null);
   const [detailOrders, setDetailOrders] = useState<Order[]>([]);
   const [blockingUid, setBlockingUid] = useState<string | null>(null);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -144,6 +147,51 @@ export default function AdminUsuariosPage() {
     }
   };
 
+  const handleDeleteUser = async (user: AdminUserRow) => {
+    const key = user.uid || user.email.toLowerCase();
+    if (!key) return;
+    const kind = getUserKind(user);
+    const label = user.email || user.name || user.uid || "usuario";
+    const warning =
+      kind === "guest"
+        ? "Esta acción borrará el historial de pedidos asociado a ese email invitado."
+        : kind === "orphan"
+          ? "Esta acción borrará el historial de pedidos asociado y cualquier rastro del perfil."
+          : "Esta acción borra su acceso en Firebase Auth, su perfil y su historial de pedidos.";
+    const ok = confirm(
+      `Vas a eliminar definitivamente a ${label}. ${warning} ¿Continuar?`
+    );
+    if (!ok) return;
+    try {
+      setDeletingKey(key);
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await getAuthHeaders()),
+        },
+        body: JSON.stringify({ uid: user.uid, email: user.email }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { success?: boolean; message?: string; error?: string }
+        | null;
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || data?.error || "Error al eliminar usuario");
+      }
+      if (detailUser?.uid === user.uid || detailUser?.email === user.email) {
+        setDetailUser(null);
+        setDetailOrders([]);
+      }
+      await loadUsers();
+      setError(null);
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      setError(err instanceof Error ? err.message : "Error al eliminar usuario");
+    } finally {
+      setDeletingKey(null);
+    }
+  };
+
   const filteredUsers = users.filter(
     (u) =>
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,6 +207,12 @@ export default function AdminUsuariosPage() {
           year: "numeric",
         })
       : "—";
+
+  const getUserKind = (user: AdminUserRow): "registered" | "orphan" | "guest" => {
+    if (user.uid && user.profile) return "registered";
+    if (user.uid && !user.profile) return "orphan";
+    return "guest";
+  };
 
   if (loading) {
     return (
@@ -237,6 +291,21 @@ export default function AdminUsuariosPage() {
                 {filteredUsers.map((user) => (
                   <tr key={user.uid || user.email} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
+                      {getUserKind(user) === "registered" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mb-2">
+                          Cuenta registrada
+                        </span>
+                      )}
+                      {getUserKind(user) === "orphan" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 mb-2">
+                          Sin cuenta (solo historial)
+                        </span>
+                      )}
+                      {getUserKind(user) === "guest" && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 mb-2">
+                          Compra invitada
+                        </span>
+                      )}
                       <div className="font-medium text-gray-900">{user.name}</div>
                       <div className="text-sm text-gray-500">{user.email}</div>
                       {user.uid && (
@@ -290,33 +359,61 @@ export default function AdminUsuariosPage() {
                           Ver datos
                         </button>
                         {user.uid && (
-                          user.blocked ? (
-                            <button
-                              onClick={() => handleBlock(user.uid!, false)}
-                              disabled={blockingUid === user.uid}
-                              className="text-green-600 hover:text-green-700 p-2 hover:bg-green-50 rounded-lg transition-colors"
-                              title="Desbloquear"
-                            >
-                              {blockingUid === user.uid ? (
-                                <span className="animate-spin">⏳</span>
-                              ) : (
-                                <CheckCircle className="h-5 w-5" />
-                              )}
-                            </button>
+                          getUserKind(user) === "registered" ? (
+                            user.blocked ? (
+                              <button
+                                onClick={() => handleBlock(user.uid!, false)}
+                                disabled={blockingUid === user.uid}
+                                className="text-green-600 hover:text-green-700 p-2 hover:bg-green-50 rounded-lg transition-colors"
+                                title="Desbloquear"
+                              >
+                                {blockingUid === user.uid ? (
+                                  <span className="animate-spin">⏳</span>
+                                ) : (
+                                  <CheckCircle className="h-5 w-5" />
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleBlock(user.uid!, true)}
+                                disabled={blockingUid === user.uid}
+                                className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Bloquear"
+                              >
+                                {blockingUid === user.uid ? (
+                                  <span className="animate-spin">⏳</span>
+                                ) : (
+                                  <Ban className="h-5 w-5" />
+                                )}
+                              </button>
+                            )
                           ) : (
                             <button
-                              onClick={() => handleBlock(user.uid!, true)}
-                              disabled={blockingUid === user.uid}
-                              className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Bloquear"
+                              disabled
+                              className="text-gray-300 p-2 rounded-lg cursor-not-allowed"
+                              title="No aplica: no es una cuenta activa"
                             >
-                              {blockingUid === user.uid ? (
-                                <span className="animate-spin">⏳</span>
-                              ) : (
-                                <Ban className="h-5 w-5" />
-                              )}
+                              <Ban className="h-5 w-5" />
                             </button>
                           )
+                        )}
+                        {user.email && (
+                          <button
+                            onClick={() => handleDeleteUser(user)}
+                            disabled={deletingKey === (user.uid || user.email.toLowerCase())}
+                            className="text-red-700 hover:text-red-800 p-2 hover:bg-red-100 rounded-lg transition-colors"
+                            title={
+                              getUserKind(user) === "guest"
+                                ? "Eliminar invitado (borra su historial)"
+                                : "Eliminar usuario"
+                            }
+                          >
+                            {deletingKey === (user.uid || user.email.toLowerCase()) ? (
+                              <span className="animate-spin">⏳</span>
+                            ) : (
+                              <Trash2 className="h-5 w-5" />
+                            )}
+                          </button>
                         )}
                         {user.email && (
                           <Link

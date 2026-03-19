@@ -8,6 +8,7 @@ import {
   updateHistoriaContent,
 } from "@/lib/firebase/content";
 import type { HistoriaContent } from "@/types";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 export default function AdminHistoriaPage() {
   const [content, setContent] = useState<HistoriaContent | null>(null);
@@ -15,10 +16,17 @@ export default function AdminHistoriaPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [originalImagePublicId, setOriginalImagePublicId] = useState<
+    string | undefined
+  >(undefined);
 
   useEffect(() => {
     getHistoriaContent()
-      .then(setContent)
+      .then((data) => {
+        setContent(data);
+        setOriginalImagePublicId(data.imagePublicId);
+      })
       .catch((err) => {
         console.error("Error loading historia:", err);
         setError(`Error al cargar: ${err instanceof Error ? err.message : "Error desconocido"}`);
@@ -26,12 +34,74 @@ export default function AdminHistoriaPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleHistoriaImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+
+    setUploadingImage(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "content");
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success)
+        throw new Error(data?.message || "Error al subir imagen");
+
+      setContent((c) => {
+        if (!c) return c;
+        return {
+          ...c,
+          imagePublicId: data.publicId,
+          imageUrl: data.url ?? "",
+        };
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error al subir la imagen"
+      );
+    } finally {
+      setUploadingImage(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleHistoriaRemoveImage = () => {
+    setContent((c) => {
+      if (!c) return c;
+      return { ...c, imagePublicId: undefined, imageUrl: undefined };
+    });
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content) return;
     setSaving(true);
     setError(null);
     try {
+      // Si se reemplazó o quitó la imagen, limpiamos el asset anterior en Cloudinary
+      const nextImagePublicId = content.imagePublicId;
+      if (
+        originalImagePublicId &&
+        originalImagePublicId !== nextImagePublicId
+      ) {
+        await fetch("/api/admin/delete-cloudinary-assets", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await getAuthHeaders()),
+          },
+          body: JSON.stringify({ publicIds: [originalImagePublicId] }),
+        }).catch(() => null);
+      }
       await updateHistoriaContent(content);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -113,6 +183,52 @@ export default function AdminHistoriaPage() {
             rows={12}
             className="w-full px-4 py-2 border rounded-lg"
           />
+        </div>
+
+        {/* Imagen opcional */}
+        <div className="space-y-2 pt-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Imagen (opcional)
+          </label>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.onchange = handleHistoriaImageUpload as any;
+                input.click();
+              }}
+              disabled={uploadingImage}
+              className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {uploadingImage
+                ? "Subiendo..."
+                : content?.imageUrl
+                  ? "Cambiar imagen"
+                  : "Seleccionar imagen"}
+            </button>
+            {content?.imageUrl && (
+              <button
+                type="button"
+                onClick={handleHistoriaRemoveImage}
+                className="px-3 py-2 text-sm rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
+              >
+                Quitar imagen
+              </button>
+            )}
+          </div>
+
+          {content?.imageUrl && (
+            <div className="mt-2 w-40 h-40 rounded overflow-hidden border border-gray-200 bg-gray-100">
+              <img
+                src={content.imageUrl}
+                alt="Preview historia"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
         </div>
         <button
           type="submit"

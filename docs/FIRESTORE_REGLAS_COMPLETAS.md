@@ -9,9 +9,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función auxiliar: es el admin
+    // Función auxiliar: es el admin (email puede faltar en algunos proveedores)
     function isAdmin() {
       return request.auth != null
+        && request.auth.token.email != null
         && request.auth.token.email.matches('(?i)amarusdesarrollo@gmail.com');
     }
 
@@ -53,6 +54,18 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Cupones (checkout): lectura pública para validar código; solo admin escribe
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Blog: lectura pública; solo admin escribe
+    match /blogPosts/{postId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Perfiles de usuario: cada uno lee/escribe el suyo; admin puede leer y bloquear a cualquiera
     match /users/{userId} {
       allow read: if request.auth != null
@@ -68,3 +81,10 @@ service cloud.firestore {
 ## Nota sobre órdenes guest
 
 Las órdenes con `userId == 'guest'` son legibles por cualquiera que tenga el ID del documento (p. ej. en la URL de confirmación). Los IDs son aleatorios y no se pueden enumerar fácilmente, así que se considera aceptable para la página de confirmación.
+
+## Si ves `Missing or insufficient permissions` (incluso en localhost)
+
+1. **Publica reglas en Firebase** que incluyan **todas** las colecciones que usa la app (`users`, `orders`, `products`, `categories`, `config`, `content`, `teamMembers`, **`coupons`**, **`blogPosts`**). Si falta alguna, cualquier `getDoc`/`getDocs` a esa colección falla.
+2. **Comprueba que el email del admin en `isAdmin()`** coincida exactamente con el de `src/lib/auth-admin.ts` (minúsculas da igual gracias a `(?i)`).
+3. **Mismo proyecto**: las variables `NEXT_PUBLIC_FIREBASE_*` de tu `.env.local` deben ser del mismo proyecto donde editas las reglas.
+4. **Registro**: hace `setDoc` en `users/{uid}`; hace falta `request.auth.uid == userId` y usuario logueado (tras `createUserWithEmailAndPassword` ya lo está).

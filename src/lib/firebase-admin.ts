@@ -84,3 +84,36 @@ export async function requireAdmin(
   }
   return result;
 }
+
+/**
+ * Verifica token Bearer (usuario autenticado, no necesariamente admin).
+ * Requiere FIREBASE_SERVICE_ACCOUNT_KEY. Si no está configurada, devuelve 503.
+ */
+export async function requireUser(
+  request: Request
+): Promise<
+  | { uid: string; email?: string | null }
+  | { error: string; status: number }
+> {
+  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (!key || !key.trim()) {
+    return { error: "FIREBASE_SERVICE_ACCOUNT_KEY no configurada", status: 503 };
+  }
+
+  const authHeader = request.headers.get("Authorization");
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
+  if (!token) {
+    return { error: "Falta token de autorización", status: 401 };
+  }
+
+  try {
+    const auth = getAdminAuth();
+    const decoded = await auth.verifyIdToken(token);
+    return { uid: decoded.uid, email: decoded.email };
+  } catch (err) {
+    if (process.env.NODE_ENV === "development") {
+      console.error("requireUser error:", err);
+    }
+    return { error: "Token inválido o expirado", status: 401 };
+  }
+}

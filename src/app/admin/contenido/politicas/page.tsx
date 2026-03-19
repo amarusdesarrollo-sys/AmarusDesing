@@ -8,6 +8,7 @@ import {
   updatePoliticasContent,
 } from "@/lib/firebase/content";
 import type { PoliticasContent } from "@/types";
+import { getAuthHeaders } from "@/lib/auth-headers";
 
 export default function AdminPoliticasPage() {
   const [content, setContent] = useState<PoliticasContent | null>(null);
@@ -15,10 +16,17 @@ export default function AdminPoliticasPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [originalHeroImagePublicId, setOriginalHeroImagePublicId] = useState<
+    string | undefined
+  >(undefined);
 
   useEffect(() => {
     getPoliticasContent()
-      .then(setContent)
+      .then((data) => {
+        setContent(data);
+        setOriginalHeroImagePublicId(data.heroImagePublicId);
+      })
       .catch((err) => {
         console.error("Error loading politicas:", err);
         setError(`Error al cargar: ${err instanceof Error ? err.message : "Error desconocido"}`);
@@ -26,12 +34,78 @@ export default function AdminPoliticasPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleHeroImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+
+    setUploadingImage(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "content");
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success)
+        throw new Error(data?.message || "Error al subir imagen");
+
+      setContent((c) => {
+        if (!c) return c;
+        return {
+          ...c,
+          heroImagePublicId: data.publicId,
+          heroImageUrl: data.url ?? "",
+        };
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error al subir la imagen"
+      );
+    } finally {
+      setUploadingImage(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleHeroRemoveImage = () => {
+    setContent((c) => {
+      if (!c) return c;
+      return {
+        ...c,
+        heroImagePublicId: undefined,
+        heroImageUrl: undefined,
+      };
+    });
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!content) return;
     setSaving(true);
     setError(null);
     try {
+      // Si se reemplazó o quitó la imagen, limpiamos el asset anterior en Cloudinary
+      const nextHeroImagePublicId = content.heroImagePublicId;
+      if (
+        originalHeroImagePublicId &&
+        originalHeroImagePublicId !== nextHeroImagePublicId
+      ) {
+        await fetch("/api/admin/delete-cloudinary-assets", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await getAuthHeaders()),
+          },
+          body: JSON.stringify({ publicIds: [originalHeroImagePublicId] }),
+        }).catch(() => null);
+      }
       await updatePoliticasContent(content);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -129,6 +203,54 @@ export default function AdminPoliticasPage() {
             className="w-full px-4 py-2 border rounded-lg"
           />
         </div>
+
+        {/* Imagen hero */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Imagen del hero (opcional)
+          </label>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => {
+                const input = document.createElement("input");
+                input.type = "file";
+                input.accept = "image/*";
+                input.onchange = handleHeroImageUpload as any;
+                input.click();
+              }}
+              disabled={uploadingImage}
+              className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-60"
+            >
+              {uploadingImage
+                ? "Subiendo..."
+                : content?.heroImageUrl
+                  ? "Cambiar imagen"
+                  : "Seleccionar imagen"}
+            </button>
+
+            {content?.heroImageUrl && (
+              <button
+                type="button"
+                onClick={handleHeroRemoveImage}
+                className="px-3 py-2 text-sm rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
+              >
+                Quitar imagen
+              </button>
+            )}
+          </div>
+
+          {content?.heroImageUrl && (
+            <div className="mt-2 w-40 h-24 rounded overflow-hidden border border-gray-200 bg-gray-100">
+              <img
+                src={content.heroImageUrl}
+                alt="Preview hero"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Introducción

@@ -1,30 +1,59 @@
 import { Resend } from "resend";
 import type { Order } from "@/types";
-import { SITE_NAME } from "./seo";
+import { SITE_NAME, getBaseUrl } from "./seo";
 import { ADMIN_EMAIL } from "./auth-admin";
 
 const formatPrice = (cents: number) => (cents / 100).toFixed(2);
+const getResend = () => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
+};
+
+const getEmailFrom = () => process.env.EMAIL_FROM || "onboarding@resend.dev";
+
+function escapeHtml(s: string) {
+  return s
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/** URL absoluta del logo para clientes de correo (requiere NEXT_PUBLIC_SITE_URL en producción). */
+function getEmailLogoUrl(): string {
+  const base = getBaseUrl().replace(/\/$/, "");
+  return `${base}/images/logo.avif`;
+}
+
+/** Cabecera con logo redondo encima del contenido del email. */
+function emailLogoHeader(): string {
+  const src = escapeHtml(getEmailLogoUrl());
+  const alt = escapeHtml(SITE_NAME);
+  return `
+      <div style="text-align:center; margin-bottom:20px;">
+        <img src="${src}" alt="${alt}" width="72" height="72" style="display:inline-block; border-radius:9999px; vertical-align:middle;" />
+      </div>`;
+}
 
 /** Envía email de confirmación de pedido al cliente tras pago exitoso */
 export async function sendOrderConfirmationEmail(order: Order): Promise<{
   ok: boolean;
   error?: string;
 }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  const resend = getResend();
+  if (!resend) {
     console.warn("RESEND_API_KEY no configurada, no se envía email");
     return { ok: false, error: "Email no configurado" };
   }
-
-  const resend = new Resend(apiKey);
 
   const to = order.customerEmail;
   if (!to?.trim()) {
     return { ok: false, error: "No hay email de cliente" };
   }
 
-  const from =
-    process.env.EMAIL_FROM || "onboarding@resend.dev";
+  const from = getEmailFrom();
 
   const itemsHtml = order.items
     .map(
@@ -44,6 +73,7 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<{
 <body style="margin:0; padding:0; font-family: system-ui, -apple-system, sans-serif; background:#f5f5f5;">
   <div style="max-width:560px; margin:0 auto; padding:24px;">
     <div style="background:white; border-radius:12px; padding:32px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      ${emailLogoHeader()}
       <h1 style="margin:0 0 8px; font-size:24px; color:#1a1a1a;">¡Gracias por tu compra!</h1>
       <p style="margin:0 0 24px; color:#666; font-size:16px;">
         Hola ${order.customerGivenName || order.customerName || "cliente"}, tu pedido ha sido confirmado.
@@ -116,8 +146,8 @@ export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
   ok: boolean;
   error?: string;
 }> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  const resend = getResend();
+  if (!resend) {
     return { ok: false, error: "Email no configurado" };
   }
 
@@ -126,8 +156,7 @@ export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
     return { ok: false, error: "No hay email de admin" };
   }
 
-  const resend = new Resend(apiKey);
-  const from = process.env.EMAIL_FROM || "onboarding@resend.dev";
+  const from = getEmailFrom();
 
   const itemsList = order.items
     .map((i) => `• ${i.product.name} × ${i.quantity} — €${formatPrice(i.price * i.quantity)}`)
@@ -140,6 +169,7 @@ export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
 <body style="margin:0; padding:0; font-family: system-ui, sans-serif; background:#f5f5f5;">
   <div style="max-width:560px; margin:0 auto; padding:24px;">
     <div style="background:white; border-radius:12px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      ${emailLogoHeader()}
       <h1 style="margin:0 0 16px; font-size:20px; color:#1a1a1a;">🛒 Nuevo pedido recibido</h1>
       <p style="margin:0 0 12px; color:#333;"><strong>Pedido #${order.id}</strong></p>
       <p style="margin:0 0 8px; color:#666;">Cliente: ${order.customerName || "—"} &lt;${order.customerEmail || "—"}&gt;</p>
@@ -151,7 +181,7 @@ export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
         Dirección: ${order.shippingAddress.street}, ${order.shippingAddress.postalCode} ${order.shippingAddress.city}, ${order.shippingAddress.country}
       </p>
       <p style="margin:16px 0 0;">
-        <a href="${process.env.NEXT_PUBLIC_SITE_URL || "https://amarus-desing.vercel.app"}/admin/pedidos/${order.id}" style="display:inline-block; background:#6B5BB6; color:white; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600;">Ver pedido en el admin</a>
+        <a href="${getBaseUrl().replace(/\/$/, "")}/admin/pedidos/${order.id}" style="display:inline-block; background:#6B5BB6; color:white; padding:10px 20px; border-radius:8px; text-decoration:none; font-weight:600;">Ver pedido en el admin</a>
       </p>
     </div>
   </div>
@@ -174,6 +204,151 @@ export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     console.error("Error enviando aviso a admin:", err);
+    return { ok: false, error: msg };
+  }
+}
+
+export async function sendContactMessageToAdmin(input: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const resend = getResend();
+  if (!resend) return { ok: false, error: "Email no configurado" };
+
+  const to = process.env.ADMIN_NOTIFY_EMAIL || ADMIN_EMAIL;
+  const from = getEmailFrom();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Nuevo mensaje de contacto</title></head>
+<body style="margin:0; padding:0; font-family: system-ui, sans-serif; background:#f5f5f5;">
+  <div style="max-width:560px; margin:0 auto; padding:24px;">
+    <div style="background:white; border-radius:12px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      ${emailLogoHeader()}
+      <h1 style="margin:0 0 12px; font-size:20px; color:#1a1a1a;">Nuevo mensaje de contacto</h1>
+      <p style="margin:0 0 8px; color:#666;"><strong>Nombre:</strong> ${escapeHtml(
+        input.name
+      )}</p>
+      <p style="margin:0 0 8px; color:#666;"><strong>Email:</strong> ${escapeHtml(
+        input.email
+      )}</p>
+      <p style="margin:0 0 12px; color:#666;"><strong>Asunto:</strong> ${escapeHtml(
+        input.subject
+      )}</p>
+      <div style="padding:12px; background:#f9f9f9; border-radius:8px; white-space:pre-wrap; color:#333;">${escapeHtml(
+        input.message
+      )}</div>
+    </div>
+    <p style="margin:16px 0 0; text-align:center; color:#999; font-size:12px;">
+      ${SITE_NAME}
+    </p>
+  </div>
+</body>
+</html>`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: `${SITE_NAME} <${from}>`,
+      to: [to.trim()],
+      replyTo: input.email.trim(),
+      subject: `[${SITE_NAME}] Contacto: ${input.subject}`,
+      html,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido";
+    return { ok: false, error: msg };
+  }
+}
+
+export async function sendContactConfirmationToUser(input: {
+  name: string;
+  email: string;
+  subject: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const resend = getResend();
+  if (!resend) return { ok: false, error: "Email no configurado" };
+  const from = getEmailFrom();
+  const to = input.email;
+  if (!to?.trim()) return { ok: false, error: "No hay email" };
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Hemos recibido tu mensaje</title></head>
+<body style="margin:0; padding:0; font-family: system-ui, sans-serif; background:#f5f5f5;">
+  <div style="max-width:560px; margin:0 auto; padding:24px;">
+    <div style="background:white; border-radius:12px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      ${emailLogoHeader()}
+      <h1 style="margin:0 0 12px; font-size:20px; color:#1a1a1a;">¡Gracias por escribirnos!</h1>
+      <p style="margin:0 0 12px; color:#666;">Hola ${escapeHtml(
+        input.name || "!"
+      )}, recibimos tu mensaje sobre <strong>${escapeHtml(
+        input.subject
+      )}</strong>. Te responderemos lo antes posible.</p>
+      <p style="margin:0; color:#888; font-size:13px;">${SITE_NAME}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: `${SITE_NAME} <${from}>`,
+      to: [to.trim()],
+      subject: `Recibimos tu mensaje - ${SITE_NAME}`,
+      html,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido";
+    return { ok: false, error: msg };
+  }
+}
+
+export async function sendWelcomeEmail(input: {
+  name?: string;
+  email: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const resend = getResend();
+  if (!resend) return { ok: false, error: "Email no configurado" };
+  const from = getEmailFrom();
+  const to = input.email;
+  if (!to?.trim()) return { ok: false, error: "No hay email" };
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Bienvenida</title></head>
+<body style="margin:0; padding:0; font-family: system-ui, sans-serif; background:#f5f5f5;">
+  <div style="max-width:560px; margin:0 auto; padding:24px;">
+    <div style="background:white; border-radius:12px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      ${emailLogoHeader()}
+      <h1 style="margin:0 0 12px; font-size:20px; color:#1a1a1a;">¡Bienvenid@ a ${SITE_NAME}!</h1>
+      <p style="margin:0; color:#666;">Hola ${escapeHtml(
+        input.name || ""
+      )} 👋 Gracias por registrarte. Ya puedes ver tus pedidos y guardar tus datos para futuras compras.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: `${SITE_NAME} <${from}>`,
+      to: [to.trim()],
+      subject: `Bienvenid@ a ${SITE_NAME}`,
+      html,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido";
     return { ok: false, error: msg };
   }
 }

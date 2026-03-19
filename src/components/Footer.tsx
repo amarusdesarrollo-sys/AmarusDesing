@@ -5,8 +5,23 @@ import { getSiteConfig } from "@/lib/firebase/site-config";
 export default async function Footer() {
   const config = await getSiteConfig().catch(() => null);
   const email = config?.contact?.email || config?.socialMedia?.email || "amarusdesign2014@gmail.com";
-  const instagram = config?.socialMedia?.instagram || "amarusdesign";
-  const instagramUrl = instagram.startsWith("http") ? instagram : `https://instagram.com/${instagram.replace(/^@/, "")}`;
+  const instagramRaw = config?.socialMedia?.instagram || "amarusdesign";
+
+  const extractInstagramHandle = (raw: string) => {
+    const trimmed = (raw || "").trim();
+    if (!trimmed) return "amarusdesign";
+
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      const match = trimmed.match(/instagram\.com\/([^/?#]+)/i);
+      return match?.[1] || "amarusdesign";
+    }
+
+    const noAt = trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
+    return noAt.split(/[/?#]/)[0] || "amarusdesign";
+  };
+
+  const instagramHandle = extractInstagramHandle(instagramRaw);
+  const instagramUrl = `https://instagram.com/${instagramHandle}`;
 
   return (
     <footer className="bg-gray-900 text-white">
@@ -40,7 +55,9 @@ export default async function Footer() {
                       rel="noopener noreferrer"
                       className="text-gray-300 hover:text-white transition-colors text-xs md:text-sm"
                     >
-                      {instagram ? (instagram.startsWith("@") ? instagram : `@${instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/\/$/, "")}`) : "@amarusdesign"}
+                      <span className="inline-flex items-center gap-2">
+                        Amarus Design
+                      </span>
                     </a>
                   </div>
                 </div>
