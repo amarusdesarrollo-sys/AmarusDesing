@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Save, Truck } from "lucide-react";
 import { getOrderById, updateOrderStatus } from "@/lib/firebase/orders";
+import { getAuthHeaders } from "@/lib/auth-headers";
 import type { Order, OrderStatus } from "@/types";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
@@ -47,16 +48,40 @@ export default function AdminPedidoDetallePage() {
     setSaving(true);
     setError(null);
     try {
+      const previousTracking = order.trackingNumber?.trim() || "";
+      const nextTracking = trackingNumber.trim();
       // Si añades nº de seguimiento y el estado es pendiente/confirmado/en proceso, se marca como Enviado
       let statusToSave = status;
       if (
-        trackingNumber.trim() &&
+        nextTracking &&
         ["pending", "confirmed", "processing"].includes(status)
       ) {
         statusToSave = "shipped";
         setStatus("shipped");
       }
       await updateOrderStatus(order.id, statusToSave, trackingNumber);
+      const shouldNotifyShipment =
+        Boolean(nextTracking) &&
+        (!previousTracking || previousTracking !== nextTracking);
+      if (shouldNotifyShipment) {
+        const res = await fetch("/api/admin/notify-shipment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await getAuthHeaders()),
+          },
+          body: JSON.stringify({ orderId: order.id }),
+        });
+        if (!res.ok) {
+          const payload = (await res.json().catch(() => null)) as
+            | { message?: string }
+            | null;
+          console.warn(
+            "No se pudo enviar email de envío:",
+            payload?.message || `HTTP ${res.status}`
+          );
+        }
+      }
       setOrder((prev) =>
         prev
           ? {

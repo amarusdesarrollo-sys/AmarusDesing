@@ -352,3 +352,56 @@ export async function sendWelcomeEmail(input: {
     return { ok: false, error: msg };
   }
 }
+
+export async function sendOrderShippedEmail(order: Order): Promise<{
+  ok: boolean;
+  error?: string;
+}> {
+  const resend = getResend();
+  if (!resend) return { ok: false, error: "Email no configurado" };
+
+  const from = getEmailFrom();
+  const to = order.customerEmail;
+  if (!to?.trim()) return { ok: false, error: "No hay email de cliente" };
+  if (!order.trackingNumber?.trim()) {
+    return { ok: false, error: "No hay número de seguimiento" };
+  }
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Tu pedido está en camino</title></head>
+<body style="margin:0; padding:0; font-family: system-ui, sans-serif; background:#f5f5f5;">
+  <div style="max-width:560px; margin:0 auto; padding:24px;">
+    <div style="background:white; border-radius:12px; padding:24px; box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+      ${emailLogoHeader()}
+      <h1 style="margin:0 0 12px; font-size:22px; color:#1a1a1a;">Tu pedido ya está en camino</h1>
+      <p style="margin:0 0 16px; color:#666;">
+        Hola ${order.customerGivenName || order.customerName || "cliente"}, tu pedido <strong>#${order.id}</strong> ha sido enviado.
+      </p>
+      <p style="margin:0 0 12px; color:#333;"><strong>Número de seguimiento:</strong></p>
+      <p style="margin:0 0 16px; padding:12px; background:#f5efff; border-radius:8px; font-family:monospace; font-size:16px; color:#6B5BB6;">
+        ${order.trackingNumber}
+      </p>
+      <p style="margin:0; color:#888; font-size:13px;">
+        Gracias por confiar en ${SITE_NAME}. Si tienes dudas, responde a este correo.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: `${SITE_NAME} <${from}>`,
+      to: [to.trim()],
+      subject: `Tu pedido #${order.id} está en camino - ${SITE_NAME}`,
+      html,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido";
+    return { ok: false, error: msg };
+  }
+}
