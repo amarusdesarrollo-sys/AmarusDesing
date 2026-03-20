@@ -140,6 +140,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true }, { status: 200 });
       }
       const order = toOrder(orderSnap.data(), orderId);
+      if (order.paymentStatus === "paid") {
+        return NextResponse.json({ received: true, alreadyPaid: true }, { status: 200 });
+      }
 
       await orderRef.update({
         paymentStatus: "paid",

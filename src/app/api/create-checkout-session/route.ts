@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
           quantity: 1,
         },
       ],
-      success_url: `${origin}/checkout/confirmacion?orderId=${orderId}`,
+      success_url: `${origin}/checkout/confirmacion?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout`,
       metadata: { orderId },
       customer_email: order.customerEmail || undefined,

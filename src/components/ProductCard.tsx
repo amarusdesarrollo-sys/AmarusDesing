@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ShoppingCart, Heart } from "lucide-react";
+import { ShoppingCart, Heart, Check } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import {
   getProductImageUrl,
@@ -22,6 +23,8 @@ export default function ProductCard({
   priority = false,
 }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
+  const totalItems = useCartStore((state) => state.getTotalItems());
+  const [added, setAdded] = useState(false);
   const hasStock = product.inStock && (product.stock ?? 0) > 0;
   const primaryImage =
     product.images.find((img) => img.isPrimary) || product.images[0];
@@ -54,6 +57,8 @@ export default function ProductCard({
     e.stopPropagation();
     if (hasStock) {
       addItem(product, 1);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1800);
     }
   };
 
@@ -140,12 +145,14 @@ export default function ProductCard({
               disabled={!hasStock}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                 hasStock
-                  ? "bg-[#6B5BB6] text-white hover:bg-[#5B4BA5]"
+                  ? added
+                    ? "bg-green-600 text-white"
+                    : "bg-[#6B5BB6] text-white hover:bg-[#5B4BA5]"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
             >
-              <ShoppingCart className="h-4 w-4" />
-              {hasStock ? "Agregar" : "Agotado"}
+              {added ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+              {hasStock ? (added ? "Agregado" : "Agregar") : "Agotado"}
             </button>
 
             <button
@@ -155,6 +162,18 @@ export default function ProductCard({
               <Heart className="h-4 w-4" />
             </button>
           </div>
+          {added && (
+            <div className="mt-2 text-xs text-green-700">
+              Producto agregado ({totalItems} en carrito).{" "}
+              <Link
+                href="/carrito"
+                className="font-semibold underline underline-offset-2 hover:text-green-800"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Ver carrito
+              </Link>
+            </div>
+          )}
         </div>
       </Link>
     </motion.div>

@@ -48,6 +48,7 @@ export default function ProductDetailPage() {
   const [addedToCart, setAddedToCart] = useState(false);
 
   const addItem = useCartStore((state) => state.addItem);
+  const totalItems = useCartStore((state) => state.getTotalItems());
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -519,6 +520,18 @@ export default function ProductDetailPage() {
                     <Heart className="h-5 w-5" />
                   </button>
                 </div>
+                {addedToCart && (
+                  <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+                    Producto agregado al carrito. Ahora tienes {totalItems} producto
+                    {totalItems === 1 ? "" : "s"}.{" "}
+                    <Link
+                      href="/carrito"
+                      className="font-semibold underline underline-offset-2 hover:text-green-900"
+                    >
+                      Ver carrito
+                    </Link>
+                  </div>
+                )}
               </div>
 
               {/* Tags */}

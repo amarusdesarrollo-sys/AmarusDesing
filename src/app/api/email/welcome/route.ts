@@ -1,22 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/firebase-admin";
 import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(request: NextRequest) {
-  const user = await requireUser(request);
-  if ("error" in user) {
-    return NextResponse.json({ error: user.error }, { status: user.status });
-  }
-
-  const email = user.email;
+  const body = await request.json().catch(() => ({}));
+  const email =
+    typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
   if (!email) {
     return NextResponse.json(
-      { error: "No hay email en el token" },
+      { error: "Falta email" },
       { status: 400 }
     );
   }
 
-  const body = await request.json().catch(() => ({}));
   const name =
     typeof body?.name === "string" ? body.name.trim().slice(0, 120) : undefined;
 

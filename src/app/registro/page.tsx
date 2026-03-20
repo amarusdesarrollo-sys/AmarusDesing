@@ -8,7 +8,6 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { isAdminEmail } from "@/lib/auth-admin";
 import { setUserProfile } from "@/lib/firebase/users";
-import { getAuthHeaders } from "@/lib/auth-headers";
 
 export default function RegistroPage() {
   const router = useRouter();
@@ -59,9 +58,11 @@ export default function RegistroPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(await getAuthHeaders()),
           },
-          body: JSON.stringify({ name: `${name.trim()} ${lastName.trim()}`.trim() }),
+          body: JSON.stringify({
+            email: email.trim(),
+            name: `${name.trim()} ${lastName.trim()}`.trim(),
+          }),
         });
         if (!emailRes.ok) {
           const payload = (await emailRes.json().catch(() => null)) as

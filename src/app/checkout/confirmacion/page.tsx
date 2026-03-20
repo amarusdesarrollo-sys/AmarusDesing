@@ -12,6 +12,7 @@ import type { Order } from "@/types";
 function ConfirmacionContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const sessionId = searchParams.get("session_id");
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(!!orderId);
   const [notFound, setNotFound] = useState(false);
@@ -22,15 +23,33 @@ function ConfirmacionContent() {
       setLoading(false);
       return;
     }
-    getOrderById(orderId)
-      .then((o) => {
+    const loadOrder = async () => {
+      // Fallback: confirmar pago desde retorno de Stripe por si webhook se demoró/falló.
+      if (sessionId) {
+        try {
+          await fetch("/api/orders/confirm-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId, sessionId }),
+          });
+        } catch {
+          // best effort
+        }
+      }
+
+      try {
+        const o = await getOrderById(orderId);
         setOrder(o ?? null);
         setNotFound(!o);
         if (o) clearCart(); // Vaciar carrito solo cuando el pedido se cargó bien
-      })
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false));
-  }, [orderId, clearCart]);
+      } catch {
+        setNotFound(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadOrder();
+  }, [orderId, sessionId, clearCart]);
 
   const formatPrice = (cents: number) => (cents / 100).toFixed(2);
 
