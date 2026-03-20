@@ -3,6 +3,29 @@ import Stripe from "stripe";
 import { getOrderById } from "@/lib/firebase/orders";
 
 /**
+ * URL base para success/cancel de Stripe (sin barra final).
+ * 1) NEXT_PUBLIC_SITE_URL (dominio custom)
+ * 2) VERCEL_URL (Vercel lo inyecta; evita success_url a localhost si falta la env pública)
+ * 3) Header Origin (mismo origen en el navegador)
+ * 4) localhost
+ */
+function getCheckoutOrigin(request: NextRequest): string {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "").trim();
+  if (fromEnv) return fromEnv;
+
+  const vercel = process.env.VERCEL_URL?.replace(/\/$/, "").trim();
+  if (vercel) {
+    return vercel.startsWith("http") ? vercel : `https://${vercel}`;
+  }
+
+  const origin = request.headers.get("origin")?.replace(/\/$/, "").trim();
+  if (origin && /^https:\/\//i.test(origin)) return origin;
+  if (origin && /^http:\/\/localhost(?::\d+)?$/i.test(origin)) return origin;
+
+  return "http://localhost:3000";
+}
+
+/**
  * Crea una sesión de Stripe Checkout para pagar una orden.
  * POST body: { orderId: string }
  * La orden debe existir en Firestore y tener total en céntimos.
@@ -50,10 +73,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Origen solo desde servidor para evitar redirección a dominio malicioso tras el pago
-    const origin =
-      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-      "http://localhost:3000";
+    const origin = getCheckoutOrigin(request);
 
     const stripe = new Stripe(secret);
 
