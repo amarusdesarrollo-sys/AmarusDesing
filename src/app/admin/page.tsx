@@ -14,6 +14,12 @@ import {
 import { getAllCategories } from "@/lib/firebase/categories";
 import { getAllProducts } from "@/lib/firebase/products";
 import { getOrders } from "@/lib/firebase/orders";
+import {
+  isAwaitingFulfillment,
+  isAwaitingPayment,
+  orderCountsAsRevenue,
+  totalRevenueCents,
+} from "@/lib/order-stats";
 import type { Category, Order, Product } from "@/types";
 
 export default function AdminDashboard() {
@@ -21,7 +27,10 @@ export default function AdminDashboard() {
     products: 0,
     categories: 0,
     orders: 0,
-    pendingOrders: 0,
+    /** Pendiente de pago */
+    awaitingPayment: 0,
+    /** Pagados: confirmado / en proceso (por preparar o enviar) */
+    awaitingFulfillment: 0,
     totalSales: 0,
     lowStockProducts: 0,
     loading: true,
@@ -39,20 +48,16 @@ export default function AdminDashboard() {
           getOrders(),
         ]);
 
-        const pendingOrders = orders.filter(
-          (o) => o.status === "pending" || o.status === "confirmed"
-        ).length;
+        const awaitingPayment = orders.filter(isAwaitingPayment).length;
+        const awaitingFulfillment = orders.filter(isAwaitingFulfillment).length;
 
-        const completedOrders = orders.filter(
-          (o) => o.status === "shipped" || o.status === "delivered"
-        );
-
-        const totalSales = completedOrders.reduce((sum, o) => sum + o.total, 0);
+        const totalSales = totalRevenueCents(orders);
 
         const lowStockProducts = products.filter((p) => p.stock < 10 && p.inStock).length;
 
         const productSales: Record<string, number> = {};
         orders.forEach((order) => {
+          if (!orderCountsAsRevenue(order)) return;
           order.items.forEach((item) => {
             productSales[item.productId] =
               (productSales[item.productId] || 0) + item.quantity;
@@ -73,7 +78,8 @@ export default function AdminDashboard() {
           products: products.length,
           categories: categories.length,
           orders: orders.length,
-          pendingOrders,
+          awaitingPayment,
+          awaitingFulfillment,
           totalSales,
           lowStockProducts,
           loading: false,
@@ -181,7 +187,14 @@ export default function AdminDashboard() {
     }
   };
 
-  const statCards = [
+  const statCards: {
+    title: string;
+    value: string | number;
+    footnote?: string;
+    icon: typeof Package;
+    color: string;
+    href: string;
+  }[] = [
     {
       title: "Productos",
       value: stats.products,
@@ -199,16 +212,18 @@ export default function AdminDashboard() {
     {
       title: "Pedidos",
       value: stats.orders,
+      footnote: "Todos los registros",
       icon: ShoppingCart,
       color: "bg-green-500",
       href: "/admin/pedidos",
     },
     {
-      title: "Ventas Totales",
+      title: "Ventas totales",
       value: formatPrice(stats.totalSales),
+      footnote: "Suma pedidos pagados (confirmado o posterior)",
       icon: TrendingUp,
       color: "bg-orange-500",
-      href: "/admin/pedidos",
+      href: "/admin/pedidos?queue=fulfillment",
     },
   ];
 
@@ -256,9 +271,16 @@ export default function AdminDashboard() {
                   {stats.loading ? (
                     <div className="h-8 w-16 bg-gray-200 animate-pulse rounded"></div>
                   ) : (
-                    <p className="text-3xl font-bold text-gray-800">
-                      {stat.value}
-                    </p>
+                    <>
+                      <p className="text-3xl font-bold text-gray-800">
+                        {stat.value}
+                      </p>
+                      {stat.footnote ? (
+                        <p className="text-xs text-gray-500 mt-1 leading-snug">
+                          {stat.footnote}
+                        </p>
+                      ) : null}
+                    </>
                   )}
                 </div>
                 <div className={`${stat.color} p-3 rounded-lg`}>
@@ -304,11 +326,13 @@ export default function AdminDashboard() {
       </div>
 
       {/* Alertas */}
-      {(stats.pendingOrders > 0 || stats.lowStockProducts > 0) && (
+      {(stats.awaitingPayment > 0 ||
+        stats.awaitingFulfillment > 0 ||
+        stats.lowStockProducts > 0) && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Alertas</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {stats.pendingOrders > 0 && (
+            {stats.awaitingPayment > 0 && (
               <Link
                 href="/admin/pedidos?status=pending"
                 className="bg-amber-50 border border-amber-200 rounded-lg p-4 hover:bg-amber-100 transition-colors"
@@ -317,10 +341,31 @@ export default function AdminDashboard() {
                   <AlertCircle className="h-6 w-6 text-amber-600" />
                   <div>
                     <p className="font-semibold text-amber-900">
-                      {stats.pendingOrders} pedido{stats.pendingOrders > 1 ? "s" : ""} pendiente{stats.pendingOrders > 1 ? "s" : ""}
+                      {stats.awaitingPayment} pedido
+                      {stats.awaitingPayment > 1 ? "s" : ""} sin pagar
                     </p>
                     <p className="text-sm text-amber-700">
-                      Requieren atención
+                      Pendiente de pago — revisar o cancelar
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            )}
+            {stats.awaitingFulfillment > 0 && (
+              <Link
+                href="/admin/pedidos?queue=fulfillment"
+                className="bg-blue-50 border border-blue-200 rounded-lg p-4 hover:bg-blue-100 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-6 w-6 text-blue-600" />
+                  <div>
+                    <p className="font-semibold text-blue-900">
+                      {stats.awaitingFulfillment} pedido
+                      {stats.awaitingFulfillment > 1 ? "s" : ""} pagado
+                      {stats.awaitingFulfillment > 1 ? "s" : ""}
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      Confirmado o en proceso — preparar / enviar
                     </p>
                   </div>
                 </div>

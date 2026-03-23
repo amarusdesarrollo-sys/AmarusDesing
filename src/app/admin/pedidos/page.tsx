@@ -25,12 +25,27 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   cancelled: "bg-gray-100 text-gray-600",
 };
 
+const ORDER_STATUSES: OrderStatus[] = [
+  "pending",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
+
+function isOrderStatus(s: string): s is OrderStatus {
+  return ORDER_STATUSES.includes(s as OrderStatus);
+}
+
 export default function AdminPedidosPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "">("");
+  /** Cola: pedidos pagados pendientes de envío (confirmado + en proceso) */
+  const [fulfillmentQueue, setFulfillmentQueue] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all");
   const [deletingAll, setDeletingAll] = useState(false);
@@ -39,9 +54,25 @@ export default function AdminPedidosPage() {
     loadOrders();
   }, []);
 
+  /** Filtros desde URL (?status=confirmed | ?queue=fulfillment) */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("queue") === "fulfillment") {
+      setFulfillmentQueue(true);
+      setStatusFilter("");
+      return;
+    }
+    setFulfillmentQueue(false);
+    const st = params.get("status");
+    if (st && isOrderStatus(st)) {
+      setStatusFilter(st);
+    }
+  }, []);
+
   useEffect(() => {
     filterOrders();
-  }, [statusFilter, searchTerm, dateFilter, allOrders]);
+  }, [statusFilter, searchTerm, dateFilter, allOrders, fulfillmentQueue]);
 
   const loadOrders = async () => {
     try {
@@ -60,7 +91,11 @@ export default function AdminPedidosPage() {
   const filterOrders = () => {
     let filtered = [...allOrders];
 
-    if (statusFilter) {
+    if (fulfillmentQueue) {
+      filtered = filtered.filter(
+        (o) => o.status === "confirmed" || o.status === "processing"
+      );
+    } else if (statusFilter) {
       filtered = filtered.filter((o) => o.status === statusFilter);
     }
 
@@ -125,6 +160,7 @@ export default function AdminPedidosPage() {
       }
       await loadOrders();
       setStatusFilter("");
+      setFulfillmentQueue(false);
       setSearchTerm("");
       setDateFilter("all");
       setError(null);
@@ -176,13 +212,23 @@ export default function AdminPedidosPage() {
           Filtrar por estado:
         </span>
         <select
-          value={statusFilter}
-          onChange={(e) =>
-            setStatusFilter((e.target.value || "") as OrderStatus | "")
-          }
+          value={fulfillmentQueue ? "__fulfillment__" : statusFilter}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "__fulfillment__") {
+              setFulfillmentQueue(true);
+              setStatusFilter("");
+            } else {
+              setFulfillmentQueue(false);
+              setStatusFilter((v || "") as OrderStatus | "");
+            }
+          }}
           className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#6B5BB6]"
         >
           <option value="">Todos</option>
+          <option value="__fulfillment__">
+            Pagados por preparar (confirmado + en proceso)
+          </option>
           {(Object.keys(STATUS_LABELS) as OrderStatus[]).map((s) => (
             <option key={s} value={s}>
               {STATUS_LABELS[s]}
@@ -195,13 +241,16 @@ export default function AdminPedidosPage() {
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
           <ShoppingCart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <p className="text-xl text-gray-600 mb-4">
-            {searchTerm || statusFilter || dateFilter !== "all"
+            {searchTerm || statusFilter || fulfillmentQueue || dateFilter !== "all"
               ? "No hay pedidos que coincidan con los filtros."
               : "No hay pedidos aún."}
           </p>
-          {statusFilter && (
+          {(statusFilter || fulfillmentQueue) && (
             <button
-              onClick={() => setStatusFilter("")}
+              onClick={() => {
+                setStatusFilter("");
+                setFulfillmentQueue(false);
+              }}
               className="text-[#6B5BB6] hover:text-[#5B4BA5] font-medium"
             >
               Ver todos los pedidos
