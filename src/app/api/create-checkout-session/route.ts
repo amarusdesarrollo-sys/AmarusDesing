@@ -80,6 +80,10 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       payment_method_types: ["card", "klarna"],
+      // Para webhook payment_intent.succeeded (respaldo si la sesión llega sin metadata útil)
+      payment_intent_data: {
+        metadata: { orderId },
+      },
       line_items: [
         {
           price_data: {

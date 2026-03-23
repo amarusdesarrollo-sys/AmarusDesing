@@ -23,17 +23,30 @@ function ConfirmacionContent() {
       setLoading(false);
       return;
     }
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
     const loadOrder = async () => {
-      // Fallback: confirmar pago desde retorno de Stripe por si webhook se demoró/falló.
+      // Confirmar pago vía API (Stripe + Firestore Admin). Reintentos: Klarna / latencia webhook.
       if (sessionId) {
-        try {
-          await fetch("/api/orders/confirm-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId, sessionId }),
-          });
-        } catch {
-          // best effort
+        for (let attempt = 0; attempt < 10; attempt++) {
+          try {
+            const res = await fetch("/api/orders/confirm-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId, sessionId }),
+            });
+            const data = (await res.json().catch(() => null)) as
+              | { success?: boolean; retry?: boolean }
+              | null;
+            if (res.ok && data?.success) break;
+            if (res.status === 409 && data?.retry) {
+              await sleep(1500);
+              continue;
+            }
+            break;
+          } catch {
+            break;
+          }
         }
       }
 

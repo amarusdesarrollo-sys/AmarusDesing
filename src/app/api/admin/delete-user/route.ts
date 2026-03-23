@@ -1,37 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import {
+  getFirebaseAdminApp,
+  hasFirebaseAdminCredentials,
+} from "@/lib/firebase-admin-server";
 import { requireAdmin } from "@/lib/firebase-admin";
 import { isAdminEmail } from "@/lib/auth-admin";
 
-let adminApp: App | null = null;
-
-function getAdminApp(): App {
-  if (adminApp) return adminApp;
-  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!key || !key.trim()) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY no configurada");
-  }
-  const serviceAccount = JSON.parse(key) as object;
-  if (getApps().length === 0) {
-    adminApp = initializeApp({
-      credential: cert(serviceAccount as Parameters<typeof cert>[0]),
-    });
-  } else {
-    adminApp = getApps()[0] as App;
-  }
-  return adminApp;
-}
-
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()) {
+    if (!hasFirebaseAdminCredentials()) {
       return NextResponse.json(
         {
           success: false,
           message:
-            "FIREBASE_SERVICE_ACCOUNT_KEY no configurada. No se puede eliminar usuarios desde admin.",
+            "Firebase Admin no configurado. No se puede eliminar usuarios desde admin.",
         },
         { status: 503 }
       );
@@ -52,7 +36,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const app = getAdminApp();
+    const app = getFirebaseAdminApp();
     const auth = getAuth(app);
     const db = getFirestore(app);
 

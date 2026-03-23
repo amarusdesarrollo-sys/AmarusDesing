@@ -1,82 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
-import { sendOrderConfirmationEmail, sendNewOrderAlertToAdmin } from "@/lib/email";
-import type { Order, OrderItem } from "@/types";
+import { getFirestore } from "firebase-admin/firestore";
+import { getFirebaseAdminApp, hasFirebaseAdminCredentials } from "@/lib/firebase-admin-server";
+import { finalizePaidOrder } from "@/lib/finalize-paid-order";
+import { checkoutSessionIndicatesPaid } from "@/lib/stripe-checkout-paid";
 
-let adminApp: App | null = null;
-
-function getAdminApp(): App {
-  if (adminApp) return adminApp;
-  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!key || !key.trim()) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY no configurada");
+async function finalizeFromCheckoutSession(
+  db: ReturnType<typeof getFirestore>,
+  session: Stripe.Checkout.Session
+) {
+  const orderId = session.metadata?.orderId?.toString().trim();
+  if (!orderId) {
+    console.error("Stripe Checkout: falta metadata.orderId", session.id);
+    return;
   }
-  const serviceAccount = JSON.parse(key) as object;
-  if (getApps().length === 0) {
-    adminApp = initializeApp({
-      credential: cert(serviceAccount as Parameters<typeof cert>[0]),
-    });
-  } else {
-    adminApp = getApps()[0] as App;
+  const paymentMethod = session.payment_method_types?.[0] ?? "card";
+  const result = await finalizePaidOrder(db, orderId, paymentMethod);
+  if (!result.ok) {
+    console.error("finalizePaidOrder:", result.message, { orderId });
   }
-  return adminApp;
-}
-
-const toDate = (v: unknown): Date => {
-  if (v && typeof v === "object" && "toDate" in v) {
-    return (v as { toDate: () => Date }).toDate();
-  }
-  if (v instanceof Date) return v;
-  if (typeof v === "string") return new Date(v);
-  return new Date();
-};
-
-function toOrder(data: any, id: string): Order {
-  const items: OrderItem[] = (data?.items || []).map((item: any) => ({
-    productId: item.productId ?? "",
-    product: item.product,
-    quantity: item.quantity ?? 0,
-    price: item.price ?? 0,
-  }));
-  return {
-    id,
-    userId: data?.userId ?? "guest",
-    customerName: data?.customerName,
-    customerGivenName: data?.customerGivenName,
-    customerFamilyName: data?.customerFamilyName,
-    customerEmail: data?.customerEmail,
-    customerPhone: data?.customerPhone,
-    items,
-    discount: data?.discount,
-    promoCode: data?.promoCode,
-    total: data?.total ?? 0,
-    shipping: data?.shipping ?? 0,
-    tax: data?.tax ?? 0,
-    shippingOptionName: data?.shippingOptionName,
-    status: data?.status ?? "pending",
-    paymentMethod: data?.paymentMethod ?? "pending",
-    paymentStatus: data?.paymentStatus ?? "pending",
-    shippingAddress: {
-      street: data?.shippingAddress?.street ?? "",
-      street2: data?.shippingAddress?.street2,
-      city: data?.shippingAddress?.city ?? "",
-      postalCode: data?.shippingAddress?.postalCode ?? "",
-      country: data?.shippingAddress?.country ?? "",
-      state: data?.shippingAddress?.state,
-    },
-    trackingNumber: data?.trackingNumber,
-    createdAt: toDate(data?.createdAt),
-    updatedAt: toDate(data?.updatedAt),
-  };
 }
 
 /**
- * Webhook de Stripe. Recibe eventos (p. ej. checkout.session.completed)
- * y actualiza la orden en Firestore cuando el pago es exitoso.
+ * Webhook de Stripe. Confirma pago, stock y emails.
  *
- * IMPORTANTE: El body debe leerse como texto raw para verificar la firma.
+ * Eventos:
+ * - checkout.session.completed: solo si el pago ya consta como pagado (tarjeta inmediata).
+ * - checkout.session.async_payment_succeeded: Klarna / métodos diferidos.
+ * - payment_intent.succeeded: respaldo (metadata orderId en payment_intent_data al crear Checkout).
+ *
  * En local: stripe listen --forward-to localhost:3000/api/webhooks/stripe
  */
 export async function POST(request: NextRequest) {
@@ -85,6 +37,14 @@ export async function POST(request: NextRequest) {
     console.error("STRIPE_WEBHOOK_SECRET no configurada");
     return NextResponse.json(
       { error: "Webhook no configurado" },
+      { status: 500 }
+    );
+  }
+
+  if (!hasFirebaseAdminCredentials()) {
+    console.error("Webhook Stripe: Firebase Admin no configurado; no se puede actualizar pedidos");
+    return NextResponse.json(
+      { error: "Firebase Admin no configurado" },
       { status: 500 }
     );
   }
@@ -108,7 +68,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey) {
+    return NextResponse.json({ error: "STRIPE_SECRET_KEY no configurada" }, { status: 500 });
+  }
+
+  const stripe = new Stripe(stripeKey);
   let event: Stripe.Event;
 
   try {
@@ -122,88 +87,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object as Stripe.Checkout.Session;
-    const orderId = session.metadata?.orderId;
-    if (!orderId) {
-      console.error("checkout.session.completed sin metadata.orderId");
-      return NextResponse.json({ received: true }, { status: 200 });
-    }
-    const paymentMethod =
-      session.payment_method_types?.[0] ?? "card";
-    try {
-      const db = getFirestore(getAdminApp());
-      const orderRef = db.collection("orders").doc(orderId);
-      const orderSnap = await orderRef.get();
-      if (!orderSnap.exists) {
-        console.error("Pedido no encontrado en webhook:", orderId);
-        return NextResponse.json({ received: true }, { status: 200 });
-      }
-      const order = toOrder(orderSnap.data(), orderId);
-      if (order.paymentStatus === "paid") {
-        return NextResponse.json({ received: true, alreadyPaid: true }, { status: 200 });
-      }
+  try {
+    const db = getFirestore(getFirebaseAdminApp());
 
-      await orderRef.update({
-        paymentStatus: "paid",
-        paymentMethod,
-        status: "confirmed",
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-
-      // Descontar stock de cada producto con Firebase Admin (no depende de reglas del cliente)
-      if (order.items?.length) {
-        for (const item of order.items) {
-          try {
-            await db.runTransaction(async (tx) => {
-              const productRef = db.collection("products").doc(item.productId);
-              const productSnap = await tx.get(productRef);
-              if (!productSnap.exists) {
-                throw new Error(`Producto ${item.productId} no encontrado`);
-              }
-              const currentStock = (productSnap.data()?.stock ?? 0) as number;
-              const newStock = Math.max(0, currentStock - item.quantity);
-              tx.update(productRef, {
-                stock: newStock,
-                inStock: newStock > 0,
-                updatedAt: FieldValue.serverTimestamp(),
-              });
-            });
-          } catch (stockErr) {
-            console.error(
-              `Error descontando stock de ${item.productId}:`,
-              stockErr
-            );
-            // No fallar el webhook; la orden ya está pagada
-          }
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (!checkoutSessionIndicatesPaid(session)) {
+        console.info(
+          "checkout.session.completed: pago no confirmado aún; esperando async_payment_succeeded / payment_intent.succeeded",
+          { id: session.id, payment_status: session.payment_status }
+        );
+      } else {
+        await finalizeFromCheckoutSession(db, session);
+      }
+    } else if (event.type === "checkout.session.async_payment_succeeded") {
+      const session = event.data.object as Stripe.Checkout.Session;
+      await finalizeFromCheckoutSession(db, session);
+    } else if (event.type === "payment_intent.succeeded") {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      const orderId = pi.metadata?.orderId?.toString().trim();
+      if (orderId) {
+        const paymentMethod = pi.payment_method_types?.[0] ?? "card";
+        const result = await finalizePaidOrder(db, orderId, paymentMethod);
+        if (!result.ok) {
+          console.error("payment_intent.succeeded finalizePaidOrder:", result.message);
         }
       }
-
-      // Emails: confirmación al cliente y aviso al admin
-      const customerEmailRes = await sendOrderConfirmationEmail(order);
-      if (!customerEmailRes.ok) {
-        console.error("Resend fallo: email confirmación pedido:", {
-          orderId: order.id,
-          to: order.customerEmail,
-          error: customerEmailRes.error,
-        });
-      }
-
-      const adminAlertRes = await sendNewOrderAlertToAdmin(order);
-      if (!adminAlertRes.ok) {
-        console.error("Resend fallo: aviso admin nuevo pedido:", {
-          orderId: order.id,
-          to: process.env.ADMIN_NOTIFY_EMAIL || undefined,
-          error: adminAlertRes.error,
-        });
-      }
-    } catch (err) {
-      console.error("Error actualizando orden:", err);
-      return NextResponse.json(
-        { error: "Error actualizando orden" },
-        { status: 500 }
-      );
     }
+  } catch (err) {
+    console.error("Webhook: error procesando evento:", err);
+    return NextResponse.json(
+      { error: "Error procesando webhook" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ received: true }, { status: 200 });

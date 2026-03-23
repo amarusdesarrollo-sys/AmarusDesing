@@ -2,36 +2,26 @@
  * Verificación de token Firebase en el servidor (API routes).
  * Solo usar en rutas que deben estar restringidas a admin.
  *
- * Requiere: FIREBASE_SERVICE_ACCOUNT_KEY (JSON completo de la cuenta de servicio de Firebase).
- * Si no está definida, requireAdmin() devuelve 503 para indicar que hay que configurarla.
+ * Credenciales Admin (una de las dos):
+ * - FIREBASE_SERVICE_ACCOUNT_KEY (JSON)
+ * - FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 (JSON en Base64; útil en Vercel)
  */
 
 import { NextResponse } from "next/server";
 import { getAuth } from "firebase-admin/auth";
-import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
+import { getFirebaseAdminApp, hasFirebaseAdminCredentials } from "@/lib/firebase-admin-server";
 import { isAdminEmail } from "@/lib/auth-admin";
 
 let authInstance: ReturnType<typeof getAuth> | null = null;
 
 function getAdminAuth(): ReturnType<typeof getAuth> {
   if (authInstance) return authInstance;
-  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!key || !key.trim()) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY no configurada");
-  }
   try {
-    const serviceAccount = JSON.parse(key) as object;
-    let app: App;
-    if (getApps().length === 0) {
-      app = initializeApp({ credential: cert(serviceAccount as Parameters<typeof cert>[0]) });
-    } else {
-      app = getApps()[0] as App;
-    }
-    authInstance = getAuth(app);
+    authInstance = getAuth(getFirebaseAdminApp());
     return authInstance;
   } catch (e) {
     console.error("Firebase Admin init error:", e);
-    throw new Error("Configuración de Firebase Admin inválida");
+    throw e instanceof Error ? e : new Error("Configuración de Firebase Admin inválida");
   }
 }
 
@@ -65,18 +55,18 @@ export async function requireAdminToken(
 
 /**
  * Helper para usar en API route.
- * Si FIREBASE_SERVICE_ACCOUNT_KEY está definida: exige token admin; si no, deja pasar (para no romper despliegues sin la key).
+ * Si hay credenciales Admin: exige token admin; si no, deja pasar (para no romper despliegues sin la key).
  */
 export async function requireAdmin(
   request: Request
 ): Promise<{ email: string } | NextResponse | null> {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()) {
+  if (!hasFirebaseAdminCredentials()) {
     if (process.env.NODE_ENV === "production") {
       console.warn(
-        "[auth] FIREBASE_SERVICE_ACCOUNT_KEY no configurada: rutas de admin sin proteger."
+        "[auth] Firebase Admin sin credenciales: rutas de admin sin proteger."
       );
     }
-    return null; // No proteger; la ruta decide seguir
+    return null;
   }
   const result = await requireAdminToken(request);
   if ("error" in result) {
@@ -87,7 +77,7 @@ export async function requireAdmin(
 
 /**
  * Verifica token Bearer (usuario autenticado, no necesariamente admin).
- * Requiere FIREBASE_SERVICE_ACCOUNT_KEY. Si no está configurada, devuelve 503.
+ * Requiere credenciales Admin. Si no están configuradas, devuelve 503.
  */
 export async function requireUser(
   request: Request
@@ -95,9 +85,12 @@ export async function requireUser(
   | { uid: string; email?: string | null }
   | { error: string; status: number }
 > {
-  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!key || !key.trim()) {
-    return { error: "FIREBASE_SERVICE_ACCOUNT_KEY no configurada", status: 503 };
+  if (!hasFirebaseAdminCredentials()) {
+    return {
+      error:
+        "Firebase Admin no configurado (FIREBASE_SERVICE_ACCOUNT_KEY o FIREBASE_SERVICE_ACCOUNT_KEY_BASE64)",
+      status: 503,
+    };
   }
 
   const authHeader = request.headers.get("Authorization");

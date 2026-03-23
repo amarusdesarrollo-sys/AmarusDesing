@@ -1,27 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCloudinary } from "@/lib/cloudinary-server";
 import { requireAdmin } from "@/lib/firebase-admin";
-import { getApps, initializeApp, cert, type App } from "firebase-admin/app";
+import { getFirebaseAdminApp } from "@/lib/firebase-admin-server";
 import { getFirestore } from "firebase-admin/firestore";
-
-let adminApp: App | null = null;
-
-function getAdminApp(): App {
-  if (adminApp) return adminApp;
-  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!key || !key.trim()) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY no configurada");
-  }
-  const serviceAccount = JSON.parse(key) as object;
-  if (getApps().length === 0) {
-    adminApp = initializeApp({
-      credential: cert(serviceAccount as Parameters<typeof cert>[0]),
-    });
-  } else {
-    adminApp = getApps()[0] as App;
-  }
-  return adminApp;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +20,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const app = getAdminApp();
+    const app = getFirebaseAdminApp();
     const db = getFirestore(app);
 
     const ref = db.collection("blogPosts").doc(blogPostId);
