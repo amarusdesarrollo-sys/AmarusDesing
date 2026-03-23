@@ -2,7 +2,7 @@
 
 Copia y pega estas reglas en **Firebase Console** → **Firestore** → **Reglas** para dejar todo protegido.
 
-Sustituye `amarusdesarrollo@gmail.com` por tu email de admin (el de `src/lib/auth-admin.ts`).
+Sustituye `amarusdesign2014@gmail.com` si usas otro email de admin (debe coincidir con `src/lib/auth-admin.ts` o `NEXT_PUBLIC_ADMIN_EMAIL`).
 
 ```javascript
 rules_version = '2';
@@ -13,7 +13,7 @@ service cloud.firestore {
     function isAdmin() {
       return request.auth != null
         && request.auth.token.email != null
-        && request.auth.token.email.matches('(?i)amarusdesarrollo@gmail.com');
+        && request.auth.token.email.matches('(?i)amarusdesign2014@gmail.com');
     }
 
     // Categorías: lectura pública, solo admin puede escribir

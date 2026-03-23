@@ -52,15 +52,16 @@ export default function RegistroPage() {
         useSameAddressForBilling: true,
       });
 
-      // Email de bienvenida (best-effort) con logging para depurar en local.
+      // Email de bienvenida: solo con token (el servidor usa el email del token).
       try {
+        const token = await user.getIdToken();
         const emailRes = await fetch("/api/email/welcome", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            email: email.trim(),
             name: `${name.trim()} ${lastName.trim()}`.trim(),
           }),
         });

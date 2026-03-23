@@ -42,7 +42,7 @@ En **Vercel** → tu proyecto → **Settings** → **Environment Variables** añ
 1. Entra en **Firebase Console** → tu proyecto → **Firestore Database** → pestaña **Reglas**.
 2. Abre en tu repo el archivo **`docs/FIRESTORE_REGLAS_COMPLETAS.md`**.
 3. Copia todo el bloque de reglas (desde `rules_version` hasta el cierre `}`).
-4. En la regla, cambia `amarusdesarrollo@gmail.com` por el **email con el que entras al panel admin** (el mismo que en `src/lib/auth-admin.ts`).
+4. En la regla, el `matches('(?i)...')` debe ser el **mismo email con el que entras al panel admin** (`src/lib/auth-admin.ts` o `NEXT_PUBLIC_ADMIN_EMAIL`). El ejemplo en `docs/FIRESTORE_REGLAS_COMPLETAS.md` usa `amarusdesign2014@gmail.com`.
 5. Pega en la consola de Firebase y pulsa **Publicar**.
 
 Así la base de datos queda protegida: solo ese email puede crear/editar categorías, productos, contenido, etc.; el resto solo puede leer y crear órdenes (checkout).

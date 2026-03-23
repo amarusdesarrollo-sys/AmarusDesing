@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/firebase-admin";
 import { sendWelcomeEmail } from "@/lib/email";
 
+/**
+ * Solo el usuario autenticado puede pedir su propio email de bienvenida
+ * (el destinatario es siempre el email del token, no el body).
+ */
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
-  const email =
-    typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const auth = await requireUser(request);
+  if ("error" in auth) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  const email = auth.email?.trim().toLowerCase() ?? "";
   if (!email) {
     return NextResponse.json(
-      { error: "Falta email" },
+      { error: "No hay email en el token" },
       { status: 400 }
     );
   }
 
+  const body = await request.json().catch(() => ({}));
   const name =
     typeof body?.name === "string" ? body.name.trim().slice(0, 120) : undefined;
 
@@ -25,4 +34,3 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ success: true }, { status: 200 });
 }
-

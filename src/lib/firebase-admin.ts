@@ -55,18 +55,20 @@ export async function requireAdminToken(
 
 /**
  * Helper para usar en API route.
- * Si hay credenciales Admin: exige token admin; si no, deja pasar (para no romper despliegues sin la key).
+ * Siempre exige Firebase Admin + token admin válido.
+ * Sin credenciales Admin en el servidor → 503 (no se ejecuta la ruta sin auth).
  */
 export async function requireAdmin(
   request: Request
-): Promise<{ email: string } | NextResponse | null> {
+): Promise<{ email: string } | NextResponse> {
   if (!hasFirebaseAdminCredentials()) {
-    if (process.env.NODE_ENV === "production") {
-      console.warn(
-        "[auth] Firebase Admin sin credenciales: rutas de admin sin proteger."
-      );
-    }
-    return null;
+    return NextResponse.json(
+      {
+        error:
+          "Firebase Admin no configurado en el servidor (FIREBASE_SERVICE_ACCOUNT_KEY o FIREBASE_SERVICE_ACCOUNT_KEY_BASE64)",
+      },
+      { status: 503 }
+    );
   }
   const result = await requireAdminToken(request);
   if ("error" in result) {
