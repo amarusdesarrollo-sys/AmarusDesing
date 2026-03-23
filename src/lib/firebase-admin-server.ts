@@ -29,6 +29,13 @@ export function getFirebaseAdminApp(): App {
 
   const raw = getServiceAccountJsonRaw();
   if (!raw?.trim()) {
+    console.error("Firebase Admin env missing in runtime:", {
+      nodeEnv: process.env.NODE_ENV,
+      hasKey: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()),
+      hasKeyBase64: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64?.trim()),
+      vercelEnv: process.env.VERCEL_ENV,
+      vercelUrl: process.env.VERCEL_URL,
+    });
     throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY no configurada");
   }
 
