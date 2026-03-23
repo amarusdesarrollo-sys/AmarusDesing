@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { useCartStore } from "@/store/cartStore";
 import {
   LayoutDashboard,
   Package,
@@ -63,8 +64,10 @@ const menuItems = [
 export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const clearCart = useCartStore((s) => s.clearCart);
 
   const handleLogout = async () => {
+    clearCart();
     await signOut(auth);
     router.replace("/admin/login");
   };

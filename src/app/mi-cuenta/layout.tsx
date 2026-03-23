@@ -6,6 +6,7 @@ import Link from "next/link";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { isAdminEmail } from "@/lib/auth-admin";
+import { useCartStore } from "@/store/cartStore";
 import { User, MapPin, Package, LogOut } from "lucide-react";
 
 export default function MiCuentaLayout({
@@ -18,6 +19,7 @@ export default function MiCuentaLayout({
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const clearCart = useCartStore((s) => s.clearCart);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -49,6 +51,7 @@ export default function MiCuentaLayout({
 
   const handleSignOut = async () => {
     setLoggingOut(true);
+    clearCart();
     await signOut(auth);
     router.replace("/");
     router.refresh();

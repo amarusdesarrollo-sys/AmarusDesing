@@ -5,22 +5,22 @@ import { getOrderById } from "@/lib/firebase/orders";
 /**
  * URL base para success/cancel de Stripe (sin barra final).
  * 1) NEXT_PUBLIC_SITE_URL (dominio custom)
- * 2) VERCEL_URL (Vercel lo inyecta; evita success_url a localhost si falta la env pública)
- * 3) Header Origin (mismo origen en el navegador)
+ * 2) Header Origin (mismo origen en el navegador)
+ * 3) VERCEL_URL (fallback final en serverless)
  * 4) localhost
  */
 function getCheckoutOrigin(request: NextRequest): string {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "").trim();
   if (fromEnv) return fromEnv;
 
+  const origin = request.headers.get("origin")?.replace(/\/$/, "").trim();
+  if (origin && /^https:\/\//i.test(origin)) return origin;
+  if (origin && /^http:\/\/localhost(?::\d+)?$/i.test(origin)) return origin;
+
   const vercel = process.env.VERCEL_URL?.replace(/\/$/, "").trim();
   if (vercel) {
     return vercel.startsWith("http") ? vercel : `https://${vercel}`;
   }
-
-  const origin = request.headers.get("origin")?.replace(/\/$/, "").trim();
-  if (origin && /^https:\/\//i.test(origin)) return origin;
-  if (origin && /^http:\/\/localhost(?::\d+)?$/i.test(origin)) return origin;
 
   return "http://localhost:3000";
 }
