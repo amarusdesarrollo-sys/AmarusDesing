@@ -91,7 +91,19 @@ export async function POST(request: NextRequest) {
     const db = getFirestore(getFirebaseAdminApp());
 
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
+      const rawSession = event.data.object as Stripe.Checkout.Session;
+      let session = rawSession;
+      if (!checkoutSessionIndicatesPaid(rawSession)) {
+        // Algunas veces checkout.session.completed llega sin payment_intent expandido.
+        // Reconsultamos la sesión para confirmar estado real antes de esperar otros eventos.
+        try {
+          session = await stripe.checkout.sessions.retrieve(rawSession.id, {
+            expand: ["payment_intent"],
+          });
+        } catch (err) {
+          console.warn("No se pudo expandir checkout session:", err);
+        }
+      }
       if (!checkoutSessionIndicatesPaid(session)) {
         console.info(
           "checkout.session.completed: pago no confirmado aún; esperando async_payment_succeeded / payment_intent.succeeded",
