@@ -256,7 +256,7 @@ export default function EditarProductoPage() {
         originalPrice:
           discount > 0 && originalPriceEur > 0
             ? Math.round(originalPriceEur * 100)
-            : undefined,
+            : null,
         category: data.category,
         subcategory: data.subcategory?.trim() || undefined,
         images: productImages,

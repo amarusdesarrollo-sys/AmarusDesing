@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Save, Upload, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { createCategory } from "@/lib/firebase/categories";
@@ -29,6 +29,23 @@ const categorySchema = z.object({
 
 type CategoryFormData = z.infer<typeof categorySchema>;
 
+type PendingSubcategory = {
+  localId: string;
+  name: string;
+  slug: string;
+  order: number;
+  active: boolean;
+};
+
+function generateSubcatSlug(name: string) {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export default function NuevaCategoriaPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -37,6 +54,15 @@ export default function NuevaCategoriaPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imagePublicId, setImagePublicId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null); // URL completa para hero
+
+  const [pendingSubcategories, setPendingSubcategories] = useState<
+    PendingSubcategory[]
+  >([]);
+  const [showNewSubcat, setShowNewSubcat] = useState(false);
+  const [subcatName, setSubcatName] = useState("");
+  const [subcatSlug, setSubcatSlug] = useState("");
+  const [subcatOrder, setSubcatOrder] = useState(0);
+  const [subcatActive, setSubcatActive] = useState(true);
 
   const {
     register,
@@ -56,8 +82,9 @@ export default function NuevaCategoriaPage() {
     },
   });
 
+  const parentSlug = watch("slug");
+
   // Auto-generar slug desde el nombre
-  const nameWatch = watch("name");
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
     setValue("name", name);
@@ -138,6 +165,48 @@ export default function NuevaCategoriaPage() {
     setImageUrl(null);
   };
 
+  const slugRegex = /^[a-z0-9-]+$/;
+
+  const addPendingSubcategory = () => {
+    const name = subcatName.trim();
+    const slug = (subcatSlug.trim() || generateSubcatSlug(name)).trim();
+    if (!name || !slug) return;
+    if (!slugRegex.test(slug)) {
+      setError(
+        "El slug de la subcategoría solo puede tener minúsculas, números y guiones."
+      );
+      return;
+    }
+    if (slug === (parentSlug || "").trim().toLowerCase()) {
+      setError("La subcategoría no puede usar el mismo slug que la categoría principal.");
+      return;
+    }
+    if (pendingSubcategories.some((s) => s.slug === slug)) {
+      setError("Ya añadiste una subcategoría con ese slug en la lista.");
+      return;
+    }
+    setError(null);
+    setPendingSubcategories((prev) => [
+      ...prev,
+      {
+        localId: `p-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        name,
+        slug,
+        order: subcatOrder,
+        active: subcatActive,
+      },
+    ]);
+    setSubcatName("");
+    setSubcatSlug("");
+    setSubcatOrder((n) => n + 1);
+    setSubcatActive(true);
+    setShowNewSubcat(false);
+  };
+
+  const removePendingSubcategory = (localId: string) => {
+    setPendingSubcategories((prev) => prev.filter((s) => s.localId !== localId));
+  };
+
   const onSubmit = async (data: CategoryFormData) => {
     try {
       setLoading(true);
@@ -152,14 +221,24 @@ export default function NuevaCategoriaPage() {
       };
 
       const categoryId = await createCategory(categoryData);
-      
-      console.log("✅ Categoría creada exitosamente con ID:", categoryId);
+
+      for (const sub of pendingSubcategories) {
+        await createCategory({
+          name: sub.name,
+          slug: sub.slug,
+          description: "",
+          order: sub.order,
+          active: sub.active,
+          featured: false,
+          parentId: categoryId,
+        });
+      }
 
       router.push("/admin/categorias");
     } catch (err) {
       console.error("❌ Error creating category:", err);
       setError(
-        "Error al crear la categoría. Verifica que el slug no esté duplicado."
+        "Error al crear la categoría o alguna subcategoría. Revisa que los slugs no estén duplicados."
       );
     } finally {
       setLoading(false);
@@ -248,6 +327,149 @@ export default function NuevaCategoriaPage() {
             </p>
             {errors.slug && (
               <p className="mt-1 text-sm text-red-600">{errors.slug.message}</p>
+            )}
+          </div>
+
+          {/* Subcategorías (se crean al guardar, bajo esta categoría) */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between gap-4 mb-3">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Subcategorías
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Opcional: añade subcategorías ahora; se crearán en cuanto guardes
+                  esta categoría (mismo comportamiento que en «Editar»).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNewSubcat((v) => {
+                    const open = !v;
+                    if (open) {
+                      setSubcatOrder(pendingSubcategories.length);
+                      setError(null);
+                    }
+                    return open;
+                  });
+                }}
+                className="px-4 py-2 rounded-lg bg-[#6B5BB6] text-white hover:bg-[#5B4BA5] shrink-0"
+              >
+                {showNewSubcat ? "Cancelar" : "Añadir subcategoría"}
+              </button>
+            </div>
+
+            {showNewSubcat && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre *
+                    </label>
+                    <input
+                      type="text"
+                      value={subcatName}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setSubcatName(v);
+                        setSubcatSlug(generateSubcatSlug(v));
+                      }}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="Ej: Anillos"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Slug (URL) *
+                    </label>
+                    <input
+                      type="text"
+                      value={subcatSlug}
+                      onChange={(e) => setSubcatSlug(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="ej: anillos"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Orden
+                    </label>
+                    <input
+                      type="number"
+                      value={subcatOrder}
+                      onChange={(e) => setSubcatOrder(Number(e.target.value))}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      min={0}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-7">
+                    <input
+                      id="newSubcatActive"
+                      type="checkbox"
+                      checked={subcatActive}
+                      onChange={(e) => setSubcatActive(e.target.checked)}
+                      className="h-4 w-4 text-[#6B5BB6] border-gray-300 rounded"
+                    />
+                    <label htmlFor="newSubcatActive" className="text-sm text-gray-700">
+                      Activa
+                    </label>
+                  </div>
+                  <div className="pt-6">
+                    <button
+                      type="button"
+                      onClick={addPendingSubcategory}
+                      className="w-full px-4 py-2 rounded-lg bg-gray-900 text-white hover:bg-gray-800"
+                    >
+                      Añadir a la lista
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {pendingSubcategories.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No hay subcategorías en la lista. Puedes añadirlas con el botón de
+                arriba.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {pendingSubcategories.map((s) => (
+                  <li
+                    key={s.localId}
+                    className="flex items-center justify-between gap-3 border rounded-lg p-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-800 truncate">
+                        {s.name}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{s.slug}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                          s.active
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {s.active ? "Activa" : "Inactiva"}
+                      </span>
+                      <span className="text-xs text-gray-500">ord. {s.order}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePendingSubcategory(s.localId)}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
 

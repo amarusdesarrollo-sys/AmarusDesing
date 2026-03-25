@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import type { SavedAddress } from "@/types";
+import { normalizeAddressCountryInput } from "@/lib/checkout-country-options";
 
 /** Perfil de usuario guardado en Firestore (campos alineados con Klarna). */
 export interface UserProfile {
@@ -30,6 +31,13 @@ export interface UserProfile {
 
 const COLLECTION = "users";
 
+function normalizeAddressCountryFromFirestore(raw: unknown): string {
+  const s = (raw ?? "").toString().trim().toUpperCase();
+  if (s === "OTHER") return "OTHER";
+  const two = s.slice(0, 2);
+  return /^[A-Z]{2}$/.test(two) ? two : "ES";
+}
+
 function firestoreToProfile(data: Record<string, unknown> | null): UserProfile | null {
   if (!data || typeof data !== "object") return null;
   const rawAddresses = (data.addresses as unknown[]) ?? [];
@@ -41,7 +49,7 @@ function firestoreToProfile(data: Record<string, unknown> | null): UserProfile |
     postalCode: a.postalCode ?? "",
     city: a.city ?? "",
     region: a.region,
-    country: (a.country ?? "").toString().toUpperCase().slice(0, 2) || "ES",
+    country: normalizeAddressCountryFromFirestore(a.country),
     isDefault: Boolean(a.isDefault),
   }));
   const firstName = (data.firstName as string) ?? (data.name as string) ?? "";
@@ -83,7 +91,7 @@ function profileToFirestore(p: Partial<UserProfile>): Record<string, unknown> {
       postalCode: a.postalCode,
       city: a.city,
       ...(a.region != null && a.region !== "" && { region: a.region }),
-      country: (a.country ?? "ES").toString().toUpperCase().slice(0, 2),
+      country: normalizeAddressCountryInput(a.country ?? "ES"),
       isDefault: a.isDefault,
     }));
   }

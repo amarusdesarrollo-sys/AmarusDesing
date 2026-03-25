@@ -4,19 +4,13 @@ import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { getUserProfile, setUserProfile } from "@/lib/firebase/users";
 import { addressSchema } from "@/lib/validations/schemas";
+import {
+  CHECKOUT_COUNTRY_SELECT_GROUPS,
+  getCheckoutCountryLabel,
+  normalizeAddressCountryInput,
+} from "@/lib/checkout-country-options";
 import type { SavedAddress } from "@/types";
 import { Plus, Pencil, Trash2, Package, CreditCard } from "lucide-react";
-
-/** Países ISO-2 compatibles con Klarna (lista reducida; se puede ampliar). */
-const COUNTRY_OPTIONS: { code: string; label: string }[] = [
-  { code: "ES", label: "España" },
-  { code: "PT", label: "Portugal" },
-  { code: "FR", label: "Francia" },
-  { code: "DE", label: "Alemania" },
-  { code: "IT", label: "Italia" },
-  { code: "GB", label: "Reino Unido" },
-  { code: "AD", label: "Andorra" },
-];
 
 /**
  * Direcciones de envío y facturación. Opción "usar la misma dirección".
@@ -53,7 +47,7 @@ export default function DireccionesPage() {
       postalCode: (form.postalCode ?? "").trim(),
       city: (form.city ?? "").trim(),
       region: (form.region ?? "").trim() || undefined,
-      country: (form.country ?? "ES").toString().toUpperCase().slice(0, 2),
+      country: normalizeAddressCountryInput(form.country),
     });
     if (!parsed.success) {
       setMessage("validation");
@@ -168,7 +162,7 @@ export default function DireccionesPage() {
 
       {message === "validation" && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-sm">
-          Completa calle, ciudad, código postal y país (código de 2 letras, ej. ES).
+          Completa calle, ciudad, código postal y país (elige en la lista, como en el checkout).
         </div>
       )}
       {message === "ok" && (
@@ -326,7 +320,9 @@ function AddressCard({
         </p>
         <p className="text-gray-600">
           {address.postalCode} {address.city}
-          {address.region ? `, ${address.region}` : ""} — {address.country}
+          {address.region ? `, ${address.region}` : ""} —{" "}
+          {getCheckoutCountryLabel(address.country)}
+          {address.country !== "OTHER" ? ` (${address.country})` : ""}
         </p>
         {address.isDefault && (
           <span className="text-xs text-[#6B5BB6] font-medium">Por defecto</span>
@@ -392,14 +388,24 @@ function AddressForm({
         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-800"
       />
       <select
-        value={(form.country ?? "ES").toString().toUpperCase().slice(0, 2)}
+        value={normalizeAddressCountryInput(form.country)}
         onChange={(e) => setForm({ ...form, country: e.target.value })}
         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-800 bg-white"
       >
-        {COUNTRY_OPTIONS.map(({ code, label }) => (
-          <option key={code} value={code}>{label} ({code})</option>
+        {CHECKOUT_COUNTRY_SELECT_GROUPS.map((group) => (
+          <optgroup key={group.label} label={group.label}>
+            {group.options.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+                {o.value !== "OTHER" ? ` (${o.value})` : ""}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
+      <p className="text-xs text-gray-500">
+        Misma lista que en el checkout. Si tu país no aparece, elige «Otro país».
+      </p>
       <label className="flex items-center gap-2">
         <input
           type="checkbox"

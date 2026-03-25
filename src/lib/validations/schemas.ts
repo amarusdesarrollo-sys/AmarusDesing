@@ -6,11 +6,16 @@
 
 import { z } from "zod";
 
-/** Códigos país ISO-2 (Klarna). Se puede ampliar. */
-const COUNTRY_ISO2 = z
+/** Códigos país ISO-2 (Klarna) o OTHER como en checkout (envío internacional). */
+export const addressCountrySchema = z
   .string()
-  .length(2, "País debe ser código ISO de 2 letras (ej. ES)")
-  .toUpperCase();
+  .min(1, "El país es requerido")
+  .trim()
+  .toUpperCase()
+  .refine(
+    (s) => s === "OTHER" || /^[A-Z]{2}$/.test(s),
+    "País debe ser código ISO de 2 letras (ej. ES) u «Otro país»"
+  );
 
 /** Perfil de usuario (Mi cuenta → Perfil). Persistido en users/{uid}. */
 export const profileSchema = z.object({
@@ -27,7 +32,7 @@ export const addressSchema = z.object({
   postalCode: z.string().min(1, "El código postal es requerido").trim(),
   city: z.string().min(1, "La ciudad es requerida").trim(),
   region: z.string().optional(),
-  country: COUNTRY_ISO2,
+  country: addressCountrySchema,
 });
 export type AddressFormData = z.infer<typeof addressSchema>;
 

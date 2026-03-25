@@ -10,6 +10,7 @@ import {
   updateDoc,
   deleteDoc,
   Timestamp,
+  deleteField,
   runTransaction,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -239,7 +240,7 @@ export const createProduct = async (
 // Actualizar producto (solo admin) - sin enviar undefined a Firestore
 export const updateProduct = async (
   id: string,
-  updates: Partial<Omit<Product, "id" | "createdAt">>
+  updates: Record<string, unknown>
 ): Promise<void> => {
   try {
     const productRef = doc(db, COLLECTION_NAME, id);
@@ -249,7 +250,8 @@ export const updateProduct = async (
     Object.keys(updates).forEach((key) => {
       const value = (updates as Record<string, unknown>)[key];
       if (value !== undefined) {
-        firestoreData[key] = value;
+        // Si el cliente manda `null`, lo interpretamos como "borrar campo" en Firestore.
+        firestoreData[key] = value === null ? deleteField() : value;
       }
     });
     await updateDoc(productRef, firestoreData);

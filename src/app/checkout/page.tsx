@@ -16,6 +16,7 @@ import { validateOrderStock } from "@/lib/firebase/products";
 import { checkoutCustomerSchema, type CheckoutCustomerFormData } from "@/lib/validations/schemas";
 import type { OrderItem } from "@/types";
 import { getCouponByCode } from "@/lib/firebase/coupons";
+import { CHECKOUT_COUNTRY_SELECT_GROUPS } from "@/lib/checkout-country-options";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -444,55 +445,16 @@ export default function CheckoutPage() {
                     {...register("pais")}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6] focus:border-transparent"
                   >
-                    {/* Europa */}
-                    <option value="ES">España</option>
-                    <option value="PT">Portugal</option>
-                    <option value="FR">Francia</option>
-                    <option value="IT">Italia</option>
-                    <option value="DE">Alemania</option>
-                    <option value="BE">Bélgica</option>
-                    <option value="NL">Países Bajos</option>
-                    <option value="LU">Luxemburgo</option>
-                    <option value="AT">Austria</option>
-                    <option value="IE">Irlanda</option>
-                    <option value="DK">Dinamarca</option>
-                    <option value="SE">Suecia</option>
-                    <option value="NO">Noruega</option>
-                    <option value="FI">Finlandia</option>
-                    <option value="PL">Polonia</option>
-                    <option value="CZ">Chequia</option>
-                    <option value="SK">Eslovaquia</option>
-                    <option value="HU">Hungría</option>
-                    <option value="RO">Rumanía</option>
-                    <option value="BG">Bulgaria</option>
-                    <option value="GR">Grecia</option>
-                    <option value="SI">Eslovenia</option>
-                    <option value="HR">Croacia</option>
-                    <option value="EE">Estonia</option>
-                    <option value="LV">Letonia</option>
-                    <option value="LT">Lituania</option>
-                    <option value="CY">Chipre</option>
-                    <option value="MT">Malta</option>
-                    <option value="GB">Reino Unido</option>
-                    {/* América */}
-                    <option value="US">Estados Unidos</option>
-                    <option value="CA">Canadá</option>
-                    <option value="MX">México</option>
-                    <option value="AR">Argentina</option>
-                    <option value="CL">Chile</option>
-                    <option value="BR">Brasil</option>
-                    <option value="CO">Colombia</option>
-                    <option value="PE">Perú</option>
-                    <option value="UY">Uruguay</option>
-                    {/* Asia / Oceanía / África */}
-                    <option value="AU">Australia</option>
-                    <option value="NZ">Nueva Zelanda</option>
-                    <option value="JP">Japón</option>
-                    <option value="CN">China</option>
-                    <option value="IN">India</option>
-                    <option value="ZA">Sudáfrica</option>
-                    <option value="MA">Marruecos</option>
-                    <option value="OTHER">Otro país</option>
+                    {CHECKOUT_COUNTRY_SELECT_GROUPS.map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.options.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                            {o.value !== "OTHER" ? ` (${o.value})` : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                   <p className="mt-1 text-xs text-gray-500">
                     Si tu país no aparece, elige &quot;Otro país&quot;. Se aplicará la tarifa Internacional.
