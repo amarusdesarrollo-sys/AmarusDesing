@@ -1,16 +1,65 @@
-import { Resend } from "resend";
 import type { Order } from "@/types";
 import { SITE_NAME, getBaseUrl } from "./seo";
 import { ADMIN_EMAIL } from "./auth-admin";
 
 const formatPrice = (cents: number) => (cents / 100).toFixed(2);
-const getResend = () => {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return null;
-  return new Resend(apiKey);
-};
 
-const getEmailFrom = () => process.env.EMAIL_FROM || "onboarding@resend.dev";
+type EmailFrom = { name: string; email: string };
+
+function parseEmailFrom(raw: string | undefined): EmailFrom {
+  const v = (raw ?? "").trim();
+  if (!v) return { name: SITE_NAME, email: "noreply@amarusdesign.com" };
+  const m = v.match(/^(.*)<([^>]+)>$/);
+  if (m) {
+    const name = (m[1] || "").trim().replace(/^"|"$/g, "") || SITE_NAME;
+    const email = (m[2] || "").trim();
+    return { name, email };
+  }
+  return { name: SITE_NAME, email: v };
+}
+
+const getEmailFrom = () => parseEmailFrom(process.env.EMAIL_FROM);
+
+const getMailerSendKey = () => process.env.MAILERSEND_API_KEY?.trim() || "";
+
+async function sendEmailViaMailerSend(input: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const apiKey = getMailerSendKey();
+  if (!apiKey) return { ok: false, error: "MAILERSEND_API_KEY no configurada" };
+
+  const from = getEmailFrom();
+  if (!from?.email?.trim()) return { ok: false, error: "EMAIL_FROM no configurado" };
+
+  try {
+    const res = await fetch("https://api.mailersend.com/v1/email", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [{ email: input.to.trim() }],
+        ...(input.replyTo?.trim()
+          ? { reply_to: [{ email: input.replyTo.trim() }] }
+          : {}),
+        subject: input.subject,
+        html: input.html,
+      }),
+    });
+
+    if (res.ok) return { ok: true };
+    const text = await res.text().catch(() => "");
+    return { ok: false, error: `MailerSend HTTP ${res.status}${text ? ` - ${text}` : ""}` };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Error desconocido";
+    return { ok: false, error: msg };
+  }
+}
 
 function escapeHtml(s: string) {
   return s
@@ -42,18 +91,10 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<{
   ok: boolean;
   error?: string;
 }> {
-  const resend = getResend();
-  if (!resend) {
-    console.warn("RESEND_API_KEY no configurada, no se envía email");
-    return { ok: false, error: "Email no configurado" };
-  }
-
   const to = order.customerEmail;
   if (!to?.trim()) {
     return { ok: false, error: "No hay email de cliente" };
   }
-
-  const from = getEmailFrom();
 
   const itemsHtml = order.items
     .map(
@@ -122,18 +163,13 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<{
 `;
 
   try {
-    const { data, error } = await resend.emails.send({
-      from: `${SITE_NAME} <${from}>`,
-      to: [to.trim()],
+    const result = await sendEmailViaMailerSend({
+      to: to.trim(),
       subject: `Confirmación de pedido #${order.id} - ${SITE_NAME}`,
       html,
     });
-
-    if (error) {
-      console.error("Error enviando email:", error);
-      return { ok: false, error: error.message };
-    }
-    return { ok: true };
+    if (!result.ok) console.error("Error enviando email:", result.error);
+    return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     console.error("Error enviando email de confirmación:", err);
@@ -146,17 +182,10 @@ export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
   ok: boolean;
   error?: string;
 }> {
-  const resend = getResend();
-  if (!resend) {
-    return { ok: false, error: "Email no configurado" };
-  }
-
   const to = process.env.ADMIN_NOTIFY_EMAIL || ADMIN_EMAIL;
   if (!to?.trim()) {
     return { ok: false, error: "No hay email de admin" };
   }
-
-  const from = getEmailFrom();
 
   const itemsList = order.items
     .map((i) => `• ${i.product.name} × ${i.quantity} — €${formatPrice(i.price * i.quantity)}`)
@@ -190,17 +219,13 @@ export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
 `;
 
   try {
-    const { error } = await resend.emails.send({
-      from: `${SITE_NAME} <${from}>`,
-      to: [to.trim()],
+    const result = await sendEmailViaMailerSend({
+      to: to.trim(),
       subject: `[${SITE_NAME}] Nuevo pedido #${order.id} — €${formatPrice(order.total)}`,
       html,
     });
-    if (error) {
-      console.error("Error enviando aviso a admin:", error);
-      return { ok: false, error: error.message };
-    }
-    return { ok: true };
+    if (!result.ok) console.error("Error enviando aviso a admin:", result.error);
+    return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     console.error("Error enviando aviso a admin:", err);
@@ -214,11 +239,8 @@ export async function sendContactMessageToAdmin(input: {
   subject: string;
   message: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const resend = getResend();
-  if (!resend) return { ok: false, error: "Email no configurado" };
-
   const to = process.env.ADMIN_NOTIFY_EMAIL || ADMIN_EMAIL;
-  const from = getEmailFrom();
+  if (!to?.trim()) return { ok: false, error: "No hay email de admin" };
 
   const html = `
 <!DOCTYPE html>
@@ -250,15 +272,12 @@ export async function sendContactMessageToAdmin(input: {
 </html>`;
 
   try {
-    const { error } = await resend.emails.send({
-      from: `${SITE_NAME} <${from}>`,
-      to: [to.trim()],
+    return await sendEmailViaMailerSend({
+      to: to.trim(),
       replyTo: input.email.trim(),
       subject: `[${SITE_NAME}] Contacto: ${input.subject}`,
       html,
     });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     return { ok: false, error: msg };
@@ -270,9 +289,6 @@ export async function sendContactConfirmationToUser(input: {
   email: string;
   subject: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const resend = getResend();
-  if (!resend) return { ok: false, error: "Email no configurado" };
-  const from = getEmailFrom();
   const to = input.email;
   if (!to?.trim()) return { ok: false, error: "No hay email" };
 
@@ -297,14 +313,11 @@ export async function sendContactConfirmationToUser(input: {
 </html>`;
 
   try {
-    const { error } = await resend.emails.send({
-      from: `${SITE_NAME} <${from}>`,
-      to: [to.trim()],
+    return await sendEmailViaMailerSend({
+      to: to.trim(),
       subject: `Recibimos tu mensaje - ${SITE_NAME}`,
       html,
     });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     return { ok: false, error: msg };
@@ -315,9 +328,6 @@ export async function sendWelcomeEmail(input: {
   name?: string;
   email: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const resend = getResend();
-  if (!resend) return { ok: false, error: "Email no configurado" };
-  const from = getEmailFrom();
   const to = input.email;
   if (!to?.trim()) return { ok: false, error: "No hay email" };
 
@@ -339,14 +349,11 @@ export async function sendWelcomeEmail(input: {
 </html>`;
 
   try {
-    const { error } = await resend.emails.send({
-      from: `${SITE_NAME} <${from}>`,
-      to: [to.trim()],
+    return await sendEmailViaMailerSend({
+      to: to.trim(),
       subject: `Bienvenid@ a ${SITE_NAME}`,
       html,
     });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     return { ok: false, error: msg };
@@ -357,10 +364,6 @@ export async function sendOrderShippedEmail(order: Order): Promise<{
   ok: boolean;
   error?: string;
 }> {
-  const resend = getResend();
-  if (!resend) return { ok: false, error: "Email no configurado" };
-
-  const from = getEmailFrom();
   const to = order.customerEmail;
   if (!to?.trim()) return { ok: false, error: "No hay email de cliente" };
   if (!order.trackingNumber?.trim()) {
@@ -392,14 +395,11 @@ export async function sendOrderShippedEmail(order: Order): Promise<{
 </html>`;
 
   try {
-    const { error } = await resend.emails.send({
-      from: `${SITE_NAME} <${from}>`,
-      to: [to.trim()],
+    return await sendEmailViaMailerSend({
+      to: to.trim(),
       subject: `Tu pedido #${order.id} está en camino - ${SITE_NAME}`,
       html,
     });
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     return { ok: false, error: msg };
