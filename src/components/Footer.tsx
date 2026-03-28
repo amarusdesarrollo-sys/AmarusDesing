@@ -1,41 +1,51 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Instagram, Mail, Heart, Settings } from "lucide-react";
 import { getSiteConfig } from "@/lib/firebase/site-config";
+import type { SiteConfig } from "@/types";
 
-export default async function Footer() {
-  const config = await getSiteConfig().catch(() => null);
-  const email = config?.contact?.email || config?.socialMedia?.email || "amarusdesign2014@gmail.com";
+function extractInstagramHandle(raw: string) {
+  const trimmed = (raw || "").trim();
+  if (!trimmed) return "amarusdesign";
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    const match = trimmed.match(/instagram\.com\/([^/?#]+)/i);
+    return match?.[1] || "amarusdesign";
+  }
+
+  const noAt = trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
+  return noAt.split(/[/?#]/)[0] || "amarusdesign";
+}
+
+export default function Footer() {
+  const [config, setConfig] = useState<SiteConfig | null>(null);
+
+  useEffect(() => {
+    getSiteConfig()
+      .then(setConfig)
+      .catch(() => setConfig(null));
+  }, []);
+
+  const email =
+    config?.contact?.email ||
+    config?.socialMedia?.email ||
+    "amarusdesign2014@gmail.com";
   const instagramRaw = config?.socialMedia?.instagram || "amarusdesign";
-
-  const extractInstagramHandle = (raw: string) => {
-    const trimmed = (raw || "").trim();
-    if (!trimmed) return "amarusdesign";
-
-    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-      const match = trimmed.match(/instagram\.com\/([^/?#]+)/i);
-      return match?.[1] || "amarusdesign";
-    }
-
-    const noAt = trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
-    return noAt.split(/[/?#]/)[0] || "amarusdesign";
-  };
-
   const instagramHandle = extractInstagramHandle(instagramRaw);
   const instagramUrl = `https://instagram.com/${instagramHandle}`;
 
   return (
     <footer className="bg-gray-900 text-white">
-      {/* Main Footer */}
       <div className="py-2 md:py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            {/* Brand */}
             <div className="text-center md:text-left">
               <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">
                 AmarusDesign
               </h3>
 
-              {/* Contacto de AmarusDesign */}
               <div className="mb-2 md:mb-3">
                 <div className="space-y-2">
                   <div className="flex items-center justify-center md:justify-start space-x-2">
@@ -63,7 +73,6 @@ export default async function Footer() {
                 </div>
               </div>
 
-              {/* Mis créditos y contacto */}
               <div className="border-t border-gray-700 pt-2 md:pt-3">
                 <p className="text-gray-300 mb-1 md:mb-2 text-xs md:text-sm">
                   Desarrollo web realizado por{" "}
@@ -88,13 +97,11 @@ export default async function Footer() {
               </div>
             </div>
 
-            {/* Espacio vacío para mantener el grid de 2 columnas */}
             <div></div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Bar */}
       <div className="border-t border-gray-800 py-2 md:py-3">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">

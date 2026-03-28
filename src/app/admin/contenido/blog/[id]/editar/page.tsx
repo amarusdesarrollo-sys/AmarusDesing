@@ -111,7 +111,7 @@ export default function EditarBlogPostPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex justify-center">
+      <div className="admin-shell flex justify-center">
         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
       </div>
     );
@@ -119,7 +119,7 @@ export default function EditarBlogPostPage() {
 
   if (notFound) {
     return (
-      <div className="p-8">
+      <div className="admin-shell">
         <p className="text-xl text-red-600 mb-4">Entrada no encontrada</p>
         <Link href="/admin/contenido/blog" className="text-[#6B5BB6] hover:underline">
           Volver al Blog
@@ -129,7 +129,7 @@ export default function EditarBlogPostPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <Link
         href="/admin/contenido/blog"
         className="inline-flex items-center gap-2 text-gray-600 hover:text-[#6B5BB6] mb-6"

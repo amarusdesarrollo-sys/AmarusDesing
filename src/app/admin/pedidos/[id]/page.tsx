@@ -70,16 +70,20 @@ export default function AdminPedidoDetallePage() {
             "Content-Type": "application/json",
             ...(await getAuthHeaders()),
           },
-          body: JSON.stringify({ orderId: order.id }),
+          body: JSON.stringify({
+            orderId: order.id,
+            trackingNumber: nextTracking,
+          }),
         });
         if (!res.ok) {
           const payload = (await res.json().catch(() => null)) as
             | { message?: string }
             | null;
-          console.warn(
-            "No se pudo enviar email de envío:",
-            payload?.message || `HTTP ${res.status}`
-          );
+          const msg =
+            payload?.message ||
+            `No se pudo enviar el email de envío (HTTP ${res.status}). Revisa Vercel → Logs y que exista FIREBASE_SERVICE_ACCOUNT_KEY_BASE64.`;
+          console.warn("notify-shipment:", msg);
+          setError(msg);
         }
       }
       setOrder((prev) =>
@@ -110,7 +114,7 @@ export default function AdminPedidoDetallePage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="admin-shell">
         <div className="flex justify-center items-center py-20">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
         </div>
@@ -120,7 +124,7 @@ export default function AdminPedidoDetallePage() {
 
   if (!order) {
     return (
-      <div className="p-8">
+      <div className="admin-shell">
         <p className="text-gray-600 mb-4">Pedido no encontrado.</p>
         <Link href="/admin/pedidos" className="text-[#6B5BB6] hover:underline">
           Volver a pedidos
@@ -130,7 +134,7 @@ export default function AdminPedidoDetallePage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <Link
         href="/admin/pedidos"
         className="inline-flex items-center text-[#6B5BB6] hover:text-[#5B4BA5] mb-6"

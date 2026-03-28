@@ -266,8 +266,8 @@ export default function EditarCategoriaPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
-        <div className="max-w-3xl mx-auto">
+      <div className="admin-shell">
+        <div className="max-w-3xl mx-auto min-w-0">
           <div className="text-center py-20">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6] mb-4"></div>
             <p className="text-xl text-gray-600">Cargando categoría...</p>
@@ -279,9 +279,9 @@ export default function EditarCategoriaPage() {
 
   if (error && !loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+      <div className="admin-shell">
+        <div className="max-w-3xl mx-auto min-w-0">
+          <div className="bg-white rounded-lg shadow-md p-6 text-center sm:p-8">
             <p className="text-xl text-red-600 mb-4">{error}</p>
             <Link href="/admin/categorias">
               <button className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors">
@@ -295,8 +295,8 @@ export default function EditarCategoriaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="admin-shell">
+      <div className="max-w-3xl mx-auto min-w-0">
         {/* Header */}
         <div className="mb-8">
           <Link

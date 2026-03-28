@@ -175,7 +175,7 @@ export default function AdminPedidosPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="admin-shell">
         <div className="flex justify-center items-center py-20">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
         </div>
@@ -184,16 +184,16 @@ export default function AdminPedidosPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="admin-shell">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Pedidos</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">Pedidos</h1>
           <p className="text-gray-600">Gestiona los pedidos de la tienda</p>
         </div>
         <button
           onClick={handleDeleteAllOrders}
           disabled={deletingAll}
-          className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+          className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2 w-full sm:w-auto shrink-0"
           title="Eliminar todos los pedidos de prueba"
         >
           <Trash2 className="h-4 w-4" />

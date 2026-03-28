@@ -380,11 +380,13 @@ export async function sendOrderShippedEmail(order: Order): Promise<{
       ${emailLogoHeader()}
       <h1 style="margin:0 0 12px; font-size:22px; color:#1a1a1a;">Tu pedido ya está en camino</h1>
       <p style="margin:0 0 16px; color:#666;">
-        Hola ${order.customerGivenName || order.customerName || "cliente"}, tu pedido <strong>#${order.id}</strong> ha sido enviado.
+        Hola ${escapeHtml(
+          order.customerGivenName || order.customerName || "cliente"
+        )}, tu pedido <strong>#${escapeHtml(order.id)}</strong> ha sido enviado.
       </p>
       <p style="margin:0 0 12px; color:#333;"><strong>Número de seguimiento:</strong></p>
       <p style="margin:0 0 16px; padding:12px; background:#f5efff; border-radius:8px; font-family:monospace; font-size:16px; color:#6B5BB6;">
-        ${order.trackingNumber}
+        ${escapeHtml(order.trackingNumber)}
       </p>
       <p style="margin:0; color:#888; font-size:13px;">
         Gracias por confiar en ${SITE_NAME}. Si tienes dudas, responde a este correo.

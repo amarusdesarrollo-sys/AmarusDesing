@@ -245,9 +245,9 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">
           Dashboard de Administración
         </h1>
         <p className="text-gray-600">
@@ -402,6 +402,7 @@ export default function AdminDashboard() {
             </h2>
           </div>
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -434,6 +435,7 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}

@@ -1,6 +1,5 @@
 import "./globals.css";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import ConditionalSiteChrome from "@/components/ConditionalSiteChrome";
 import ShippingConfigLoader from "@/components/ShippingConfigLoader";
 import { buildTitle, SITE_DESCRIPTION, SITE_KEYWORDS, getBaseUrl } from "@/lib/seo";
 
@@ -43,9 +42,7 @@ export default function RootLayout({
     <html lang="es">
       <body className="min-h-screen flex flex-col">
         <ShippingConfigLoader />
-        <Navbar />
-        <main className="flex-grow">{children}</main>
-        <Footer />
+        <ConditionalSiteChrome>{children}</ConditionalSiteChrome>
       </body>
     </html>
   );

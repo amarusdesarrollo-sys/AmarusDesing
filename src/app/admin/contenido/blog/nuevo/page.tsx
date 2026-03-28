@@ -75,7 +75,7 @@ export default function NuevoBlogPostPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <Link
         href="/admin/contenido/blog"
         className="inline-flex items-center gap-2 text-gray-600 hover:text-[#6B5BB6] mb-6"

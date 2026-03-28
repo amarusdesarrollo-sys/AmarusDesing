@@ -239,8 +239,8 @@ export default function NuevoProductoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="admin-shell">
+      <div className="max-w-4xl mx-auto min-w-0">
         <Link
           href="/admin/productos"
           className="inline-flex items-center text-[#6B5BB6] hover:text-[#5B4BA5] mb-6"

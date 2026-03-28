@@ -80,14 +80,14 @@ export default function AdminEquipoPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex justify-center">
+      <div className="admin-shell flex justify-center">
         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <Link
         href="/admin/contenido"
         className="inline-flex items-center gap-2 text-gray-600 hover:text-[#6B5BB6] mb-6"

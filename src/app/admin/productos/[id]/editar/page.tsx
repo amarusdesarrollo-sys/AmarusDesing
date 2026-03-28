@@ -300,7 +300,7 @@ export default function EditarProductoPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 px-4 flex items-center justify-center">
+      <div className="admin-shell flex min-h-[40vh] items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
       </div>
     );
@@ -308,7 +308,7 @@ export default function EditarProductoPage() {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="admin-shell">
         <div className="max-w-4xl mx-auto text-center py-12">
           <p className="text-xl text-red-600 mb-4">Producto no encontrado</p>
           <Link
@@ -323,8 +323,8 @@ export default function EditarProductoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="admin-shell">
+      <div className="max-w-4xl mx-auto min-w-0">
         <Link
           href="/admin/productos"
           className="inline-flex items-center text-[#6B5BB6] hover:text-[#5B4BA5] mb-6"

@@ -126,7 +126,7 @@ export default function AdminProductosPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="admin-shell">
         <div className="flex justify-center items-center py-20">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
         </div>
@@ -135,14 +135,14 @@ export default function AdminProductosPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="admin-shell">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Productos</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">Productos</h1>
           <p className="text-gray-600">Gestiona el catálogo de la tienda</p>
         </div>
-        <Link href="/admin/productos/nuevo">
-          <button className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors flex items-center gap-2">
+        <Link href="/admin/productos/nuevo" className="w-full sm:w-auto shrink-0">
+          <button className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors flex w-full items-center justify-center gap-2 sm:w-auto">
             <Plus className="h-5 w-5" />
             Nuevo producto
           </button>

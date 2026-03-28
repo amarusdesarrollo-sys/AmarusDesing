@@ -1,4 +1,5 @@
-import { FieldValue, type Firestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getFirebaseAdminApp, hasFirebaseAdminCredentials } from "@/lib/firebase-admin-server";
 import { sendOrderConfirmationEmail, sendNewOrderAlertToAdmin } from "@/lib/email";
 import type { Order, OrderItem } from "@/types";
 
@@ -49,6 +50,19 @@ export function firestoreDataToOrder(data: Record<string, unknown> | undefined, 
     createdAt: toDate(data?.createdAt),
     updatedAt: toDate(data?.updatedAt),
   };
+}
+
+/** Lee un pedido con Firebase Admin (API routes / webhooks). El SDK cliente en servidor suele fallar por reglas de Firestore. */
+export async function getOrderByIdAdmin(orderId: string): Promise<Order | null> {
+  if (!hasFirebaseAdminCredentials()) {
+    console.error("getOrderByIdAdmin: Firebase Admin no configurado");
+    return null;
+  }
+  const db = getFirestore(getFirebaseAdminApp());
+  const snap = await db.collection("orders").doc(orderId).get();
+  if (!snap.exists) return null;
+  const data = snap.data() as Record<string, unknown> | undefined;
+  return firestoreDataToOrder(data, snap.id);
 }
 
 /**
@@ -109,20 +123,27 @@ export async function finalizePaidOrder(
   };
 
   const customerEmailRes = await sendOrderConfirmationEmail(paidOrder);
-  if (!customerEmailRes.ok) {
-    console.error("Resend fallo: email confirmación pedido:", {
-      orderId: paidOrder.id,
-      to: paidOrder.customerEmail,
-      error: customerEmailRes.error,
-    });
-  }
-
   const adminAlertRes = await sendNewOrderAlertToAdmin(paidOrder);
-  if (!adminAlertRes.ok) {
-    console.error("Resend fallo: aviso admin nuevo pedido:", {
+
+  if (customerEmailRes.ok && adminAlertRes.ok) {
+    console.log("[MailerSend] Pedido pagado: emails cliente + admin enviados", {
       orderId: paidOrder.id,
-      error: adminAlertRes.error,
+      toCustomer: paidOrder.customerEmail,
     });
+  } else {
+    if (!customerEmailRes.ok) {
+      console.error("[MailerSend] Fallo confirmación pedido al cliente:", {
+        orderId: paidOrder.id,
+        to: paidOrder.customerEmail,
+        error: customerEmailRes.error,
+      });
+    }
+    if (!adminAlertRes.ok) {
+      console.error("[MailerSend] Fallo aviso admin nuevo pedido:", {
+        orderId: paidOrder.id,
+        error: adminAlertRes.error,
+      });
+    }
   }
 
   return { ok: true, alreadyPaid: false };

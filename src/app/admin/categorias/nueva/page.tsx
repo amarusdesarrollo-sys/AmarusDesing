@@ -246,8 +246,8 @@ export default function NuevaCategoriaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="admin-shell">
+      <div className="max-w-3xl mx-auto min-w-0">
         {/* Header */}
         <div className="mb-8">
           <Link

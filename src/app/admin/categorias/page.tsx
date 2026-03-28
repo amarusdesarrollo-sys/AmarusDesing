@@ -153,20 +153,20 @@ export default function AdminCategoriasPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <div className="w-full">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">
               Gestión de Categorías
             </h1>
             <p className="text-gray-600">
               Crea y gestiona las categorías de productos
             </p>
           </div>
-          <Link href="/admin/categorias/nueva">
-            <button className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors flex items-center gap-2">
+          <Link href="/admin/categorias/nueva" className="w-full sm:w-auto shrink-0">
+            <button className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors flex w-full items-center justify-center gap-2 sm:w-auto">
               <Plus className="h-5 w-5" />
               Nueva Categoría
             </button>
@@ -203,7 +203,8 @@ export default function AdminCategoriasPage() {
           </div>
         ) : (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <table className="w-full divide-y divide-gray-200">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
@@ -310,6 +311,7 @@ export default function AdminCategoriasPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

@@ -216,7 +216,7 @@ export default function AdminUsuariosPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="admin-shell">
         <div className="flex justify-center items-center py-20">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
         </div>
@@ -225,7 +225,7 @@ export default function AdminUsuariosPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">Usuarios</h1>
         <p className="text-gray-600">

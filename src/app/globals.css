@@ -5,6 +5,27 @@ body {
   overflow-x: hidden;
 }
 
+/* Contenedor estándar del panel admin: padding acorde al viewport */
+.admin-shell {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 1rem 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .admin-shell {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-shell {
+    padding: 2rem;
+  }
+}
+
 /* Estilos específicos para las secciones hero */
 .hero-section {
   height: 60vh;

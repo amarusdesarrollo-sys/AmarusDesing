@@ -14,7 +14,7 @@ const sections = [
 
 export default function AdminContenidoPage() {
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">
           Contenido del Sitio

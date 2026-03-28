@@ -116,14 +116,14 @@ export default function AdminCuponesPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex justify-center">
+      <div className="admin-shell flex justify-center">
         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-4xl font-bold text-gray-800 mb-1">Cupones</h1>
@@ -317,6 +317,7 @@ export default function AdminCuponesPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -378,6 +379,7 @@ export default function AdminCuponesPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

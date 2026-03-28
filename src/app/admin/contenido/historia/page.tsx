@@ -114,7 +114,7 @@ export default function AdminHistoriaPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex justify-center">
+      <div className="admin-shell flex justify-center">
         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
       </div>
     );
@@ -122,14 +122,14 @@ export default function AdminHistoriaPage() {
 
   if (!content) {
     return (
-      <div className="p-8">
+      <div className="admin-shell">
         <p className="text-red-600">No se pudo cargar el contenido</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <Link
         href="/admin/contenido"
         className="inline-flex items-center gap-2 text-gray-600 hover:text-[#6B5BB6] mb-6"

@@ -40,14 +40,14 @@ export default function AdminBlogPage() {
 
   if (loading) {
     return (
-      <div className="p-8 flex justify-center">
+      <div className="admin-shell flex justify-center">
         <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]" />
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="admin-shell">
       <Link
         href="/admin/contenido"
         className="inline-flex items-center gap-2 text-gray-600 hover:text-[#6B5BB6] mb-6"
@@ -56,10 +56,10 @@ export default function AdminBlogPage() {
         Volver a Contenido
       </Link>
 
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800">Blog</h1>
-        <Link href="/admin/contenido/blog/nuevo">
-          <button className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] flex items-center gap-2">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-3xl font-bold text-gray-800 sm:text-4xl">Blog</h1>
+        <Link href="/admin/contenido/blog/nuevo" className="w-full sm:w-auto shrink-0">
+          <button className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] flex w-full items-center justify-center gap-2 sm:w-auto">
             <Plus className="h-5 w-5" />
             Nuevo post
           </button>
@@ -78,6 +78,7 @@ export default function AdminBlogPage() {
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -160,6 +161,7 @@ export default function AdminBlogPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
