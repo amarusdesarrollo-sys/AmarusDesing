@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
 
   const res = await sendWelcomeEmail({ email, name });
   if (!res.ok) {
+    console.error("[api/email/welcome] MailerSend:", res.error, { email });
     return NextResponse.json(
       { success: false, error: res.error || "No se pudo enviar" },
       { status: 500 }

@@ -7,7 +7,13 @@ const formatPrice = (cents: number) => (cents / 100).toFixed(2);
 type EmailFrom = { name: string; email: string };
 
 function parseEmailFrom(raw: string | undefined): EmailFrom {
-  const v = (raw ?? "").trim();
+  let v = (raw ?? "").trim();
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    v = v.slice(1, -1).trim();
+  }
   if (!v) return { name: SITE_NAME, email: "noreply@amarusdesign.com" };
   const m = v.match(/^(.*)<([^>]+)>$/);
   if (m) {
@@ -20,7 +26,54 @@ function parseEmailFrom(raw: string | undefined): EmailFrom {
 
 const getEmailFrom = () => parseEmailFrom(process.env.EMAIL_FROM);
 
-const getMailerSendKey = () => process.env.MAILERSEND_API_KEY?.trim() || "";
+/** POST de envío. Override solo si MailerSend te da otra URL (soporte / data residency). */
+function getMailerSendEmailUrl(): string {
+  const custom = process.env.MAILERSEND_API_URL?.trim();
+  if (custom) return custom.replace(/\/$/, "");
+  return "https://api.mailersend.com/v1/email";
+}
+
+/** Limpia el token tal como a veces se pega en Vercel (Bearer duplicado, comillas, saltos de línea). */
+function normalizeMailerSendApiKey(raw: string): string {
+  let k = raw.trim().replace(/\r\n/g, "").replace(/\n/g, "");
+  if (k.toLowerCase().startsWith("bearer ")) {
+    k = k.slice(7).trim();
+  }
+  if (
+    (k.startsWith('"') && k.endsWith('"')) ||
+    (k.startsWith("'") && k.endsWith("'"))
+  ) {
+    k = k.slice(1, -1).trim();
+  }
+  return k;
+}
+
+function mailerSendApiKeyOrExplain(): { key: string } | { error: string } {
+  const raw = process.env.MAILERSEND_API_KEY;
+  const key = raw ? normalizeMailerSendApiKey(raw) : "";
+  if (key) return { key };
+  if (process.env.RESEND_API_KEY?.trim()) {
+    return {
+      error:
+        "En Vercel tienes RESEND_API_KEY pero el proyecto usa MailerSend. Añade MAILERSEND_API_KEY con el token de api.mailersend.com (nombre exacto, Production). Quita o ignora RESEND_API_KEY.",
+    };
+  }
+  return {
+    error:
+      "MAILERSEND_API_KEY no está definida en el servidor. En Vercel: Variable = MAILERSEND_API_KEY (no RESEND_API_KEY). Activa el entorno Production y redeploy.",
+  };
+}
+
+/** Texto plano mínimo para entregabilidad (MailerSend recomienda `text` junto a `html`). */
+function htmlToPlainText(html: string): string {
+  const t = html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return t.slice(0, 100_000) || SITE_NAME;
+}
 
 async function sendEmailViaMailerSend(input: {
   to: string;
@@ -28,33 +81,109 @@ async function sendEmailViaMailerSend(input: {
   html: string;
   replyTo?: string;
 }): Promise<{ ok: boolean; error?: string }> {
-  const apiKey = getMailerSendKey();
-  if (!apiKey) return { ok: false, error: "MAILERSEND_API_KEY no configurada" };
+  const api = mailerSendApiKeyOrExplain();
+  if ("error" in api) {
+    console.error("[MailerSend]", api.error);
+    return { ok: false, error: api.error };
+  }
 
   const from = getEmailFrom();
   if (!from?.email?.trim()) return { ok: false, error: "EMAIL_FROM no configurado" };
 
+  const plain = htmlToPlainText(input.html);
+  const body: Record<string, unknown> = {
+    from,
+    to: [{ email: input.to.trim() }],
+    subject: input.subject,
+    html: input.html,
+    text: plain,
+  };
+  /** API MailerSend: `reply_to` es un objeto { email }, no un array. */
+  if (input.replyTo?.trim()) {
+    body.reply_to = { email: input.replyTo.trim() };
+  }
+
+  const emailUrl = getMailerSendEmailUrl();
+
   try {
-    const res = await fetch("https://api.mailersend.com/v1/email", {
+    const res = await fetch(emailUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${api.key}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from,
-        to: [{ email: input.to.trim() }],
-        ...(input.replyTo?.trim()
-          ? { reply_to: [{ email: input.replyTo.trim() }] }
-          : {}),
-        subject: input.subject,
-        html: input.html,
-      }),
+      body: JSON.stringify(body),
     });
 
-    if (res.ok) return { ok: true };
-    const text = await res.text().catch(() => "");
-    return { ok: false, error: `MailerSend HTTP ${res.status}${text ? ` - ${text}` : ""}` };
+    console.log("[MailerSend] respuesta HTTP", res.status);
+
+    const sendPaused = res.headers.get("x-send-paused");
+    if (sendPaused === "true") {
+      const msg =
+        "MailerSend devolvió envío en pausa (x-send-paused). Revisa en el panel: dominio, límites y estado de la cuenta.";
+      console.error("[MailerSend]", msg);
+      return { ok: false, error: msg };
+    }
+
+    const rawBody = await res.text().catch(() => "");
+
+    if (res.status === 401) {
+      console.error("[MailerSend] 401 Unauthenticated — revisa MAILERSEND_API_KEY en Vercel (token completo mlsn…, sin 'Bearer ', sin comillas, redeploy tras guardar).");
+      return {
+        ok: false,
+        error: `MailerSend HTTP 401 - ${rawBody || "Unauthenticated."} Revisa en Vercel que MAILERSEND_API_KEY sea el token completo copiado desde MailerSend (solo el valor mlsn…, sin prefijo Bearer ni comillas). Vuelve a desplegar tras guardar.`,
+      };
+    }
+
+    if (res.status === 403) {
+      console.error("[MailerSend] 403", rawBody);
+      return {
+        ok: false,
+        error: `MailerSend 403 — el token no tiene permiso o la cuenta está restringida. ${rawBody?.slice(0, 600) || "Crea un token con «Sending access»."}`,
+      };
+    }
+
+    if (res.status === 422) {
+      console.error("[MailerSend] 422", rawBody);
+      return {
+        ok: false,
+        error: `MailerSend rechazó el envío (422). ${rawBody || "Revisa dominio remitente verificado y EMAIL_FROM."}`,
+      };
+    }
+
+    if (res.status === 202 || res.status === 200) {
+      if (rawBody.trim().startsWith("{")) {
+        try {
+          const parsed = JSON.parse(rawBody) as {
+            warnings?: Array<{ type?: string; warning?: string }>;
+            message?: string;
+          };
+          if (parsed.warnings?.length) {
+            console.warn("[MailerSend] respuesta con advertencias:", parsed.warnings);
+            const w = JSON.stringify(parsed.warnings);
+            if (/suppressed|blocklisted|invalid/i.test(w)) {
+              return {
+                ok: false,
+                error: `MailerSend: problema con el destinatario. ${parsed.message || w.slice(0, 400)}`,
+              };
+            }
+          }
+        } catch {
+          /* cuerpo no JSON */
+        }
+      }
+      const msgId = res.headers.get("x-message-id");
+      if (msgId) {
+        console.log("[MailerSend] aceptado", { x_message_id: msgId, to: input.to.trim() });
+      }
+      return { ok: true };
+    }
+
+    console.error("[MailerSend] HTTP", res.status, rawBody);
+    return {
+      ok: false,
+      error: `MailerSend HTTP ${res.status}${rawBody ? ` - ${rawBody.slice(0, 800)}` : ""}`,
+    };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Error desconocido";
     return { ok: false, error: msg };
