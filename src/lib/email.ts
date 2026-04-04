@@ -1,4 +1,6 @@
 import type { Order } from "@/types";
+import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { SITE_NAME, getBaseUrl } from "./seo";
 import { ADMIN_EMAIL } from "./auth-admin";
 
@@ -33,9 +35,9 @@ function getMailerSendEmailUrl(): string {
   return "https://api.mailersend.com/v1/email";
 }
 
-/** Limpia el token tal como a veces se pega en Vercel (Bearer duplicado, comillas, saltos de línea). */
-function normalizeMailerSendApiKey(raw: string): string {
-  let k = raw.trim().replace(/\r\n/g, "").replace(/\n/g, "");
+/** Limpia API keys pegadas en Vercel (Bearer duplicado, comillas, saltos de línea). */
+function normalizeSecret(raw: string | undefined): string {
+  let k = (raw ?? "").trim().replace(/\r\n/g, "").replace(/\n/g, "");
   if (k.toLowerCase().startsWith("bearer ")) {
     k = k.slice(7).trim();
   }
@@ -49,18 +51,63 @@ function normalizeMailerSendApiKey(raw: string): string {
 }
 
 function mailerSendApiKeyOrExplain(): { key: string } | { error: string } {
-  const raw = process.env.MAILERSEND_API_KEY;
-  const key = raw ? normalizeMailerSendApiKey(raw) : "";
+  const key = normalizeSecret(process.env.MAILERSEND_API_KEY);
   if (key) return { key };
-  if (process.env.RESEND_API_KEY?.trim()) {
+  return { error: "MAILERSEND_API_KEY no configurada." };
+}
+
+type EmailProvider = "resend" | "mailersend" | "smtp";
+
+/**
+ * Orden automático (sin EMAIL_PROVIDER): Resend → MailerSend → SMTP.
+ * Forzar: EMAIL_PROVIDER=resend | mailersend | smtp | auto
+ */
+function resolveEmailProvider(): EmailProvider | { error: string } {
+  const explicit = (process.env.EMAIL_PROVIDER || "auto").trim().toLowerCase();
+
+  if (explicit === "resend") {
+    if (!normalizeSecret(process.env.RESEND_API_KEY)) {
+      return { error: "EMAIL_PROVIDER=resend pero falta RESEND_API_KEY en el servidor." };
+    }
+    return "resend";
+  }
+  if (explicit === "mailersend") {
+    if (!normalizeSecret(process.env.MAILERSEND_API_KEY)) {
+      return { error: "EMAIL_PROVIDER=mailersend pero falta MAILERSEND_API_KEY." };
+    }
+    return "mailersend";
+  }
+  if (explicit === "smtp") {
+    if (
+      !process.env.SMTP_HOST?.trim() ||
+      !process.env.SMTP_USER?.trim() ||
+      !process.env.SMTP_PASS?.trim()
+    ) {
+      return {
+        error:
+          "EMAIL_PROVIDER=smtp pero faltan SMTP_HOST, SMTP_USER o SMTP_PASS (y opcional SMTP_PORT=587).",
+      };
+    }
+    return "smtp";
+  }
+  if (explicit !== "auto") {
     return {
-      error:
-        "En Vercel tienes RESEND_API_KEY pero el proyecto usa MailerSend. Añade MAILERSEND_API_KEY con el token de api.mailersend.com (nombre exacto, Production). Quita o ignora RESEND_API_KEY.",
+      error: `EMAIL_PROVIDER desconocido: "${explicit}". Usa resend, mailersend, smtp o auto.`,
     };
+  }
+
+  if (normalizeSecret(process.env.RESEND_API_KEY)) return "resend";
+  if (normalizeSecret(process.env.MAILERSEND_API_KEY)) return "mailersend";
+  if (
+    process.env.SMTP_HOST?.trim() &&
+    process.env.SMTP_USER?.trim() &&
+    process.env.SMTP_PASS?.trim()
+  ) {
+    return "smtp";
   }
   return {
     error:
-      "MAILERSEND_API_KEY no está definida en el servidor. En Vercel: Variable = MAILERSEND_API_KEY (no RESEND_API_KEY). Activa el entorno Production y redeploy.",
+      "Sin email configurado: añade RESEND_API_KEY, o MAILERSEND_API_KEY, o SMTP_HOST+SMTP_USER+SMTP_PASS (Gmail con contraseña de aplicación). Opcional: EMAIL_PROVIDER=resend|mailersend|smtp. Ver .env.example.",
   };
 }
 
@@ -190,6 +237,121 @@ async function sendEmailViaMailerSend(input: {
   }
 }
 
+async function sendEmailViaResend(input: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const key = normalizeSecret(process.env.RESEND_API_KEY);
+  if (!key) return { ok: false, error: "RESEND_API_KEY no configurada" };
+
+  const from = getEmailFrom();
+  if (!from?.email?.trim()) return { ok: false, error: "EMAIL_FROM no configurado" };
+
+  const fromStr = `${from.name} <${from.email}>`.replace(/\s+/g, " ").trim();
+
+  try {
+    const resend = new Resend(key);
+    const { data, error } = await resend.emails.send({
+      from: fromStr,
+      to: [input.to.trim()],
+      subject: input.subject,
+      html: input.html,
+      text: htmlToPlainText(input.html),
+      ...(input.replyTo?.trim() ? { replyTo: input.replyTo.trim() } : {}),
+    });
+
+    if (error) {
+      const msg =
+        typeof error === "object" && error !== null && "message" in error
+          ? String((error as { message: unknown }).message)
+          : JSON.stringify(error);
+      console.error("[Resend]", error);
+      return { ok: false, error: `Resend: ${msg}` };
+    }
+    console.log("[Resend] enviado", { id: data?.id, to: input.to.trim() });
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[Resend]", err);
+    return { ok: false, error: msg };
+  }
+}
+
+async function sendEmailViaSmtp(input: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const host = process.env.SMTP_HOST?.trim();
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim();
+  if (!host || !user || !pass) {
+    return { ok: false, error: "SMTP_HOST, SMTP_USER y SMTP_PASS son obligatorios" };
+  }
+
+  const port = Number.parseInt(process.env.SMTP_PORT || "587", 10);
+  const secure =
+    process.env.SMTP_SECURE === "true" || process.env.SMTP_SECURE === "1" || port === 465;
+
+  const from = getEmailFrom();
+  if (!from?.email?.trim()) return { ok: false, error: "EMAIL_FROM no configurado" };
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+    });
+
+    await transporter.sendMail({
+      from: `"${from.name.replace(/"/g, "")}" <${from.email}>`,
+      to: input.to.trim(),
+      subject: input.subject,
+      html: input.html,
+      text: htmlToPlainText(input.html),
+      ...(input.replyTo?.trim() ? { replyTo: input.replyTo.trim() } : {}),
+    });
+    console.log("[SMTP] enviado", { host, to: input.to.trim() });
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[SMTP]", msg);
+    return { ok: false, error: `SMTP: ${msg}` };
+  }
+}
+
+function isEmailProviderError(
+  x: EmailProvider | { error: string }
+): x is { error: string } {
+  return typeof x === "object" && x !== null && "error" in x;
+}
+
+async function sendEmailUnified(input: {
+  to: string;
+  subject: string;
+  html: string;
+  replyTo?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  const resolved = resolveEmailProvider();
+  if (isEmailProviderError(resolved)) {
+    console.error("[email]", resolved.error);
+    return { ok: false, error: resolved.error };
+  }
+  console.log("[email] proveedor:", resolved);
+  switch (resolved) {
+    case "resend":
+      return sendEmailViaResend(input);
+    case "mailersend":
+      return sendEmailViaMailerSend(input);
+    case "smtp":
+      return sendEmailViaSmtp(input);
+  }
+}
+
 function escapeHtml(s: string) {
   return s
     .replaceAll("&", "&amp;")
@@ -292,7 +454,7 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<{
 `;
 
   try {
-    const result = await sendEmailViaMailerSend({
+    const result = await sendEmailUnified({
       to: to.trim(),
       subject: `Confirmación de pedido #${order.id} - ${SITE_NAME}`,
       html,
@@ -348,7 +510,7 @@ export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
 `;
 
   try {
-    const result = await sendEmailViaMailerSend({
+    const result = await sendEmailUnified({
       to: to.trim(),
       subject: `[${SITE_NAME}] Nuevo pedido #${order.id} — €${formatPrice(order.total)}`,
       html,
@@ -401,7 +563,7 @@ export async function sendContactMessageToAdmin(input: {
 </html>`;
 
   try {
-    return await sendEmailViaMailerSend({
+    return await sendEmailUnified({
       to: to.trim(),
       replyTo: input.email.trim(),
       subject: `[${SITE_NAME}] Contacto: ${input.subject}`,
@@ -442,7 +604,7 @@ export async function sendContactConfirmationToUser(input: {
 </html>`;
 
   try {
-    return await sendEmailViaMailerSend({
+    return await sendEmailUnified({
       to: to.trim(),
       subject: `Recibimos tu mensaje - ${SITE_NAME}`,
       html,
@@ -478,7 +640,7 @@ export async function sendWelcomeEmail(input: {
 </html>`;
 
   try {
-    return await sendEmailViaMailerSend({
+    return await sendEmailUnified({
       to: to.trim(),
       subject: `Bienvenid@ a ${SITE_NAME}`,
       html,
@@ -526,7 +688,7 @@ export async function sendOrderShippedEmail(order: Order): Promise<{
 </html>`;
 
   try {
-    return await sendEmailViaMailerSend({
+    return await sendEmailUnified({
       to: to.trim(),
       subject: `Tu pedido #${order.id} está en camino - ${SITE_NAME}`,
       html,
