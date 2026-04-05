@@ -11,6 +11,15 @@ export default function ConditionalSiteChrome({
 }) {
   const pathname = usePathname();
   const hideChrome = pathname?.startsWith("/admin") ?? false;
+  /** Rutas donde el propio layout de la página ya cierra bien y no hace falta colchón extra antes del footer. */
+  const compactMainBottom =
+    pathname === "/" ||
+    pathname === "/politicas" ||
+    pathname?.startsWith("/politicas/") ||
+    pathname === "/equipo" ||
+    pathname?.startsWith("/equipo/") ||
+    pathname === "/tienda-online" ||
+    pathname?.startsWith("/tienda-online/");
 
   if (hideChrome) {
     return (
@@ -23,7 +32,15 @@ export default function ConditionalSiteChrome({
   return (
     <>
       <Navbar />
-      <main className="flex-grow">{children}</main>
+      <main
+        className={
+          compactMainBottom
+            ? "flex-grow w-full min-w-0 pb-0"
+            : "flex-grow w-full min-w-0 pb-12 md:pb-16 lg:pb-20"
+        }
+      >
+        {children}
+      </main>
       <Footer />
     </>
   );

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Save, Truck } from "lucide-react";
+import { ArrowLeft, Save, Truck, Trash2 } from "lucide-react";
 import { getOrderById, updateOrderStatus } from "@/lib/firebase/orders";
 import { getAuthHeaders } from "@/lib/auth-headers";
 import type { Order, OrderStatus } from "@/types";
@@ -25,6 +25,7 @@ export default function AdminPedidoDetallePage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<OrderStatus>("pending");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -99,6 +100,39 @@ export default function AdminPedidoDetallePage() {
       setError(err instanceof Error ? err.message : "Error al actualizar");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!order) return;
+    const label = order.customerName || order.customerEmail || order.id;
+    const ok = confirm(
+      `¿Eliminar definitivamente este pedido?\n\n${order.id}\n${label}\n\nNo se puede deshacer.`
+    );
+    if (!ok) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/delete-orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await getAuthHeaders()),
+        },
+        body: JSON.stringify({ orderId: order.id }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { success?: boolean; message?: string; error?: string }
+        | null;
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || data?.error || "Error al eliminar");
+      }
+      router.push("/admin/pedidos");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al eliminar el pedido");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -177,11 +211,20 @@ export default function AdminPedidoDetallePage() {
           </div>
           <button
             onClick={handleSaveStatus}
-            disabled={saving}
+            disabled={saving || deleting}
             className="bg-[#6B5BB6] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#5B4BA5] transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             <Save className="h-4 w-4" />
             {saving ? "Guardando…" : "Guardar"}
+          </button>
+          <button
+            type="button"
+            onClick={handleDeleteOrder}
+            disabled={deleting || saving}
+            className="border border-red-300 text-red-700 bg-white px-4 py-2 rounded-lg font-medium hover:bg-red-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleting ? "Eliminando…" : "Eliminar pedido"}
           </button>
         </div>
       </div>

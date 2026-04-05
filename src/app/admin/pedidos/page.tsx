@@ -48,7 +48,7 @@ export default function AdminPedidosPage() {
   const [fulfillmentQueue, setFulfillmentQueue] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all");
-  const [deletingAll, setDeletingAll] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadOrders();
@@ -137,39 +137,35 @@ export default function AdminPedidosPage() {
       minute: "2-digit",
     });
 
-  const handleDeleteAllOrders = async () => {
+  const handleDeleteOrder = async (order: Order) => {
+    const label = order.customerName || order.customerEmail || order.id.slice(0, 12);
     const ok = confirm(
-      "Vas a eliminar TODOS los pedidos. Esta acción es irreversible y se usa solo para limpiar pruebas. ¿Continuar?"
+      `¿Eliminar el pedido ${order.id.slice(0, 12)}… (${label})?\n\nEsta acción no se puede deshacer.`
     );
     if (!ok) return;
     try {
-      setDeletingAll(true);
+      setDeletingId(order.id);
+      setError(null);
       const res = await fetch("/api/admin/delete-orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(await getAuthHeaders()),
         },
-        body: JSON.stringify({ all: true }),
+        body: JSON.stringify({ orderId: order.id }),
       });
       const data = (await res.json().catch(() => null)) as
-        | { success?: boolean; message?: string; error?: string; deleted?: number }
+        | { success?: boolean; message?: string; error?: string }
         | null;
       if (!res.ok || !data?.success) {
-        throw new Error(data?.message || data?.error || "Error al eliminar pedidos");
+        throw new Error(data?.message || data?.error || "Error al eliminar el pedido");
       }
-      await loadOrders();
-      setStatusFilter("");
-      setFulfillmentQueue(false);
-      setSearchTerm("");
-      setDateFilter("all");
-      setError(null);
-      alert(`Pedidos eliminados: ${data.deleted ?? 0}`);
+      setAllOrders((prev) => prev.filter((o) => o.id !== order.id));
     } catch (err) {
-      console.error("Error deleting orders:", err);
-      setError(err instanceof Error ? err.message : "Error al eliminar pedidos");
+      console.error("Error deleting order:", err);
+      setError(err instanceof Error ? err.message : "Error al eliminar el pedido");
     } finally {
-      setDeletingAll(false);
+      setDeletingId(null);
     }
   };
 
@@ -185,20 +181,9 @@ export default function AdminPedidosPage() {
 
   return (
     <div className="admin-shell">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">Pedidos</h1>
-          <p className="text-gray-600">Gestiona los pedidos de la tienda</p>
-        </div>
-        <button
-          onClick={handleDeleteAllOrders}
-          disabled={deletingAll}
-          className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2 w-full sm:w-auto shrink-0"
-          title="Eliminar todos los pedidos de prueba"
-        >
-          <Trash2 className="h-4 w-4" />
-          {deletingAll ? "Eliminando..." : "Eliminar todos"}
-        </button>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">Pedidos</h1>
+        <p className="text-gray-600">Gestiona los pedidos de la tienda. Podés eliminar pedidos uno por uno desde la tabla.</p>
       </div>
 
       {error && (
@@ -279,7 +264,7 @@ export default function AdminPedidosPage() {
                     Estado
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
-                    Acción
+                    Acciones
                   </th>
                 </tr>
               </thead>
@@ -329,15 +314,28 @@ export default function AdminPedidosPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <Link href={`/admin/pedidos/${order.id}`}>
+                      <div className="inline-flex flex-wrap items-center justify-end gap-1">
+                        <Link href={`/admin/pedidos/${order.id}`}>
+                          <button
+                            type="button"
+                            className="p-2 text-[#6B5BB6] hover:bg-[#6B5BB6]/10 rounded-lg transition-colors inline-flex items-center gap-1"
+                            title="Ver detalle"
+                          >
+                            <Eye className="h-5 w-5" />
+                            Ver
+                          </button>
+                        </Link>
                         <button
-                          className="p-2 text-[#6B5BB6] hover:bg-[#6B5BB6]/10 rounded-lg transition-colors inline-flex items-center gap-1"
-                          title="Ver detalle"
+                          type="button"
+                          onClick={() => handleDeleteOrder(order)}
+                          disabled={deletingId === order.id}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                          title="Eliminar pedido"
                         >
-                          <Eye className="h-5 w-5" />
-                          Ver
+                          <Trash2 className="h-5 w-5" />
+                          {deletingId === order.id ? "…" : "Eliminar"}
                         </button>
-                      </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

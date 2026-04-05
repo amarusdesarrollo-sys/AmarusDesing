@@ -5,19 +5,7 @@ import Link from "next/link";
 import { Instagram, Mail, Heart, Settings } from "lucide-react";
 import { getSiteConfig } from "@/lib/firebase/site-config";
 import type { SiteConfig } from "@/types";
-
-function extractInstagramHandle(raw: string) {
-  const trimmed = (raw || "").trim();
-  if (!trimmed) return "amarusdesign";
-
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    const match = trimmed.match(/instagram\.com\/([^/?#]+)/i);
-    return match?.[1] || "amarusdesign";
-  }
-
-  const noAt = trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
-  return noAt.split(/[/?#]/)[0] || "amarusdesign";
-}
+import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
 
 export default function Footer() {
   const [config, setConfig] = useState<SiteConfig | null>(null);
@@ -33,20 +21,20 @@ export default function Footer() {
     config?.socialMedia?.email ||
     "amarusdesign2014@gmail.com";
   const instagramRaw = config?.socialMedia?.instagram || "amarusdesign";
-  const instagramHandle = extractInstagramHandle(instagramRaw);
-  const instagramUrl = `https://instagram.com/${instagramHandle}`;
+  const instagramHandle = normalizeInstagramHandle(instagramRaw);
+  const instagramUrl = instagramProfileUrl(instagramRaw);
 
   return (
-    <footer className="bg-gray-900 text-white">
-      <div className="py-2 md:py-4">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+    <footer className="bg-gray-900 text-white mt-auto border-t border-gray-800/80">
+      <div className="pt-10 pb-8 md:pt-12 md:pb-10">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             <div className="text-center md:text-left">
-              <h3 className="text-base md:text-lg font-bold mb-1 md:mb-2">
+              <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">
                 AmarusDesign
               </h3>
 
-              <div className="mb-2 md:mb-3">
+              <div className="mb-4 md:mb-5">
                 <div className="space-y-2">
                   <div className="flex items-center justify-center md:justify-start space-x-2">
                     <Mail className="h-3 w-3 md:h-4 md:w-4 text-[#6b5bb6]" />
@@ -73,7 +61,7 @@ export default function Footer() {
                 </div>
               </div>
 
-              <div className="border-t border-gray-700 pt-2 md:pt-3">
+              <div className="border-t border-gray-700 pt-4 md:pt-5">
                 <p className="text-gray-300 mb-1 md:mb-2 text-xs md:text-sm">
                   Desarrollo web realizado por{" "}
                   <a
@@ -102,8 +90,8 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-gray-800 py-2 md:py-3">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="border-t border-gray-800 py-4 md:py-5">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
               © 2024 AmarusDesign. Todos los derechos reservados.

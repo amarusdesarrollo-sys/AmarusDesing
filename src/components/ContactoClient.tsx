@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Mail, Phone, MapPin, Send } from "lucide-react";
 import AnimatedSection from "@/components/AnimatedSection";
+import { instagramProfileUrl, normalizeInstagramHandle } from "@/lib/instagram";
 
 interface ContactoClientProps {
   heroTitle: string;
@@ -69,15 +70,18 @@ export default function ContactoClient({
     }
   };
 
-  const instagramUrl = instagram.startsWith("http")
-    ? instagram
-    : `https://instagram.com/${instagram.replace(/^@/, "")}`;
-  const instagramDisplay = instagram.startsWith("@") ? instagram : `@${instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/\/$/, "")}`;
+  const igHandle = normalizeInstagramHandle(instagram);
+  const instagramUrl = instagramProfileUrl(instagram);
+  const instagramDisplay = `@${igHandle}`;
+
+  const pagePadX = "px-5 sm:px-6 md:px-8 lg:px-10";
 
   return (
     <div className="min-h-screen bg-white">
-      <section className="bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2] py-16 md:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section
+        className={`bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2] py-16 md:py-24 ${pagePadX}`}
+      >
+        <div className="max-w-7xl mx-auto text-center">
           <AnimatedSection delay={0.2}>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-4">
               {heroTitle}
@@ -89,9 +93,9 @@ export default function ContactoClient({
         </div>
       </section>
 
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <section className={`py-16 md:py-20 pb-20 md:pb-28 lg:pb-32 ${pagePadX}`}>
+        <div className="max-w-6xl mx-auto w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
             <AnimatedSection delay={0.3}>
               <div>
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8">
@@ -170,7 +174,7 @@ export default function ContactoClient({
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8">
                   Envíanos un mensaje
                 </h2>
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6 pb-2">
                   {/* honeypot */}
                   <input
                     type="text"
@@ -259,7 +263,7 @@ export default function ContactoClient({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full px-6 py-4 rounded-lg font-bold text-base md:text-lg bg-[#6B5BB6] text-white hover:bg-[#5B4BA5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    className="mt-2 w-full px-6 py-4 rounded-lg font-bold text-base md:text-lg bg-[#6B5BB6] text-white hover:bg-[#5B4BA5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-sm"
                   >
                     {isSubmitting ? "Enviando..." : <>Enviar mensaje <Send className="ml-2 h-5 w-5" /></>}
                   </button>

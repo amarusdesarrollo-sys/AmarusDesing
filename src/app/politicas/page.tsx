@@ -1,9 +1,9 @@
-import Image from "next/image";
 import AnimatedSection from "@/components/AnimatedSection";
 import { getPoliticasContent } from "@/lib/firebase/content";
-import OptimizedImage from "@/components/OptimizedImage";
-import { getCloudinaryUrl } from "@/lib/cloudinary";
 import Link from "next/link";
+import { FileText, Package, RefreshCw, ShieldCheck } from "lucide-react";
+
+const sectionIcons = [Package, RefreshCw, ShieldCheck, FileText];
 
 export default async function PoliticasPage() {
   const content = await getPoliticasContent().catch(() => null);
@@ -28,86 +28,110 @@ export default async function PoliticasPage() {
           },
           {
             title: "LA PRIVACIDAD EN AMARUSDESIGN",
-            content: "Tus datos están seguros. Respetamos la legislación vigente en protección de datos personales (RGPD, LOPD-GDD).",
+            content:
+              "Tus datos están seguros. Respetamos la legislación vigente en protección de datos personales (RGPD, LOPD-GDD).",
           },
         ];
 
-  const heroImageSrc = content?.heroImagePublicId
-    ? getCloudinaryUrl(content.heroImagePublicId, { width: 1920, height: 1080 })
-    : content?.heroImageUrl ?? "/images/heroes/037.jpg";
+  const pagePadX = "px-5 sm:px-6 md:px-8 lg:px-10";
 
   return (
-    <div className="min-h-screen bg-white">
-      <section className="bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2] py-16 md:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <AnimatedSection delay={0.2}>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-800 mb-4">
+    <div className="min-h-screen bg-[#f8f7fc]">
+      <section
+        className={`relative bg-gradient-to-br from-[#F5EFFF] via-[#EDE7F8] to-[#E0D4F0] ${pagePadX} py-10 md:py-12`}
+      >
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          aria-hidden
+          style={{
+            backgroundImage: `radial-gradient(circle at 20% 20%, rgba(107, 91, 182, 0.12) 0%, transparent 45%),
+              radial-gradient(circle at 80% 60%, rgba(107, 91, 182, 0.1) 0%, transparent 40%)`,
+          }}
+        />
+        <div className="relative max-w-lg mx-auto text-center px-1">
+          <AnimatedSection delay={0.1}>
+            <p className="text-[10px] sm:text-xs font-semibold tracking-[0.18em] text-[#6B5BB6] uppercase mb-2.5">
+              Información para clientes
+            </p>
+            <h1 className="text-xl sm:text-2xl md:text-[1.65rem] font-bold text-gray-900 leading-snug mb-3">
               {heroTitle}
             </h1>
+            <p className="text-sm md:text-[0.95rem] text-gray-600 leading-relaxed max-w-md mx-auto">
+              Condiciones claras de envíos, devoluciones y privacidad. Todo en un solo lugar.
+            </p>
           </AnimatedSection>
         </div>
       </section>
 
-      {heroImageSrc && (
-        <section className="relative w-full bg-gray-200">
-          <div className="relative w-full">
-            {content?.heroImagePublicId ? (
-              <OptimizedImage
-                src={heroImageSrc}
-                alt="Políticas de la tienda"
-                width={1920}
-                height={1080}
-                className="w-full h-auto object-contain"
-                sizes="100vw"
-              />
-            ) : (
-              <Image
-                src={heroImageSrc}
-                alt="Políticas de la tienda"
-                width={1920}
-                height={1080}
-                className="w-full h-auto object-contain"
-                priority
-                sizes="100vw"
-                quality={90}
-              />
-            )}
-          </div>
-        </section>
-      )}
-
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <AnimatedSection delay={0.2}>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8 text-center">
-              Lo que necesitas saber
-            </h2>
-            <p className="text-base md:text-lg lg:text-xl text-gray-700 leading-relaxed mb-12 text-center">
-              {intro}
-              <Link
-                href="/contacto"
-                className="text-[#6B5BB6] hover:text-[#5B4BA5] font-semibold underline"
-              >
-                contáctanos
-              </Link>
-              {" "}y te ayudaremos.
-            </p>
-          </AnimatedSection>
-
-          {sections.map((section, idx) => (
-            <AnimatedSection key={idx} delay={0.3 + idx * 0.1}>
-              <div className="mb-12">
-                <h3 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
-                  {section.title}
-                </h3>
-                <div className="text-base md:text-lg lg:text-xl text-gray-700 leading-relaxed space-y-4 whitespace-pre-line">
-                  {section.content.split("\n").map((p, i) => (
-                    <p key={i}>{p}</p>
-                  ))}
+      <section className={`${pagePadX} pt-8 md:pt-10 pb-0`}>
+        <div className="max-w-3xl mx-auto w-full">
+          <AnimatedSection delay={0.15}>
+            <div className="rounded-2xl bg-white border border-gray-200/80 shadow-sm p-6 sm:p-8 md:p-10 mb-8 md:mb-10">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 rounded-xl bg-[#F5EFFF] p-3 text-[#6B5BB6]">
+                  <FileText className="h-6 w-6" aria-hidden />
+                </div>
+                <div>
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+                    Lo que necesitas saber
+                  </h2>
+                  <p className="text-gray-600 leading-relaxed text-base md:text-lg">
+                    {intro}
+                    <Link
+                      href="/contacto"
+                      className="text-[#6B5BB6] hover:text-[#5B4BA5] font-semibold underline underline-offset-2 decoration-[#6B5BB6]/40 hover:decoration-[#5B4BA5]"
+                    >
+                      contáctanos
+                    </Link>{" "}
+                    y te ayudaremos.
+                  </p>
                 </div>
               </div>
-            </AnimatedSection>
-          ))}
+            </div>
+          </AnimatedSection>
+
+          <div className="flex flex-col gap-5 md:gap-6">
+            {sections.map((section, idx) => {
+              const Icon = sectionIcons[idx % sectionIcons.length];
+              return (
+                <AnimatedSection key={idx} delay={0.2 + idx * 0.06}>
+                  <article className="group rounded-2xl bg-white border border-gray-200/80 shadow-sm p-6 sm:p-8 md:p-9 transition-shadow hover:shadow-md">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-5">
+                      <div className="flex-shrink-0 inline-flex rounded-xl bg-gradient-to-br from-[#F5EFFF] to-[#EDE7F8] p-3.5 text-[#6B5BB6] ring-1 ring-[#6B5BB6]/10">
+                        <Icon className="h-6 w-6" aria-hidden />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-4 tracking-tight">
+                          {section.title}
+                        </h3>
+                        <div className="text-gray-600 leading-relaxed text-base md:text-[1.05rem] space-y-3">
+                          {section.content.split("\n").map((p, i) =>
+                            p.trim() ? (
+                              <p key={i} className="first:mt-0">
+                                {p}
+                              </p>
+                            ) : null
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                </AnimatedSection>
+              );
+            })}
+          </div>
+
+          <AnimatedSection delay={0.35 + sections.length * 0.06}>
+            <p className="mt-8 md:mt-10 text-center text-sm text-gray-500">
+              ¿Dudas sobre tu pedido?{" "}
+              <Link
+                href="/contacto"
+                className="font-semibold text-[#6B5BB6] hover:text-[#5B4BA5] underline underline-offset-2"
+              >
+                Escribinos
+              </Link>
+            </p>
+          </AnimatedSection>
         </div>
       </section>
     </div>

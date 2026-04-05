@@ -39,12 +39,6 @@ body {
   }
 }
 
-/* Asegurar que no haya espacios entre secciones */
-section {
-  margin: 0;
-  padding: 0;
-}
-
 /* Forzar que las imágenes hero ocupen todo el espacio */
 .hero-image {
   position: absolute !important;

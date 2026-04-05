@@ -23,34 +23,28 @@ export async function POST(request: NextRequest) {
     if (authResult && "json" in authResult) return authResult;
 
     const body = (await request.json().catch(() => null)) as
-      | { all?: boolean }
+      | { orderId?: string }
       | null;
-    if (!body?.all) {
+    const orderId = typeof body?.orderId === "string" ? body.orderId.trim() : "";
+    if (!orderId) {
       return NextResponse.json(
-        { success: false, message: "Acción no permitida" },
+        { success: false, message: "Falta orderId" },
         { status: 400 }
       );
     }
 
     const db = getFirestore(getFirebaseAdminApp());
-    const snapshot = await db.collection("orders").get();
-    const docs = snapshot.docs;
-
-    if (docs.length === 0) {
-      return NextResponse.json({ success: true, deleted: 0 });
+    const ref = db.collection("orders").doc(orderId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+      return NextResponse.json(
+        { success: false, message: "Pedido no encontrado" },
+        { status: 404 }
+      );
     }
 
-    // Firestore batch write limit: 500 operaciones.
-    let deleted = 0;
-    for (let i = 0; i < docs.length; i += 400) {
-      const chunk = docs.slice(i, i + 400);
-      const batch = db.batch();
-      chunk.forEach((d) => batch.delete(d.ref));
-      await batch.commit();
-      deleted += chunk.length;
-    }
-
-    return NextResponse.json({ success: true, deleted });
+    await ref.delete();
+    return NextResponse.json({ success: true, deleted: 1 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error desconocido";
     return NextResponse.json(
