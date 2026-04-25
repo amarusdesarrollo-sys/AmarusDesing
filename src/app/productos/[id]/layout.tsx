@@ -14,8 +14,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     product.seo?.description || product.description?.slice(0, 160) || "";
   const image =
     product.seo?.openGraph?.image ||
-    product.images?.find((i) => i.isPrimary)?.url ||
-    product.images?.[0]?.url;
+    product.images?.find((i) => i.isPrimary && i.mediaType !== "video")?.url ||
+    product.images?.find((i) => i.mediaType !== "video")?.url;
   const baseUrl = getBaseUrl();
 
   return {

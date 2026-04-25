@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Edit, Trash2, Package, Search, Filter } from "lucide-react";
+import { Plus, Edit, Trash2, Package, Search, Filter, X, CheckCircle2 } from "lucide-react";
 import { getAllProducts, deactivateProduct, activateProduct } from "@/lib/firebase/products";
 import { getAllCategories } from "@/lib/firebase/categories";
 import { getCloudinaryBaseUrl } from "@/lib/cloudinary";
@@ -20,10 +20,26 @@ export default function AdminProductosPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [stockFilter, setStockFilter] = useState<string>("");
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [flashSuccess, setFlashSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     loadProducts();
     loadCategories();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const v = sessionStorage.getItem("adminProductosFlash");
+      if (v === "created") {
+        setFlashSuccess("Producto creado correctamente.");
+        sessionStorage.removeItem("adminProductosFlash");
+      } else if (v === "updated") {
+        setFlashSuccess("Producto actualizado correctamente.");
+        sessionStorage.removeItem("adminProductosFlash");
+      }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
@@ -48,7 +64,9 @@ export default function AdminProductosPage() {
       setError(null);
     } catch (err) {
       console.error("Error loading products:", err);
-      setError("Error al cargar productos");
+      setError(
+        "No se pudieron cargar los productos. Comprueba la conexión e inténtalo de nuevo."
+      );
     } finally {
       setLoading(false);
     }
@@ -119,7 +137,9 @@ export default function AdminProductosPage() {
   };
 
   const primaryImage = (p: Product) => {
-    const primary = p.images?.find((img) => img.isPrimary) || p.images?.[0];
+    const primary =
+      p.images?.find((img) => img.isPrimary && img.mediaType !== "video") ||
+      p.images?.find((img) => img.mediaType !== "video");
     if (!primary?.publicId) return null;
     return getCloudinaryBaseUrl(primary.publicId);
   };
@@ -136,6 +156,27 @@ export default function AdminProductosPage() {
 
   return (
     <div className="admin-shell">
+      {flashSuccess && (
+        <div
+          role="status"
+          className="mb-6 flex items-start gap-3 rounded-lg border-2 border-emerald-600 bg-emerald-50 px-4 py-4 text-emerald-950 shadow-md"
+        >
+          <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-700 mt-0.5" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-base">Listo</p>
+            <p className="mt-0.5 text-sm leading-relaxed">{flashSuccess}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFlashSuccess(null)}
+            className="shrink-0 rounded p-1 text-emerald-800 hover:bg-emerald-100"
+            aria-label="Cerrar aviso"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">Productos</h1>
@@ -150,8 +191,12 @@ export default function AdminProductosPage() {
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          {error}
+        <div
+          role="alert"
+          className="mb-6 rounded-lg border-2 border-red-600 bg-red-50 px-4 py-4 text-red-900 shadow-md"
+        >
+          <p className="font-semibold text-base">Error</p>
+          <p className="mt-1 text-sm leading-relaxed">{error}</p>
         </div>
       )}
 

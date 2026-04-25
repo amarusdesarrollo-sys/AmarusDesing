@@ -2,8 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCloudinary } from "@/lib/cloudinary-server";
 import { requireAdmin } from "@/lib/firebase-admin";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"];
+const ALLOWED_VIDEO_TYPES = [
+  "video/mp4",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-ms-wmv",
+  "video/webm",
+  "video/3gpp",
+  "video/3gpp2",
+  "video/x-m4v",
+  "video/mp2t",
+];
+const ALLOWED_VIDEO_EXTENSIONS = [
+  ".mp4",
+  ".mov",
+  ".m4v",
+  ".webm",
+  ".avi",
+  ".wmv",
+  ".3gp",
+  ".3g2",
+  ".mts",
+  ".m2ts",
+];
 const ALLOWED_FOLDERS = ["categories", "products", "team", "blog", "content"];
 
 export async function POST(request: NextRequest) {
@@ -32,17 +57,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (file.size > MAX_FILE_SIZE) {
+    const mime = (file.type || "").toLowerCase();
+    const filename = (file.name || "").toLowerCase();
+    const hasAllowedVideoExtension = ALLOWED_VIDEO_EXTENSIONS.some((ext) =>
+      filename.endsWith(ext)
+    );
+    const isVideoMime = ALLOWED_VIDEO_TYPES.includes(mime) || mime.startsWith("video/");
+    const isPotentialVideo = isVideoMime || hasAllowedVideoExtension;
+    const maxSize = isPotentialVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { success: false, message: "El archivo no puede superar 5 MB" },
+        {
+          success: false,
+          message: isPotentialVideo
+            ? "El video no puede superar 50 MB"
+            : "La imagen no puede superar 5 MB",
+        },
         { status: 400 }
       );
     }
 
-    const mime = (file.type || "").toLowerCase();
-    if (!ALLOWED_TYPES.includes(mime) && !mime.startsWith("image/")) {
+    const hasAllowedImageExtension = ALLOWED_EXTENSIONS.some((ext) =>
+      filename.endsWith(ext)
+    );
+    const isImageMime = ALLOWED_TYPES.includes(mime) || mime.startsWith("image/");
+    const isImage = isImageMime || hasAllowedImageExtension;
+    const isVideo = isVideoMime || hasAllowedVideoExtension;
+    if (!isImage && !isVideo) {
       return NextResponse.json(
-        { success: false, message: "Solo se permiten imágenes (JPEG, PNG, WebP, GIF)" },
+        {
+          success: false,
+          message:
+            "Formato no permitido. Usa imágenes (JPEG, PNG, WebP, GIF, HEIC, HEIF) o videos (MP4, MOV, M4V, WEBM, AVI, WMV).",
+        },
         { status: 400 }
       );
     }
@@ -63,7 +111,7 @@ export async function POST(request: NextRequest) {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: folder,
-          resource_type: "image",
+          resource_type: isVideo ? "video" : "image",
           public_id: `${Date.now()}-${cleanFileName}`,
         },
         (error, result) => {
@@ -90,6 +138,8 @@ export async function POST(request: NextRequest) {
         url: uploadResult.secure_url,
         width: uploadResult.width,
         height: uploadResult.height,
+        resourceType: uploadResult.resource_type || (isVideo ? "video" : "image"),
+        format: uploadResult.format,
       },
       { status: 200 }
     );

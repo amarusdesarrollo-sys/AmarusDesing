@@ -14,15 +14,15 @@ import type { ProductImage as ProductImageType } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
 
 const productSchema = z.object({
-  name: z.string().min(1, "El nombre es requerido"),
-  description: z.string().min(1, "La descripción es requerida"),
-  price: z.number().min(0, "El precio debe ser mayor o igual a 0"),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  price: z.number().min(0, "El precio debe ser mayor o igual a 0").optional(),
   discountPercent: z.number().min(0).max(99).optional(),
-  category: z.string().min(1, "Selecciona una categoría"),
+  category: z.string().optional(),
   subcategory: z.string().optional(),
-  inStock: z.boolean(),
-  stock: z.number().min(0, "Stock debe ser >= 0"),
-  featured: z.boolean(),
+  inStock: z.boolean().optional(),
+  stock: z.number().min(0, "Stock debe ser >= 0").optional(),
+  featured: z.boolean().optional(),
   tags: z.string().optional(),
   materials: z.string().optional(),
   dimensions: z.string().optional(),
@@ -40,7 +40,12 @@ interface UploadedImage {
   width: number;
   height: number;
   isPrimary: boolean;
+  mediaType: "image" | "video";
+  mimeType?: string;
 }
+
+const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"];
+const ALLOWED_VIDEO_EXTENSIONS = [".mp4", ".mov", ".m4v", ".webm", ".avi", ".wmv", ".3gp", ".3g2", ".mts", ".m2ts"];
 
 export default function NuevoProductoPage() {
   const router = useRouter();
@@ -91,6 +96,8 @@ export default function NuevoProductoPage() {
   }, []);
 
   const selectedCategory = watch("category");
+  const watchedPrice = watch("price");
+  const watchedDiscount = watch("discountPercent") ?? 0;
   useEffect(() => {
     if (!selectedCategory) {
       setSubcategories([]);
@@ -103,9 +110,25 @@ export default function NuevoProductoPage() {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setError("La imagen no puede ser mayor a 5MB");
+    if (!file) return;
+    const lowerName = file.name.toLowerCase();
+    const hasAllowedExtension = ALLOWED_IMAGE_EXTENSIONS.some((ext) =>
+      lowerName.endsWith(ext)
+    );
+    const hasAllowedVideoExtension = ALLOWED_VIDEO_EXTENSIONS.some((ext) =>
+      lowerName.endsWith(ext)
+    );
+    const hasValidImageMime = file.type ? file.type.startsWith("image/") : false;
+    const hasValidVideoMime = file.type ? file.type.startsWith("video/") : false;
+    const isImage = hasValidImageMime || hasAllowedExtension;
+    const isVideo = hasValidVideoMime || hasAllowedVideoExtension;
+    if (!isImage && !isVideo) {
+      setError("Formato no válido. Usa imagen o video (JPG, PNG, HEIC, MP4, MOV, etc).");
+      return;
+    }
+    const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError(isVideo ? "El video no puede ser mayor a 50MB" : "La imagen no puede ser mayor a 5MB");
       return;
     }
     setUploadingImage(true);
@@ -121,7 +144,7 @@ export default function NuevoProductoPage() {
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
-      const isFirst = images.length === 0;
+      const hasAnyImage = images.some((media) => media.mediaType === "image");
       setImages((prev) => [
         ...prev,
         {
@@ -131,7 +154,9 @@ export default function NuevoProductoPage() {
           alt: "",
           width: data.width || 800,
           height: data.height || 800,
-          isPrimary: isFirst,
+          isPrimary: !hasAnyImage && (data.resourceType || "image") !== "video",
+          mediaType: (data.resourceType || "image") === "video" ? "video" : "image",
+          mimeType: file.type || undefined,
         },
       ]);
     } catch (err) {
@@ -144,15 +169,22 @@ export default function NuevoProductoPage() {
   const removeImage = (id: string) => {
     setImages((prev) => {
       const next = prev.filter((img) => img.id !== id);
-      if (next.length && next.every((img) => !img.isPrimary))
-        next[0].isPrimary = true;
+      if (next.length && next.every((img) => !img.isPrimary)) {
+        const firstImageIndex = next.findIndex((img) => img.mediaType === "image");
+        if (firstImageIndex >= 0) next[firstImageIndex].isPrimary = true;
+      }
       return next;
     });
   };
 
   const setPrimary = (id: string) => {
     setImages((prev) =>
-      prev.map((img) => ({ ...img, isPrimary: img.id === id }))
+      prev.map((img) => {
+        if (img.id === id && img.mediaType === "video") {
+          return img;
+        }
+        return { ...img, isPrimary: img.mediaType === "image" && img.id === id };
+      })
     );
   };
 
@@ -160,14 +192,18 @@ export default function NuevoProductoPage() {
     try {
       setLoading(true);
       setError(null);
+      const productName = data.name?.trim() || "";
+      const productDescription = data.description?.trim() || "";
       const productImages: ProductImageType[] = images.map((img) => ({
         id: img.id,
         publicId: img.publicId,
         url: img.url,
-        alt: img.alt || data.name,
+        alt: img.alt || productName,
         width: img.width,
         height: img.height,
         isPrimary: img.isPrimary,
+        mediaType: img.mediaType,
+        ...(img.mimeType ? { mimeType: img.mimeType } : {}),
       }));
       const attributes: Record<string, string> = {};
       if (data.attributesText?.trim()) {
@@ -180,26 +216,26 @@ export default function NuevoProductoPage() {
           }
         });
       }
-      const originalPriceEur = data.price;
+      const originalPriceEur = data.price ?? 0;
       const discount =
         data.discountPercent != null && data.discountPercent > 0
           ? data.discountPercent
           : 0;
       const salePriceEur = originalPriceEur * (1 - discount / 100);
       const product = {
-        name: data.name,
-        description: data.description,
+        name: productName,
+        description: productDescription,
         price: Math.round(salePriceEur * 100),
         originalPrice:
           discount > 0 && originalPriceEur > 0
             ? Math.round(originalPriceEur * 100)
             : undefined,
-        category: data.category,
+        category: data.category?.trim() || "",
         subcategory: data.subcategory?.trim() || undefined,
         images: productImages,
-        inStock: data.inStock,
-        stock: data.stock,
-        featured: data.featured,
+        inStock: data.inStock ?? true,
+        stock: data.stock ?? 0,
+        featured: data.featured ?? false,
         tags: data.tags
           ? data.tags
               .split(",")
@@ -217,8 +253,8 @@ export default function NuevoProductoPage() {
           data.weight != null && data.weight > 0 ? data.weight : undefined,
         attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
         seo: {
-          title: data.name,
-          description: data.description.substring(0, 160),
+          title: productName,
+          description: productDescription.substring(0, 160),
           keywords: data.tags
             ? data.tags
                 .split(",")
@@ -227,7 +263,12 @@ export default function NuevoProductoPage() {
             : [],
         },
       };
-      const id = await createProduct(product);
+      await createProduct(product);
+      try {
+        sessionStorage.setItem("adminProductosFlash", "created");
+      } catch {
+        /* ignore */
+      }
       router.push("/admin/productos");
     } catch (err) {
       setError(
@@ -255,17 +296,22 @@ export default function NuevoProductoPage() {
 
         <form
           onSubmit={handleSubmit(onSubmit)}
+          noValidate
           className="bg-white rounded-lg shadow-md p-6 md:p-8 space-y-6"
         >
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
+            <div
+              role="alert"
+              className="rounded-lg border-2 border-red-600 bg-red-50 px-4 py-4 text-red-900 shadow-md"
+            >
+              <p className="font-semibold text-base">Error</p>
+              <p className="mt-1 text-sm leading-relaxed">{error}</p>
             </div>
           )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre *
+              Nombre
             </label>
             <input
               {...register("name")}
@@ -279,7 +325,7 @@ export default function NuevoProductoPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Descripción *
+              Descripción
             </label>
             <textarea
               {...register("description")}
@@ -297,13 +343,15 @@ export default function NuevoProductoPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Precio original (€) *
+                Precio original (€)
               </label>
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                {...register("price", { valueAsNumber: true })}
+                {...register("price", {
+                  setValueAs: (v) => (v === "" || Number.isNaN(Number(v)) ? undefined : Number(v)),
+                })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
                 placeholder="Ej: 50.00"
               />
@@ -327,7 +375,8 @@ export default function NuevoProductoPage() {
                 max="99"
                 step="1"
                 {...register("discountPercent", {
-                  setValueAs: (v) => (v === "" ? undefined : v),
+                  setValueAs: (v) =>
+                    v === "" || Number.isNaN(Number(v)) ? undefined : Number(v),
                 })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
                 placeholder="Ej: 10"
@@ -337,22 +386,18 @@ export default function NuevoProductoPage() {
               </p>
             </div>
           </div>
-          {typeof watch("price") === "number" &&
-            watch("price") > 0 &&
-            (watch("discountPercent") ?? 0) > 0 && (
+          {typeof watchedPrice === "number" &&
+            watchedPrice > 0 &&
+            watchedDiscount > 0 && (
               <p className="text-sm font-medium text-[#6B5BB6]">
                 Precio de venta:{" "}
-                {(
-                  watch("price") *
-                  (1 - (watch("discountPercent") ?? 0) / 100)
-                ).toFixed(2)}{" "}
-                €
+                {(watchedPrice * (1 - watchedDiscount / 100)).toFixed(2)} €
               </p>
             )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoría *
+              Categoría
             </label>
             <select
               {...register("category")}
@@ -401,25 +446,40 @@ export default function NuevoProductoPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Imágenes
+              Multimedia (imágenes y videos)
             </label>
             <div className="flex flex-wrap gap-4">
               {images.map((img) => (
                 <div key={img.id} className="relative group">
                   <div className="w-28 h-28 rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100">
-                    <img
-                      src={img.url}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
+                    {img.mediaType === "video" ? (
+                      <video
+                        src={img.url}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : (
+                      <img
+                        src={img.url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    )}
                   </div>
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                  <div className="absolute inset-0 bg-black/50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => setPrimary(img.id)}
-                      className="px-2 py-1 bg-white text-gray-800 text-xs rounded"
+                      className="px-2 py-1 bg-white text-gray-800 text-xs rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={img.mediaType === "video"}
                     >
-                      {img.isPrimary ? "Principal" : "Usar como principal"}
+                      {img.mediaType === "video"
+                        ? "Video"
+                        : img.isPrimary
+                        ? "Principal"
+                        : "Usar como principal"}
                     </button>
                     <button
                       type="button"
@@ -434,7 +494,7 @@ export default function NuevoProductoPage() {
               <label className="w-28 h-28 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#6B5BB6] transition-colors">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/*,.heic,.heif,.mov,.m4v"
                   className="hidden"
                   onChange={handleImageUpload}
                   disabled={uploadingImage}
@@ -459,7 +519,9 @@ export default function NuevoProductoPage() {
               <input
                 type="number"
                 min="0"
-                {...register("stock", { valueAsNumber: true })}
+                {...register("stock", {
+                  setValueAs: (v) => (v === "" || Number.isNaN(Number(v)) ? undefined : Number(v)),
+                })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
               />
               {errors.stock && (
@@ -538,8 +600,13 @@ export default function NuevoProductoPage() {
                   <input
                     type="number"
                     min="0"
-                    step="1"
-                    {...register("weight", { valueAsNumber: true, setValueAs: (v) => (v === "" || Number.isNaN(v) ? undefined : v) })}
+                    step="0.01"
+                    {...register("weight", {
+                      setValueAs: (v) =>
+                        v === "" || Number.isNaN(Number(v))
+                          ? undefined
+                          : Number(v),
+                    })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
                     placeholder="Ej: 15"
                   />

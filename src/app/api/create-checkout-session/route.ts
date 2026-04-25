@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
               name: `Pedido #${orderId.slice(0, 8)}`,
               description: `${order.items.length} producto(s) - Envío incluido`,
               images:
-                order.items[0]?.product?.images?.[0]?.url
-                  ? [order.items[0].product.images[0].url]
+                order.items[0]?.product?.images?.find((img) => img.mediaType !== "video")?.url
+                  ? [order.items[0].product.images.find((img) => img.mediaType !== "video")!.url]
                   : undefined,
             },
           },

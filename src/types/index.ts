@@ -31,6 +31,8 @@ export interface ProductImage {
   width: number;
   height: number;
   isPrimary: boolean;
+  mediaType?: "image" | "video";
+  mimeType?: string;
 }
 
 // Tipo flexible para categorías dinámicas

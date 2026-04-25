@@ -188,9 +188,10 @@ export default function ProductDetailPage() {
     notFound();
   }
 
-  const selectedImage = product.images[selectedImageIndex] || product.images[0];
-  const primaryImage =
+  const selectedMedia = product.images[selectedImageIndex] || product.images[0];
+  const primaryMedia =
     product.images.find((img) => img.isPrimary) || product.images[0];
+  const selectedMediaIsVideo = selectedMedia?.mediaType === "video";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -234,23 +235,36 @@ export default function ProductDetailPage() {
             <div className="relative aspect-square bg-white rounded-lg overflow-hidden shadow-lg">
               {product.images.length > 0 ? (
                 <>
-                  <Image
-                    src={
-                      selectedImage
-                        ? getImageUrl(selectedImage, "large")
-                        : primaryImage
-                        ? getImageUrl(primaryImage, "large")
-                        : "/images/placeholder.jpg"
-                    }
-                    alt={selectedImage?.alt || product.name}
-                    fill
-                    className="object-cover"
-                    priority
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    unoptimized={isCloudinaryUrl(
-                      selectedImage?.url || primaryImage?.url || ""
-                    )}
-                  />
+                  {selectedMediaIsVideo ? (
+                    <video
+                      src={selectedMedia?.url}
+                      className="w-full h-full object-cover"
+                      autoPlay
+                      muted
+                      loop
+                      controls={false}
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <Image
+                      src={
+                        selectedMedia
+                          ? getImageUrl(selectedMedia, "large")
+                          : primaryMedia
+                          ? getImageUrl(primaryMedia, "large")
+                          : "/images/placeholder.jpg"
+                      }
+                      alt={selectedMedia?.alt || product.name}
+                      fill
+                      className="object-cover"
+                      priority
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      unoptimized={isCloudinaryUrl(
+                        selectedMedia?.url || primaryMedia?.url || ""
+                      )}
+                    />
+                  )}
 
                   {/* Navegación de imágenes si hay más de una */}
                   {product.images.length > 1 && (
@@ -321,14 +335,24 @@ export default function ProductDetailPage() {
                         : "border-gray-200 hover:border-[#6B5BB6]"
                     }`}
                   >
-                    <Image
-                      src={getImageUrl(image, "thumbnail")}
-                      alt={image.alt}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 25vw, 12vw"
-                      unoptimized={isCloudinaryUrl(image.url)}
-                    />
+                    {image.mediaType === "video" ? (
+                      <video
+                        src={image.url}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : (
+                      <Image
+                        src={getImageUrl(image, "thumbnail")}
+                        alt={image.alt}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 25vw, 12vw"
+                        unoptimized={isCloudinaryUrl(image.url)}
+                      />
+                    )}
                   </button>
                 ))}
               </div>

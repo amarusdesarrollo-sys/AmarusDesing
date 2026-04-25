@@ -26,8 +26,9 @@ export default function ProductCard({
   const totalItems = useCartStore((state) => state.getTotalItems());
   const [added, setAdded] = useState(false);
   const hasStock = product.inStock && (product.stock ?? 0) > 0;
-  const primaryImage =
-    product.images.find((img) => img.isPrimary) || product.images[0];
+  const primaryMedia =
+    product.images.find((img) => img.isPrimary && img.mediaType !== "video") ||
+    product.images.find((img) => img.mediaType !== "video");
 
   const formatPrice = (cents: number) => {
     return (cents / 100).toFixed(2);
@@ -79,17 +80,17 @@ export default function ProductCard({
         <div className="relative w-full aspect-[4/5] overflow-hidden bg-gray-100">
           <Image
             src={
-              primaryImage
-                ? getImageUrl(primaryImage)
+              primaryMedia
+                ? getImageUrl(primaryMedia)
                 : "/images/placeholder.jpg"
             }
-            alt={primaryImage?.alt || product.name}
+            alt={primaryMedia?.alt || product.name}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-300"
             priority={priority}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             unoptimized={
-              primaryImage ? isCloudinaryUrl(primaryImage.url) : false
+              primaryMedia ? isCloudinaryUrl(primaryMedia.url) : false
             }
           />
 

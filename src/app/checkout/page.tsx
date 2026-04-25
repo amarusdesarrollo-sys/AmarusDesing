@@ -492,8 +492,8 @@ export default function CheckoutPage() {
                     <div className="relative w-14 h-14 flex-shrink-0 rounded overflow-hidden bg-gray-100">
                       <Image
                         src={
-                          item.product.images.find((i) => i.isPrimary)?.url ||
-                          item.product.images[0]?.url ||
+                          item.product.images.find((i) => i.isPrimary && i.mediaType !== "video")?.url ||
+                          item.product.images.find((i) => i.mediaType !== "video")?.url ||
                           "/images/placeholder.jpg"
                         }
                         alt={item.product.name}

@@ -77,8 +77,8 @@ export default function CarritoPage() {
                   <div className="relative w-full md:w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden">
                     <Image
                       src={
-                        item.product.images.find((img) => img.isPrimary)?.url ||
-                        item.product.images[0]?.url ||
+                        item.product.images.find((img) => img.isPrimary && img.mediaType !== "video")?.url ||
+                        item.product.images.find((img) => img.mediaType !== "video")?.url ||
                         "/images/placeholder.jpg"
                       }
                       alt={item.product.name}
