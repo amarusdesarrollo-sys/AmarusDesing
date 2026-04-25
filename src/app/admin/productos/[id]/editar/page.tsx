@@ -312,8 +312,9 @@ export default function EditarProductoPage() {
               .filter(Boolean)
           : undefined,
         dimensions: data.dimensions?.trim() || undefined,
+        // Vacío → null borra el campo en Firestore y el peso no se muestra en la tienda
         weight:
-          data.weight != null && data.weight > 0 ? data.weight : undefined,
+          data.weight != null && !Number.isNaN(data.weight) ? data.weight : null,
         attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
         seo: {
           title: productName,
@@ -681,6 +682,9 @@ export default function EditarProductoPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
                     placeholder="Ej: 15"
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Déjalo vacío y guarda para ocultar el peso en la ficha del producto.
+                  </p>
                 </div>
               </div>
               <div>

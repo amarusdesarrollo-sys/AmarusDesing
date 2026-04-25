@@ -249,8 +249,9 @@ export default function NuevoProductoPage() {
               .filter(Boolean)
           : undefined,
         dimensions: data.dimensions?.trim() || undefined,
+        // Sin valor → no se guarda peso (no aparece en la ficha)
         weight:
-          data.weight != null && data.weight > 0 ? data.weight : undefined,
+          data.weight != null && !Number.isNaN(data.weight) ? data.weight : undefined,
         attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
         seo: {
           title: productName,
@@ -610,6 +611,9 @@ export default function NuevoProductoPage() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
                     placeholder="Ej: 15"
                   />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Déjalo vacío si no quieres mostrar peso en la ficha del producto.
+                  </p>
                 </div>
               </div>
               <div>

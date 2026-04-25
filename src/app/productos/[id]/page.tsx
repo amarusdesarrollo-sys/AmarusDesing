@@ -441,7 +441,8 @@ export default function ProductDetailPage() {
                   </div>
                 )}
 
-                {product.weight && (
+                {typeof product.weight === "number" &&
+                  !Number.isNaN(product.weight) && (
                   <div className="flex items-start gap-2">
                     <Weight className="h-5 w-5 text-[#6B5BB6] mt-0.5 flex-shrink-0" />
                     <div>
