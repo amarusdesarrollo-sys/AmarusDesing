@@ -11,6 +11,7 @@ import { getProductById, updateProduct } from "@/lib/firebase/products";
 import { getActiveCategories, getSubcategoriesByParentSlug } from "@/lib/firebase/categories";
 import type { ProductImage as ProductImageType } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { parseProductAttributesText } from "@/lib/parse-attributes-text";
 
 const productSchema = z.object({
   name: z.string().optional(),
@@ -308,16 +309,13 @@ export default function EditarProductoPage() {
         mediaType: img.mediaType,
         ...(img.mimeType ? { mimeType: img.mimeType } : {}),
       }));
-      const attributes: Record<string, string> = {};
-      if (data.attributesText?.trim()) {
-        data.attributesText.split("\n").forEach((line) => {
-          const idx = line.indexOf(":");
-          if (idx > 0) {
-            const key = line.slice(0, idx).trim();
-            const value = line.slice(idx + 1).trim();
-            if (key && value) attributes[key] = value;
-          }
-        });
+      const attributes = parseProductAttributesText(data.attributesText);
+      if (data.attributesText?.trim() && Object.keys(attributes).length === 0) {
+        setError(
+          "Hay texto en atributos adicionales pero no se pudo leer ningún par. Usa una línea por par con el formato Clave: Valor (dos puntos normal)."
+        );
+        setSaving(false);
+        return;
       }
       const originalPriceEur = data.price ?? 0;
       const discount =
@@ -756,6 +754,10 @@ export default function EditarProductoPage() {
                 <textarea
                   {...register("attributesText")}
                   rows={4}
+                  autoComplete="off"
+                  spellCheck={false}
+                  autoCorrect="off"
+                  autoCapitalize="none"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
                   placeholder={
                     'Uno por línea, formato "Clave: Valor":\nColor: Plateado\nTalla: 16\nPiedra: Cuarzo rosa'
