@@ -476,6 +476,28 @@ export default function ProductDetailPage() {
                 )}
               </div>
 
+              {/* Atributos adicionales (configurados en admin) */}
+              {product.attributes &&
+                typeof product.attributes === "object" &&
+                Object.keys(product.attributes).length > 0 && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                      Atributos
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {Object.entries(product.attributes).map(([key, value]) => (
+                        <div
+                          key={key}
+                          className="rounded-md bg-gray-50 px-3 py-2 border border-gray-100"
+                        >
+                          <p className="text-xs font-medium text-gray-500">{key}</p>
+                          <p className="text-sm text-gray-800">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
               {/* Stock */}
               <div className="pt-4 border-t border-gray-200">
                 <p className="text-sm text-gray-600">

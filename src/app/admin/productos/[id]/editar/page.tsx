@@ -602,7 +602,7 @@ export default function EditarProductoPage() {
                       />
                     )}
                   </div>
-                  <div className="absolute inset-0 bg-black/50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                  <div className="absolute inset-0 bg-black/50 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                     <button
                       type="button"
                       onClick={() => setPrimary(img.id)}
