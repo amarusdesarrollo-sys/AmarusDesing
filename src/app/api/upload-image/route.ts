@@ -9,6 +9,9 @@ const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", "
 const ALLOWED_VIDEO_TYPES = [
   "video/mp4",
   "video/quicktime",
+  "video/hevc",
+  "video/h265",
+  "video/x-hevc",
   "video/x-msvideo",
   "video/x-ms-wmv",
   "video/webm",
@@ -21,6 +24,7 @@ const ALLOWED_VIDEO_EXTENSIONS = [
   ".mp4",
   ".mov",
   ".m4v",
+  ".hevc",
   ".webm",
   ".avi",
   ".wmv",
@@ -57,7 +61,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const mime = (file.type || "").toLowerCase();
+    const mime = (file.type || "").toLowerCase().split(";")[0].trim();
     const filename = (file.name || "").toLowerCase();
     const hasAllowedVideoExtension = ALLOWED_VIDEO_EXTENSIONS.some((ext) =>
       filename.endsWith(ext)

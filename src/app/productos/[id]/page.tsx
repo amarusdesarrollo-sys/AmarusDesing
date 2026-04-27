@@ -559,21 +559,7 @@ export default function ProductDetailPage() {
                 )}
               </div>
 
-              {/* Tags */}
-              {product.tags && product.tags.length > 0 && (
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex flex-wrap gap-2">
-                    {product.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Tags ocultas en UI: se mantienen para SEO interno */}
             </div>
           </AnimatedSection>
         </div>

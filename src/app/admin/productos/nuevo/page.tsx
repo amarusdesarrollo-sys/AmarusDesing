@@ -45,7 +45,7 @@ interface UploadedImage {
 }
 
 const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"];
-const ALLOWED_VIDEO_EXTENSIONS = [".mp4", ".mov", ".m4v", ".webm", ".avi", ".wmv", ".3gp", ".3g2", ".mts", ".m2ts"];
+const ALLOWED_VIDEO_EXTENSIONS = [".mp4", ".mov", ".m4v", ".hevc", ".webm", ".avi", ".wmv", ".3gp", ".3g2", ".mts", ".m2ts"];
 
 export default function NuevoProductoPage() {
   const router = useRouter();
@@ -118,12 +118,13 @@ export default function NuevoProductoPage() {
     const hasAllowedVideoExtension = ALLOWED_VIDEO_EXTENSIONS.some((ext) =>
       lowerName.endsWith(ext)
     );
-    const hasValidImageMime = file.type ? file.type.startsWith("image/") : false;
-    const hasValidVideoMime = file.type ? file.type.startsWith("video/") : false;
+    const normalizedMime = (file.type || "").toLowerCase().split(";")[0].trim();
+    const hasValidImageMime = normalizedMime.startsWith("image/");
+    const hasValidVideoMime = normalizedMime.startsWith("video/");
     const isImage = hasValidImageMime || hasAllowedExtension;
     const isVideo = hasValidVideoMime || hasAllowedVideoExtension;
     if (!isImage && !isVideo) {
-      setError("Formato no válido. Usa imagen o video (JPG, PNG, HEIC, MP4, MOV, etc).");
+      setError("Formato no válido. Usa imagen o video (JPG, PNG, HEIC, HEIF, MP4, MOV, HEVC, etc).");
       return;
     }
     const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
@@ -160,7 +161,12 @@ export default function NuevoProductoPage() {
         },
       ]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al subir la imagen");
+      const message = err instanceof Error ? err.message : "Error al subir el archivo";
+      if (message.toLowerCase().includes("did not match the expected pattern")) {
+        setError("No se pudo procesar el video HEVC. Prueba grabar en 'Más compatible' (H.264) o convertirlo a MP4/MOV antes de subir.");
+      } else {
+        setError(message);
+      }
     } finally {
       setUploadingImage(false);
     }

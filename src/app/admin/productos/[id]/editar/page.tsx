@@ -44,7 +44,7 @@ interface UploadedImage {
 }
 
 const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"];
-const ALLOWED_VIDEO_EXTENSIONS = [".mp4", ".mov", ".m4v", ".webm", ".avi", ".wmv", ".3gp", ".3g2", ".mts", ".m2ts"];
+const ALLOWED_VIDEO_EXTENSIONS = [".mp4", ".mov", ".m4v", ".hevc", ".webm", ".avi", ".wmv", ".3gp", ".3g2", ".mts", ".m2ts"];
 
 export default function EditarProductoPage() {
   const router = useRouter();
@@ -162,12 +162,13 @@ export default function EditarProductoPage() {
     const hasAllowedVideoExtension = ALLOWED_VIDEO_EXTENSIONS.some((ext) =>
       lowerName.endsWith(ext)
     );
-    const hasValidImageMime = file.type ? file.type.startsWith("image/") : false;
-    const hasValidVideoMime = file.type ? file.type.startsWith("video/") : false;
+    const normalizedMime = (file.type || "").toLowerCase().split(";")[0].trim();
+    const hasValidImageMime = normalizedMime.startsWith("image/");
+    const hasValidVideoMime = normalizedMime.startsWith("video/");
     const isImage = hasValidImageMime || hasAllowedExtension;
     const isVideo = hasValidVideoMime || hasAllowedVideoExtension;
     if (!isImage && !isVideo) {
-      setError("Formato no válido. Usa imagen o video (JPG, PNG, HEIC, MP4, MOV, etc).");
+      setError("Formato no válido. Usa imagen o video (JPG, PNG, HEIC, HEIF, MP4, MOV, HEVC, etc).");
       return;
     }
     const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
@@ -204,7 +205,12 @@ export default function EditarProductoPage() {
         },
       ]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al subir la imagen");
+      const message = err instanceof Error ? err.message : "Error al subir el archivo";
+      if (message.toLowerCase().includes("did not match the expected pattern")) {
+        setError("No se pudo procesar el video HEVC. Prueba grabar en 'Más compatible' (H.264) o convertirlo a MP4/MOV antes de subir.");
+      } else {
+        setError(message);
+      }
     } finally {
       setUploadingImage(false);
     }
@@ -294,7 +300,8 @@ export default function EditarProductoPage() {
             ? Math.round(originalPriceEur * 100)
             : null,
         category: data.category?.trim() || "",
-        subcategory: data.subcategory?.trim() || undefined,
+        // Vacío -> null para borrar subcategoría existente en Firestore.
+        subcategory: data.subcategory?.trim() ? data.subcategory.trim() : null,
         images: productImages,
         inStock: data.inStock ?? true,
         stock: data.stock ?? 0,
@@ -305,17 +312,19 @@ export default function EditarProductoPage() {
               .map((t) => t.trim())
               .filter(Boolean)
           : [],
+        // Vacío -> null para borrar materiales/dimensiones existentes.
         materials: data.materials
           ? data.materials
               .split(",")
               .map((t) => t.trim())
               .filter(Boolean)
-          : undefined,
-        dimensions: data.dimensions?.trim() || undefined,
+          : null,
+        dimensions: data.dimensions?.trim() ? data.dimensions.trim() : null,
         // Vacío → null borra el campo en Firestore y el peso no se muestra en la tienda
         weight:
           data.weight != null && !Number.isNaN(data.weight) ? data.weight : null,
-        attributes: Object.keys(attributes).length > 0 ? attributes : undefined,
+        // Si se borran todos los atributos, enviar null para eliminarlos en Firestore.
+        attributes: Object.keys(attributes).length > 0 ? attributes : null,
         seo: {
           title: productName,
           description: productDescription.substring(0, 160),
