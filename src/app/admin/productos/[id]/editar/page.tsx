@@ -580,9 +580,9 @@ export default function EditarProductoPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Multimedia (imágenes y videos)
             </label>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4 items-start">
               {images.map((img) => (
-                <div key={img.id} className="relative group">
+                <div key={img.id} className="flex w-28 shrink-0 flex-col">
                   <div className="w-28 h-28 rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100">
                     {img.mediaType === "video" ? (
                       <video
@@ -600,25 +600,33 @@ export default function EditarProductoPage() {
                       />
                     )}
                   </div>
-                  <div className="absolute inset-0 bg-black/50 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
+                  {img.mediaType === "image" && img.isPrimary ? (
+                    <p className="mt-1 text-center text-[10px] font-semibold uppercase tracking-wide text-[#6B5BB6]">
+                      Principal
+                    </p>
+                  ) : (
+                    <span className="mt-1 block h-4" aria-hidden />
+                  )}
+                  <div className="mt-1 flex w-full flex-col gap-1.5">
                     <button
                       type="button"
                       onClick={() => setPrimary(img.id)}
-                      className="px-2 py-1 bg-white text-gray-800 text-xs rounded disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={img.mediaType === "video"}
+                      className="touch-manipulation w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-center text-[11px] font-medium leading-tight text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {img.mediaType === "video"
-                        ? "Video"
+                        ? "Video (no portada)"
                         : img.isPrimary
-                        ? "Principal"
-                        : "Usar como principal"}
+                          ? "Es la portada"
+                          : "Poner como portada"}
                     </button>
                     <button
                       type="button"
                       onClick={() => removeImage(img.id)}
-                      className="p-1 bg-red-500 text-white rounded"
+                      className="touch-manipulation flex w-full items-center justify-center gap-1 rounded-md bg-red-500 px-2 py-2 text-[11px] font-medium text-white hover:bg-red-600"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      Eliminar
                     </button>
                   </div>
                 </div>
