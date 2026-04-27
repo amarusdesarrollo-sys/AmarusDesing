@@ -3,7 +3,9 @@ import { getCloudinary } from "@/lib/cloudinary-server";
 import { requireAdmin } from "@/lib/firebase-admin";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50 MB
+// En producción (Vercel), requests multipart grandes pueden cortar en ~4.5 MB.
+// Usamos 4 MB para validar antes y mostrar mensaje claro.
+const MAX_VIDEO_SIZE = 4 * 1024 * 1024; // 4 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".heif"];
 const ALLOWED_VIDEO_TYPES = [
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message: isPotentialVideo
-            ? "El video no puede superar 50 MB"
+            ? "El video no puede superar 4 MB"
             : "La imagen no puede superar 5 MB",
         },
         { status: 400 }

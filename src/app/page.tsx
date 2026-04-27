@@ -5,13 +5,17 @@ import AnimatedButton from "@/components/AnimatedButton";
 import FeaturedCategoriesHero from "@/components/FeaturedCategoriesHero";
 import { getHomeContent } from "@/lib/firebase/content";
 import { getHistoriaContent } from "@/lib/firebase/content";
+import { getFeaturedCategories } from "@/lib/firebase/categories";
 import OptimizedImage from "@/components/OptimizedImage";
 import { getCloudinaryUrl } from "@/lib/cloudinary";
 
+export const revalidate = 300;
+
 export default async function Home() {
-  const [homeContent, historiaContent] = await Promise.all([
+  const [homeContent, historiaContent, featuredCategories] = await Promise.all([
     getHomeContent().catch(() => null),
     getHistoriaContent().catch(() => null),
+    getFeaturedCategories().catch(() => []),
   ]);
 
   const pf = homeContent?.proyectoFamiliar;
@@ -53,7 +57,7 @@ export default async function Home() {
   return (
     <>
       {/* Categorías destacadas (desde admin: marcar "Destacada" en cada categoría) */}
-      <FeaturedCategoriesHero />
+      <FeaturedCategoriesHero initialCategories={featuredCategories} />
 
       {/* Sección Conoce nuestro proyecto familiar */}
       <section className="flex flex-col lg:flex-row min-h-[90vh]">
@@ -66,9 +70,9 @@ export default async function Home() {
               width={1200}
               height={1600}
               className="w-full h-full object-cover"
-              priority={true}
+              priority={false}
               sizes="(max-width: 1024px) 100vw, 50vw"
-              quality={90}
+              quality={80}
             />
             {/* Gradiente de transición hacia el fondo lila - muy intenso */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#e5d9f2]/60 to-[#e5d9f2] pointer-events-none"></div>
@@ -132,7 +136,7 @@ export default async function Home() {
               width={1920}
               height={1080}
               className="w-full h-auto object-contain"
-              priority={true}
+              priority={false}
               sizes="100vw"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>

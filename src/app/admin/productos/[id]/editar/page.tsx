@@ -171,24 +171,77 @@ export default function EditarProductoPage() {
       setError("Formato no válido. Usa imagen o video (JPG, PNG, HEIC, HEIF, MP4, MOV, HEVC, etc).");
       return;
     }
-    const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxSize = isVideo ? 30 * 1024 * 1024 : 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      setError(isVideo ? "El video no puede ser mayor a 50MB" : "La imagen no puede ser mayor a 5MB");
+      setError(isVideo ? "El video no puede ser mayor a 30MB" : "La imagen no puede ser mayor a 5MB");
       return;
     }
     setUploadingImage(true);
     setError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "products");
-      const res = await fetch("/api/upload-image", {
-        method: "POST",
-        headers: await getAuthHeaders(),
-        body: formData,
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message);
+      let data: any = null;
+      if (isVideo) {
+        const signRes = await fetch("/api/upload-signature", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await getAuthHeaders()),
+          },
+          body: JSON.stringify({ folder: "products", resourceType: "video" }),
+        });
+        const signText = await signRes.text();
+        const signData = JSON.parse(signText);
+        if (!signRes.ok || !signData?.success) {
+          throw new Error(signData?.message || "No se pudo preparar la subida del video");
+        }
+
+        const cloudForm = new FormData();
+        cloudForm.append("file", file);
+        cloudForm.append("api_key", signData.apiKey);
+        cloudForm.append("timestamp", String(signData.timestamp));
+        cloudForm.append("signature", signData.signature);
+        cloudForm.append("folder", signData.folder);
+        cloudForm.append("resource_type", "video");
+        const cloudRes = await fetch(
+          `https://api.cloudinary.com/v1_1/${signData.cloudName}/video/upload`,
+          {
+            method: "POST",
+            body: cloudForm,
+          }
+        );
+        const cloudText = await cloudRes.text();
+        const cloudData = JSON.parse(cloudText);
+        if (!cloudRes.ok) {
+          throw new Error(cloudData?.error?.message || "Error al subir video a Cloudinary");
+        }
+        data = {
+          success: true,
+          publicId: cloudData.public_id,
+          url: cloudData.secure_url,
+          width: cloudData.width,
+          height: cloudData.height,
+          resourceType: cloudData.resource_type || "video",
+        };
+      } else {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", "products");
+        const res = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: await getAuthHeaders(),
+          body: formData,
+        });
+        const responseText = await res.text();
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          throw new Error(
+            responseText?.trim() || "Error inesperado al subir el archivo."
+          );
+        }
+        if (!res.ok) throw new Error(data?.message || "Error al subir el archivo");
+        if (!data.success) throw new Error(data.message);
+      }
       const hasAnyImage = images.some((media) => media.mediaType === "image");
       setImages((prev) => [
         ...prev,

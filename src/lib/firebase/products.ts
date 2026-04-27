@@ -17,6 +17,18 @@ import { db } from "../firebase";
 import type { Product, ProductCategory } from "@/types";
 
 const COLLECTION_NAME = "products";
+const CACHE_TTL_MS = 30 * 1000;
+
+let allProductsCache: { data: Product[]; ts: number } | null = null;
+const productByIdCache = new Map<string, { data: Product | null; ts: number }>();
+const productsByCategoryCache = new Map<string, { data: Product[]; ts: number }>();
+
+const isFresh = (ts: number) => Date.now() - ts < CACHE_TTL_MS;
+const clearProductCaches = () => {
+  allProductsCache = null;
+  productByIdCache.clear();
+  productsByCategoryCache.clear();
+};
 
 // Convertir Firestore Timestamp a Date
 const convertTimestamp = (timestamp: any): Date => {
@@ -84,12 +96,17 @@ const productToFirestore = (
 
 // Obtener todos los productos
 export const getAllProducts = async (): Promise<Product[]> => {
+  if (allProductsCache && isFresh(allProductsCache.ts)) {
+    return allProductsCache.data;
+  }
   try {
     const productsRef = collection(db, COLLECTION_NAME);
     const q = query(productsRef, orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => firestoreToProduct(doc.data(), doc.id));
+    const products = snapshot.docs.map((doc) => firestoreToProduct(doc.data(), doc.id));
+    allProductsCache = { data: products, ts: Date.now() };
+    return products;
   } catch (error) {
     console.error("Error getting products:", error);
     throw error;
@@ -98,15 +115,22 @@ export const getAllProducts = async (): Promise<Product[]> => {
 
 // Obtener producto por ID
 export const getProductById = async (id: string): Promise<Product | null> => {
+  const cached = productByIdCache.get(id);
+  if (cached && isFresh(cached.ts)) {
+    return cached.data;
+  }
   try {
     const productRef = doc(db, COLLECTION_NAME, id);
     const snapshot = await getDoc(productRef);
 
     if (!snapshot.exists()) {
+      productByIdCache.set(id, { data: null, ts: Date.now() });
       return null;
     }
 
-    return firestoreToProduct(snapshot.data(), snapshot.id);
+    const product = firestoreToProduct(snapshot.data(), snapshot.id);
+    productByIdCache.set(id, { data: product, ts: Date.now() });
+    return product;
   } catch (error) {
     console.error("Error getting product:", error);
     throw error;
@@ -117,6 +141,10 @@ export const getProductById = async (id: string): Promise<Product | null> => {
 export const getProductsByCategory = async (
   category: ProductCategory
 ): Promise<Product[]> => {
+  const cached = productsByCategoryCache.get(category);
+  if (cached && isFresh(cached.ts)) {
+    return cached.data;
+  }
   try {
     const productsRef = collection(db, COLLECTION_NAME);
     const q = query(
@@ -126,7 +154,9 @@ export const getProductsByCategory = async (
     );
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => firestoreToProduct(doc.data(), doc.id));
+    const products = snapshot.docs.map((doc) => firestoreToProduct(doc.data(), doc.id));
+    productsByCategoryCache.set(category, { data: products, ts: Date.now() });
+    return products;
   } catch (error: any) {
     // Detectar si el error es por falta de índice
     const isIndexError =
@@ -162,6 +192,7 @@ export const getProductsByCategory = async (
         console.info(
           `✅ Fallback exitoso: ${categoryProducts.length} productos encontrados en categoría "${category}"`
         );
+        productsByCategoryCache.set(category, { data: categoryProducts, ts: Date.now() });
         return categoryProducts;
       } catch (fallbackError) {
         console.error("❌ Error en fallback:", fallbackError);
@@ -230,6 +261,7 @@ export const createProduct = async (
     const productsRef = collection(db, COLLECTION_NAME);
     const firestoreData = productToFirestore(product);
     const docRef = await addDoc(productsRef, firestoreData);
+    clearProductCaches();
     return docRef.id;
   } catch (error) {
     console.error("Error creating product:", error);
@@ -255,6 +287,7 @@ export const updateProduct = async (
       }
     });
     await updateDoc(productRef, firestoreData);
+    clearProductCaches();
   } catch (error) {
     console.error("Error updating product:", error);
     throw error;
@@ -268,6 +301,7 @@ export const deactivateProduct = async (id: string): Promise<void> => {
     inStock: false,
     updatedAt: Timestamp.now(),
   });
+  clearProductCaches();
 };
 
 /** Reactivar producto - vuelve a mostrarse en la tienda */
@@ -277,12 +311,14 @@ export const activateProduct = async (id: string): Promise<void> => {
     inStock: true,
     updatedAt: Timestamp.now(),
   });
+  clearProductCaches();
 };
 
 /** Eliminar producto permanentemente de Firestore. No se puede deshacer. */
 export const deleteProductPermanently = async (id: string): Promise<void> => {
   const productRef = doc(db, COLLECTION_NAME, id);
   await deleteDoc(productRef);
+  clearProductCaches();
 };
 
 /** @deprecated Use deactivateProduct para desactivar. Se mantiene por compatibilidad. */

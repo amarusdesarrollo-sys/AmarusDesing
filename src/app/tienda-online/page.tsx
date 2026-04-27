@@ -1,31 +1,12 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import AnimatedSection from "@/components/AnimatedSection";
 import AnimatedGrid from "@/components/AnimatedGrid";
 import AnimatedCategory from "@/components/AnimatedCategory";
 import { getActiveCategories } from "@/lib/firebase/categories";
-import type { Category } from "@/types";
+export const revalidate = 300;
 
-export default function TiendaOnlinePage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const activeCategories = await getActiveCategories();
-        // En Tienda Online solo mostramos categorías principales (sin parentId)
-        setCategories(activeCategories.filter((c) => !c.parentId));
-      } catch (error) {
-        console.error("Error loading categories:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCategories();
-  }, []);
+export default async function TiendaOnlinePage() {
+  const activeCategories = await getActiveCategories().catch(() => []);
+  const categories = activeCategories.filter((c) => !c.parentId);
 
   return (
     <>
@@ -40,11 +21,7 @@ export default function TiendaOnlinePage() {
             </AnimatedSection>
 
             {/* Grid de categorías */}
-            {loading ? (
-              <div className="flex justify-center items-center py-20">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#6B5BB6]"></div>
-              </div>
-            ) : categories.length > 0 ? (
+            {categories.length > 0 ? (
               <AnimatedGrid
                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
                 staggerDelay={0.1}

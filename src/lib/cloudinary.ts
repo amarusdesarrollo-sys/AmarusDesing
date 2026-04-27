@@ -80,7 +80,9 @@ export function getCloudinaryUrl(
   if (gravity !== "auto") transformations.push(`g_${gravity}`);
   transformations.push(`q_${quality}`);
   transformations.push(`f_${format}`);
-  if (fetchFormat === "auto") transformations.push("fl_auto");
+  // Nota: evitamos fl_auto porque en algunos assets de Cloudinary provoca 400.
+  // f_auto ya cubre selección automática de formato.
+  void fetchFormat;
 
   const transformationString = transformations.join(",");
 

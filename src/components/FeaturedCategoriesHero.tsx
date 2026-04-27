@@ -19,32 +19,39 @@ function CategoryHeroSection({
   index: number;
 }) {
   const [imageError, setImageError] = useState(false);
+  const [triedOptimized, setTriedOptimized] = useState(false);
 
-  // Prioridad: imageUrl (de Cloudinary al subir) > image como URL > image como publicId
-  const getHeroImageUrl = (): string | null => {
-    // 1. imageUrl es la URL completa guardada al subir - siempre funciona
-    if (category.imageUrl?.trim()) return category.imageUrl.trim();
+  // Preferimos una URL optimizada de Cloudinary para mejorar LCP.
+  // Si falla, hacemos fallback a la URL original/base.
+  const getHeroImageUrls = (): { optimized: string | null; fallback: string | null } => {
     const img = category.image?.trim();
-    if (!img) return null;
-    // 2. Si image es URL completa, usarla
-    if (img.startsWith("http://") || img.startsWith("https://")) return img;
-    // 3. image es publicId - usar URL base SIN transformaciones (más compatible)
-    // Las transformaciones a veces fallan si el formato de imagen es atípico
-    const baseUrl = getCloudinaryBaseUrl(img);
-    if (baseUrl?.trim()) return baseUrl.trim();
-    const url = getCloudinaryUrl(img, {
-      width: 1920,
-      height: 1080,
-      crop: "fill",
-      quality: "auto",
-      format: "auto",
-      gravity: "auto",
-    });
-    return url?.trim() || null;
+    const imageUrl = category.imageUrl?.trim() || null;
+
+    if (img && !img.startsWith("http://") && !img.startsWith("https://")) {
+      const optimized = getCloudinaryUrl(img, {
+        width: 1600,
+        height: 900,
+        crop: "fill",
+        quality: "auto",
+        format: "auto",
+        gravity: "auto",
+      });
+      const fallback = imageUrl || getCloudinaryBaseUrl(img) || null;
+      return { optimized: optimized?.trim() || null, fallback: fallback?.trim() || null };
+    }
+
+    // Si solo tenemos URL completa, no podemos aplicar transformaciones de forma segura.
+    if (imageUrl) return { optimized: imageUrl, fallback: imageUrl };
+    if (img && (img.startsWith("http://") || img.startsWith("https://"))) {
+      return { optimized: img, fallback: img };
+    }
+
+    return { optimized: null, fallback: null };
   };
 
-  const heroImageUrl = getHeroImageUrl();
-  const hasValidImage = heroImageUrl && !imageError;
+  const { optimized, fallback } = getHeroImageUrls();
+  const heroImageUrl = triedOptimized ? fallback : optimized;
+  const hasValidImage = !!heroImageUrl && !imageError;
 
   // Debug temporal: si la imagen falla, mostrar URL completa para probar en el navegador
   if (process.env.NODE_ENV === "development" && category.featured && imageError && heroImageUrl) {
@@ -62,8 +69,15 @@ function CategoryHeroSection({
               src={heroImageUrl!}
               alt={category.name}
               className="absolute inset-0 w-full h-full object-cover"
-              loading={index < 2 ? "eager" : "lazy"}
-              onError={() => setImageError(true)}
+              loading={index === 0 ? "eager" : "lazy"}
+              fetchPriority={index === 0 ? "high" : "auto"}
+              onError={() => {
+                if (!triedOptimized && fallback && fallback !== optimized) {
+                  setTriedOptimized(true);
+                  return;
+                }
+                setImageError(true);
+              }}
             />
           </div>
         ) : (
@@ -109,9 +123,13 @@ function CategoryHeroSection({
  * Componente que obtiene y muestra las categorías destacadas en la página principal.
  * Si no hay destacadas, muestra un mensaje o las secciones por defecto.
  */
-export default function FeaturedCategoriesHero() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function FeaturedCategoriesHero({
+  initialCategories,
+}: {
+  initialCategories?: Category[];
+}) {
+  const [categories, setCategories] = useState<Category[]>(initialCategories ?? []);
+  const [loading, setLoading] = useState(!initialCategories);
 
   useEffect(() => {
     const load = async () => {
@@ -124,8 +142,10 @@ export default function FeaturedCategoriesHero() {
         setLoading(false);
       }
     };
-    load();
-  }, []);
+    if (!initialCategories) {
+      load();
+    }
+  }, [initialCategories]);
 
   if (loading) {
     return (

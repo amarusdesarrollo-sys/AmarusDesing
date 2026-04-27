@@ -15,6 +15,20 @@ import { db } from "../firebase";
 import type { Category } from "@/types";
 
 const COLLECTION_NAME = "categories";
+const CACHE_TTL_MS = 30 * 1000;
+
+let allCategoriesCache: { data: Category[]; ts: number } | null = null;
+let activeCategoriesCache: { data: Category[]; ts: number } | null = null;
+const categoryBySlugCache = new Map<string, { data: Category | null; ts: number }>();
+const categoryByIdCache = new Map<string, { data: Category | null; ts: number }>();
+
+const isFresh = (ts: number) => Date.now() - ts < CACHE_TTL_MS;
+const clearCategoryCaches = () => {
+  allCategoriesCache = null;
+  activeCategoriesCache = null;
+  categoryBySlugCache.clear();
+  categoryByIdCache.clear();
+};
 
 // Convertir Firestore Timestamp a Date
 const convertTimestamp = (timestamp: any): Date => {
@@ -72,12 +86,17 @@ const categoryToFirestore = (
 
 // Obtener todas las categorías
 export const getAllCategories = async (): Promise<Category[]> => {
+  if (allCategoriesCache && isFresh(allCategoriesCache.ts)) {
+    return allCategoriesCache.data;
+  }
   try {
     const categoriesRef = collection(db, COLLECTION_NAME);
     const q = query(categoriesRef, orderBy("order", "asc"));
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => firestoreToCategory(doc.data(), doc.id));
+    const categories = snapshot.docs.map((doc) => firestoreToCategory(doc.data(), doc.id));
+    allCategoriesCache = { data: categories, ts: Date.now() };
+    return categories;
   } catch (error) {
     console.error("Error getting categories:", error);
     throw error;
@@ -89,6 +108,9 @@ export const getAllCategories = async (): Promise<Category[]> => {
 // Si ves un error, haz clic en el enlace proporcionado para crear el índice automáticamente
 // O crea manualmente: Collection: categories, Fields: active (Asc), order (Asc)
 export const getActiveCategories = async (): Promise<Category[]> => {
+  if (activeCategoriesCache && isFresh(activeCategoriesCache.ts)) {
+    return activeCategoriesCache.data;
+  }
   try {
     const categoriesRef = collection(db, COLLECTION_NAME);
     const q = query(
@@ -98,7 +120,9 @@ export const getActiveCategories = async (): Promise<Category[]> => {
     );
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map((doc) => firestoreToCategory(doc.data(), doc.id));
+    const categories = snapshot.docs.map((doc) => firestoreToCategory(doc.data(), doc.id));
+    activeCategoriesCache = { data: categories, ts: Date.now() };
+    return categories;
   } catch (error: any) {
     // Detectar si el error es por falta de índice
     const isIndexError =
@@ -123,6 +147,7 @@ export const getActiveCategories = async (): Promise<Category[]> => {
         const activeCategories = allCategories
           .filter((cat) => cat.active)
           .sort((a, b) => a.order - b.order);
+        activeCategoriesCache = { data: activeCategories, ts: Date.now() };
         return activeCategories;
       } catch (fallbackError) {
         console.error("❌ Error en fallback:", fallbackError);
@@ -155,6 +180,10 @@ export const getFeaturedCategories = async (): Promise<Category[]> => {
 export const getCategoryBySlug = async (
   slug: string
 ): Promise<Category | null> => {
+  const cached = categoryBySlugCache.get(slug);
+  if (cached && isFresh(cached.ts)) {
+    return cached.data;
+  }
   try {
     const categoriesRef = collection(db, COLLECTION_NAME);
     const q = query(
@@ -165,11 +194,14 @@ export const getCategoryBySlug = async (
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
+      categoryBySlugCache.set(slug, { data: null, ts: Date.now() });
       return null;
     }
 
     const doc = snapshot.docs[0];
-    return firestoreToCategory(doc.data(), doc.id);
+    const category = firestoreToCategory(doc.data(), doc.id);
+    categoryBySlugCache.set(slug, { data: category, ts: Date.now() });
+    return category;
   } catch (error) {
     console.error("Error getting category by slug:", error);
     throw error;
@@ -178,15 +210,22 @@ export const getCategoryBySlug = async (
 
 // Obtener categoría por ID
 export const getCategoryById = async (id: string): Promise<Category | null> => {
+  const cached = categoryByIdCache.get(id);
+  if (cached && isFresh(cached.ts)) {
+    return cached.data;
+  }
   try {
     const categoryRef = doc(db, COLLECTION_NAME, id);
     const snapshot = await getDoc(categoryRef);
 
     if (!snapshot.exists()) {
+      categoryByIdCache.set(id, { data: null, ts: Date.now() });
       return null;
     }
 
-    return firestoreToCategory(snapshot.data(), snapshot.id);
+    const category = firestoreToCategory(snapshot.data(), snapshot.id);
+    categoryByIdCache.set(id, { data: category, ts: Date.now() });
+    return category;
   } catch (error) {
     console.error("Error getting category by id:", error);
     throw error;
@@ -209,6 +248,7 @@ export const createCategory = async (
     });
     
     const docRef = await addDoc(categoriesRef, firestoreData);
+    clearCategoryCaches();
     
     console.log("✅ Categoría guardada en Firestore con ID:", docRef.id);
     
@@ -241,6 +281,7 @@ export const updateCategory = async (
     });
     
     await updateDoc(categoryRef, firestoreData);
+    clearCategoryCaches();
   } catch (error) {
     console.error("Error updating category:", error);
     throw error;
@@ -256,6 +297,7 @@ export const deleteCategory = async (id: string): Promise<void> => {
       active: false,
       updatedAt: Timestamp.now(),
     });
+    clearCategoryCaches();
   } catch (error) {
     console.error("Error deleting category:", error);
     throw error;
@@ -267,6 +309,7 @@ export const hardDeleteCategory = async (id: string): Promise<void> => {
   try {
     const categoryRef = doc(db, COLLECTION_NAME, id);
     await deleteDoc(categoryRef);
+    clearCategoryCaches();
   } catch (error) {
     console.error("Error hard deleting category:", error);
     throw error;
