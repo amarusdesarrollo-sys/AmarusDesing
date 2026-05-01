@@ -1,11 +1,16 @@
 import AnimatedSection from "@/components/AnimatedSection";
 import AnimatedGrid from "@/components/AnimatedGrid";
 import AnimatedCategory from "@/components/AnimatedCategory";
+import TiendaOnlineSearchBar from "@/components/TiendaOnlineSearchBar";
 import { getActiveCategories } from "@/lib/firebase/categories";
+import { getAllProducts } from "@/lib/firebase/products";
 export const revalidate = 300;
 
 export default async function TiendaOnlinePage() {
-  const activeCategories = await getActiveCategories().catch(() => []);
+  const [activeCategories, allProducts] = await Promise.all([
+    getActiveCategories().catch(() => []),
+    getAllProducts().catch(() => []),
+  ]);
   const categories = activeCategories.filter((c) => !c.parentId);
 
   return (
@@ -18,6 +23,10 @@ export default async function TiendaOnlinePage() {
               <h1 className="text-5xl md:text-6xl font-bold text-gray-800 mb-6">
                 TIENDA ONLINE
               </h1>
+            </AnimatedSection>
+
+            <AnimatedSection delay={0.25}>
+              <TiendaOnlineSearchBar products={allProducts} />
             </AnimatedSection>
 
             {/* Grid de categorías */}
