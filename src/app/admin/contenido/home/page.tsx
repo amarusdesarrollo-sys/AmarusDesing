@@ -6,6 +6,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import { getHomeContent, updateHomeContent } from "@/lib/firebase/content";
 import type { HomeContent } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { isSupportedImageFile } from "@/lib/is-supported-image";
 
 export default function AdminHomePage() {
   const [content, setContent] = useState<HomeContent | null>(null);
@@ -34,7 +35,7 @@ export default function AdminHomePage() {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) return;
+    if (!isSupportedImageFile(file)) return;
 
     setUploadingImage(true);
     setError(null);

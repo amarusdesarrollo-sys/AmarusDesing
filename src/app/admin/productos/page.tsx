@@ -9,6 +9,7 @@ import { getAllCategories } from "@/lib/firebase/categories";
 import { getCloudinaryBaseUrl } from "@/lib/cloudinary";
 import type { Product, Category } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { totalSellableStock } from "@/lib/product-purchase-options";
 
 export default function AdminProductosPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -90,11 +91,17 @@ export default function AdminProductosPage() {
     }
 
     if (stockFilter === "low") {
-      filtered = filtered.filter((p) => p.stock < 10 && p.inStock);
+      filtered = filtered.filter(
+        (p) => totalSellableStock(p) < 10 && p.inStock
+      );
     } else if (stockFilter === "out") {
-      filtered = filtered.filter((p) => !p.inStock || p.stock === 0);
+      filtered = filtered.filter(
+        (p) => !p.inStock || totalSellableStock(p) === 0
+      );
     } else if (stockFilter === "in") {
-      filtered = filtered.filter((p) => p.inStock && p.stock > 0);
+      filtered = filtered.filter(
+        (p) => p.inStock && totalSellableStock(p) > 0
+      );
     }
 
     setProducts(filtered);
@@ -336,7 +343,7 @@ export default function AdminProductosPage() {
                       €{(product.price / 100).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {product.stock}
+                      {totalSellableStock(product)}
                     </td>
                     <td className="px-6 py-4">
                       <span

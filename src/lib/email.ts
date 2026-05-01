@@ -388,10 +388,17 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<{
   }
 
   const itemsHtml = order.items
-    .map(
-      (i) =>
-        `<tr><td>${i.product.name}</td><td>${i.quantity}</td><td>€${formatPrice(i.price)}</td><td>€${formatPrice(i.price * i.quantity)}</td></tr>`
-    )
+    .map((i) => {
+      const variantLine =
+        i.selectedVariants && Object.keys(i.selectedVariants).length > 0
+          ? `<div style="font-size:12px;color:#666;margin-top:4px;">${escapeHtml(
+              Object.entries(i.selectedVariants)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(" · ")
+            )}</div>`
+          : "";
+      return `<tr><td>${escapeHtml(i.product.name)}${variantLine}</td><td style="text-align:center">${i.quantity}</td><td style="text-align:right">€${formatPrice(i.price)}</td><td style="text-align:right">€${formatPrice(i.price * i.quantity)}</td></tr>`;
+    })
     .join("");
 
   const html = `
@@ -479,7 +486,15 @@ export async function sendNewOrderAlertToAdmin(order: Order): Promise<{
   }
 
   const itemsList = order.items
-    .map((i) => `• ${i.product.name} × ${i.quantity} — €${formatPrice(i.price * i.quantity)}`)
+    .map((i) => {
+      const v =
+        i.selectedVariants && Object.keys(i.selectedVariants).length > 0
+          ? ` (${Object.entries(i.selectedVariants)
+              .map(([k, val]) => `${escapeHtml(k)}: ${escapeHtml(val)}`)
+              .join(", ")})`
+          : "";
+      return `• ${escapeHtml(i.product.name)}${v} × ${i.quantity} — €${formatPrice(i.price * i.quantity)}`;
+    })
     .join("\n");
 
   const html = `

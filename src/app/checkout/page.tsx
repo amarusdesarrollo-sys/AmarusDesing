@@ -191,6 +191,7 @@ export default function CheckoutPage() {
       const orderItemsForValidation = items.map((i) => ({
         productId: i.productId,
         quantity: i.quantity,
+        selectedVariants: i.selectedVariants,
       }));
       const { valid, invalidItems } = await validateOrderStock(
         orderItemsForValidation
@@ -212,6 +213,9 @@ export default function CheckoutPage() {
         product: item.product,
         quantity: item.quantity,
         price: item.product.price,
+        ...(item.selectedVariants && Object.keys(item.selectedVariants).length > 0
+          ? { selectedVariants: item.selectedVariants }
+          : {}),
       }));
       const user = auth.currentUser;
       const orderId = await createOrder({
@@ -486,7 +490,7 @@ export default function CheckoutPage() {
               <div className="space-y-3 max-h-48 overflow-y-auto mb-4">
                 {items.map((item) => (
                   <div
-                    key={item.productId}
+                    key={item.lineId}
                     className="flex gap-3 py-2 border-b border-gray-100 last:border-0"
                   >
                     <div className="relative w-14 h-14 flex-shrink-0 rounded overflow-hidden bg-gray-100">
@@ -505,6 +509,18 @@ export default function CheckoutPage() {
                       <p className="font-medium text-gray-800 text-sm line-clamp-2">
                         {item.product.name}
                       </p>
+                      {item.selectedVariants &&
+                        Object.keys(item.selectedVariants).length > 0 && (
+                          <p className="text-gray-500 text-xs mt-0.5">
+                            {Object.entries(item.selectedVariants).map(
+                              ([k, v]) => (
+                                <span key={k} className="mr-2">
+                                  {k}: {v}
+                                </span>
+                              )
+                            )}
+                          </p>
+                        )}
                       <p className="text-gray-500 text-xs">
                         {item.quantity} × €{formatPrice(item.product.price)}
                       </p>

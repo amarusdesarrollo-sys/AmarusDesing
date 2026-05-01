@@ -9,6 +9,7 @@ import {
 } from "@/lib/firebase/content";
 import type { HistoriaContent } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { isSupportedImageFile } from "@/lib/is-supported-image";
 
 export default function AdminHistoriaPage() {
   const [content, setContent] = useState<HistoriaContent | null>(null);
@@ -39,7 +40,7 @@ export default function AdminHistoriaPage() {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) return;
+    if (!isSupportedImageFile(file)) return;
 
     setUploadingImage(true);
     setError(null);

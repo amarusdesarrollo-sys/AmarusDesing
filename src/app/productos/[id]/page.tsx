@@ -31,6 +31,14 @@ import {
 } from "@/lib/cloudinary";
 import type { Product, Category } from "@/types";
 import { mockProducts } from "@/data/mockProducts";
+import {
+  isCompletePurchaseSelection,
+  productRequiresPurchaseSelection,
+  getAvailableStockForSelection,
+  productHasAnyStock,
+  optionValueHasAvailability,
+  productUsesVariantStock,
+} from "@/lib/product-purchase-options";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -46,6 +54,12 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [purchaseSelection, setPurchaseSelection] = useState<
+    Record<string, string>
+  >({});
+  const [purchaseSelectionError, setPurchaseSelectionError] = useState<
+    string | null
+  >(null);
 
   const addItem = useCartStore((state) => state.addItem);
   const totalItems = useCartStore((state) => state.getTotalItems());
@@ -110,6 +124,41 @@ export default function ProductDetailPage() {
     }
   }, [productId]);
 
+  useEffect(() => {
+    if (!product) return;
+    const next: Record<string, string> = {};
+    for (const o of product.purchaseOptions ?? []) next[o.name] = "";
+    setPurchaseSelection(next);
+    setPurchaseSelectionError(null);
+    setQuantity(1);
+  }, [product]);
+
+  const needsPurchaseOpts = product
+    ? productRequiresPurchaseSelection(product)
+    : false;
+  const selectionComplete =
+    product &&
+    (!needsPurchaseOpts ||
+      isCompletePurchaseSelection(product, purchaseSelection));
+  const availableForLine =
+    product && selectionComplete
+      ? getAvailableStockForSelection(product, purchaseSelection)
+      : 0;
+  const hasAnyStock = product ? productHasAnyStock(product) : false;
+  const canAddToCart =
+    !!product &&
+    product.inStock &&
+    selectionComplete &&
+    availableForLine > 0;
+
+  useEffect(() => {
+    if (!product) return;
+    if (!selectionComplete) return;
+    const cap = availableForLine;
+    if (cap <= 0) return;
+    setQuantity((q) => Math.min(Math.max(1, q), cap));
+  }, [product, purchaseSelection, selectionComplete, availableForLine]);
+
   const formatPrice = (cents: number) => {
     return (cents / 100).toFixed(2);
   };
@@ -136,19 +185,33 @@ export default function ProductDetailPage() {
     return image.url;
   };
 
-  const hasStock = product && product.inStock && (product.stock ?? 0) > 0;
-
   const handleAddToCart = () => {
-    if (!product || !hasStock) return;
+    if (!product || !canAddToCart) return;
 
-    addItem(product, quantity);
+    if (productRequiresPurchaseSelection(product)) {
+      if (!isCompletePurchaseSelection(product, purchaseSelection)) {
+        setPurchaseSelectionError(
+          "Elige todas las opciones disponibles antes de añadir al carrito."
+        );
+        return;
+      }
+    }
+    setPurchaseSelectionError(null);
+
+    const variants =
+      product.purchaseOptions && product.purchaseOptions.length > 0
+        ? { ...purchaseSelection }
+        : undefined;
+
+    addItem(product, quantity, variants);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   };
 
   const increaseQuantity = () => {
-    const maxQty = product?.stock ?? 0;
-    if (product && quantity < maxQty) {
+    if (!product || !selectionComplete) return;
+    const maxQty = availableForLine;
+    if (quantity < maxQty) {
       setQuantity(quantity + 1);
     }
   };
@@ -195,6 +258,13 @@ export default function ProductDetailPage() {
     notFound();
   }
 
+  const categoryBrowseHref =
+    category && product.subcategory
+      ? `/categorias/${category.slug}?sub=${encodeURIComponent(product.subcategory)}`
+      : category
+        ? `/categorias/${category.slug}`
+        : "";
+
   const selectedMedia = product.images[selectedImageIndex] || product.images[0];
   const primaryMedia =
     product.images.find((img) => img.isPrimary) || product.images[0];
@@ -216,11 +286,11 @@ export default function ProductDetailPage() {
             >
               Tienda
             </Link>
-            {category && (
+            {category && categoryBrowseHref && (
               <>
                 <span>/</span>
                 <Link
-                  href={`/categorias/${category.slug}`}
+                  href={categoryBrowseHref}
                   className="hover:text-[#6B5BB6] transition-colors"
                 >
                   {category.name}
@@ -304,7 +374,7 @@ export default function ProductDetailPage() {
                       Destacado
                     </span>
                   )}
-                  {!hasStock && (
+                  {(!product.inStock || !hasAnyStock) && (
                     <span className="absolute top-4 right-4 bg-gray-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
                       Agotado
                     </span>
@@ -371,9 +441,9 @@ export default function ProductDetailPage() {
             <div className="space-y-6">
               {/* Título y categoría */}
               <div>
-                {category && (
+                {category && categoryBrowseHref && (
                   <Link
-                    href={`/categorias/${category.slug}`}
+                    href={categoryBrowseHref}
                     className="text-[#6B5BB6] hover:text-[#5B4BA5] text-sm font-medium mb-2 inline-block transition-colors"
                   >
                     {category.name}
@@ -501,15 +571,85 @@ export default function ProductDetailPage() {
               {/* Stock */}
               <div className="pt-4 border-t border-gray-200">
                 <p className="text-sm text-gray-600">
-                  {hasStock ? (
-                    <span className="text-green-600 font-medium">
-                      ✓ Solo quedan {(product.stock ?? 0)} unidades
+                  {!product.inStock || !hasAnyStock ? (
+                    <span className="text-red-600 font-medium">✗ Agotado</span>
+                  ) : needsPurchaseOpts && !selectionComplete ? (
+                    <span className="text-amber-700 font-medium">
+                      Elige las opciones para ver cuántas unidades quedan.
+                    </span>
+                  ) : selectionComplete && availableForLine === 0 ? (
+                    <span className="text-red-600 font-medium">
+                      ✗ Sin stock para esta combinación
                     </span>
                   ) : (
-                    <span className="text-red-600 font-medium">✗ Agotado</span>
+                    <span className="text-green-600 font-medium">
+                      ✓ Quedan {availableForLine}{" "}
+                      {availableForLine === 1 ? "unidad" : "unidades"}
+                      {needsPurchaseOpts && productUsesVariantStock(product)
+                        ? " con esta combinación"
+                        : ""}
+                    </span>
                   )}
                 </p>
               </div>
+
+              {(product.purchaseOptions?.length ?? 0) > 0 && (
+                <div className="space-y-4 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Opciones
+                  </h3>
+                  {(product.purchaseOptions ?? []).map((opt) => {
+                    const partialBase: Record<string, string> = {
+                      ...purchaseSelection,
+                    };
+                    partialBase[opt.name] = "";
+                    return (
+                      <div key={opt.name}>
+                        <label
+                          htmlFor={`purchase-opt-${opt.name}`}
+                          className="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          {opt.name}
+                        </label>
+                        <select
+                          id={`purchase-opt-${opt.name}`}
+                          value={purchaseSelection[opt.name] ?? ""}
+                          onChange={(e) => {
+                            setPurchaseSelection((prev) => ({
+                              ...prev,
+                              [opt.name]: e.target.value,
+                            }));
+                            setPurchaseSelectionError(null);
+                            setQuantity(1);
+                          }}
+                          className="w-full max-w-xs rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm focus:border-[#6B5BB6] focus:outline-none focus:ring-2 focus:ring-[#6B5BB6]/30"
+                        >
+                          <option value="">Elige…</option>
+                          {opt.values.map((v) => {
+                            const noStock =
+                              productUsesVariantStock(product) &&
+                              !optionValueHasAvailability(
+                                product,
+                                partialBase,
+                                opt.name,
+                                v
+                              );
+                            return (
+                              <option key={v} value={v} disabled={noStock}>
+                                {v}
+                                {noStock ? " — sin stock" : ""}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    );
+                  })}
+                  {purchaseSelectionError && (
+                    <p className="text-sm text-red-600">{purchaseSelectionError}</p>
+                  )}
+                </div>
+              )}
 
               {/* Selector de cantidad y agregar al carrito */}
               <div className="space-y-4 pt-4 border-t border-gray-200">
@@ -531,7 +671,11 @@ export default function ProductDetailPage() {
                     </span>
                     <button
                       onClick={increaseQuantity}
-                      disabled={!hasStock || quantity >= (product.stock ?? 0)}
+                      disabled={
+                        !selectionComplete ||
+                        availableForLine <= 0 ||
+                        quantity >= availableForLine
+                      }
                       className="p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       aria-label="Aumentar cantidad"
                     >
@@ -543,11 +687,11 @@ export default function ProductDetailPage() {
                 <div className="flex gap-3">
                   <motion.button
                     onClick={handleAddToCart}
-                    disabled={!hasStock}
+                    disabled={!canAddToCart}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-lg font-semibold text-lg transition-all ${
-                      hasStock
+                      canAddToCart
                         ? addedToCart
                           ? "bg-green-500 text-white"
                           : "bg-[#6B5BB6] text-white hover:bg-[#5B4BA5]"
@@ -562,7 +706,13 @@ export default function ProductDetailPage() {
                     ) : (
                       <>
                         <ShoppingCart className="h-5 w-5" />
-                        {hasStock ? "Agregar al carrito" : "Agotado"}
+                        {!product.inStock || !hasAnyStock
+                          ? "Agotado"
+                          : needsPurchaseOpts && !selectionComplete
+                            ? "Elige opciones"
+                            : selectionComplete && availableForLine === 0
+                              ? "Sin stock"
+                              : "Agregar al carrito"}
                       </>
                     )}
                   </motion.button>
@@ -601,9 +751,9 @@ export default function ProductDetailPage() {
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
                   Productos relacionados
                 </h2>
-                {category && (
+                {category && categoryBrowseHref && (
                   <Link
-                    href={`/categorias/${category.slug}`}
+                    href={categoryBrowseHref}
                     className="text-[#6B5BB6] hover:text-[#5B4BA5] font-medium flex items-center gap-2 transition-colors"
                   >
                     Ver todos

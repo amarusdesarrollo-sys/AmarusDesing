@@ -1,6 +1,18 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { CartItem, Product, ShippingZoneConfig } from "@/types";
+import {
+  makeCartLineId,
+  ensureCartLineIds,
+  variantSelectionKey,
+} from "@/lib/cart-line-id";
+
+function sameVariantSelection(
+  a?: Record<string, string> | null,
+  b?: Record<string, string> | null
+): boolean {
+  return variantSelectionKey(a) === variantSelectionKey(b);
+}
 
 export interface ShippingConfig {
   freeShippingThreshold: number;
@@ -18,9 +30,13 @@ interface CartStore {
   items: CartItem[];
   shippingConfig: ShippingConfig | null;
   setShippingConfig: (config: ShippingConfig | null) => void;
-  addItem: (product: Product, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addItem: (
+    product: Product,
+    quantity?: number,
+    selectedVariants?: Record<string, string>
+  ) => void;
+  removeItem: (lineId: string) => void;
+  updateQuantity: (lineId: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getSubtotal: () => number;
@@ -41,52 +57,61 @@ export const useCartStore = create<CartStore>()(
 
       setShippingConfig: (config) => set({ shippingConfig: config }),
 
-      addItem: (product, quantity = 1) => {
+      addItem: (product, quantity = 1, selectedVariants) => {
         set((state) => {
-          const existingItem = state.items.find(
-            (item) => item.productId === product.id
+          const items = ensureCartLineIds(state.items);
+          const lineId = makeCartLineId(product.id, selectedVariants);
+          const existingItem = items.find(
+            (item) =>
+              item.productId === product.id &&
+              sameVariantSelection(item.selectedVariants, selectedVariants)
           );
 
           if (existingItem) {
-            // Si ya existe, actualizar cantidad
             return {
-              items: state.items.map((item) =>
-                item.productId === product.id
-                  ? { ...item, quantity: item.quantity + quantity }
+              items: items.map((item) =>
+                item.lineId === existingItem.lineId
+                  ? { ...item, product, quantity: item.quantity + quantity }
                   : item
               ),
             };
           }
 
-          // Si no existe, agregar nuevo item
           return {
             items: [
-              ...state.items,
+              ...items,
               {
+                lineId,
                 productId: product.id,
                 product,
                 quantity,
+                ...(selectedVariants &&
+                Object.keys(selectedVariants).length > 0
+                  ? { selectedVariants }
+                  : {}),
               },
             ],
           };
         });
       },
 
-      removeItem: (productId) => {
+      removeItem: (lineId) => {
         set((state) => ({
-          items: state.items.filter((item) => item.productId !== productId),
+          items: ensureCartLineIds(state.items).filter(
+            (item) => item.lineId !== lineId
+          ),
         }));
       },
 
-      updateQuantity: (productId, quantity) => {
+      updateQuantity: (lineId, quantity) => {
         if (quantity <= 0) {
-          get().removeItem(productId);
+          get().removeItem(lineId);
           return;
         }
 
         set((state) => ({
-          items: state.items.map((item) =>
-            item.productId === productId ? { ...item, quantity } : item
+          items: ensureCartLineIds(state.items).map((item) =>
+            item.lineId === lineId ? { ...item, quantity } : item
           ),
         }));
       },
@@ -138,6 +163,12 @@ export const useCartStore = create<CartStore>()(
       name: "amarus-cart",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ items: state.items }),
+      merge: (persistedState, currentState) => {
+        const p = persistedState as Partial<CartStore> | undefined;
+        const rawItems = (p?.items ?? []) as CartItem[];
+        const items = ensureCartLineIds(rawItems);
+        return { ...currentState, ...p, items };
+      },
     }
   )
 );

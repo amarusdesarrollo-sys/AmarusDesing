@@ -291,9 +291,9 @@ export default function AdminPedidoDetallePage() {
             Resumen del pedido
           </h2>
           <div className="space-y-3 mb-6">
-            {order.items.map((item) => (
+            {order.items.map((item, idx) => (
               <div
-                key={`${item.productId}-${item.quantity}`}
+                key={`${item.productId}-${idx}-${JSON.stringify(item.selectedVariants ?? {})}`}
                 className="flex gap-4 py-3 border-b border-gray-100 last:border-0"
               >
                 <div className="relative w-16 h-16 flex-shrink-0 rounded overflow-hidden bg-gray-100">
@@ -312,6 +312,16 @@ export default function AdminPedidoDetallePage() {
                   <p className="font-medium text-gray-800">
                     {item.product.name}
                   </p>
+                  {item.selectedVariants &&
+                    Object.keys(item.selectedVariants).length > 0 && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        {Object.entries(item.selectedVariants).map(([k, v]) => (
+                          <span key={k} className="mr-2">
+                            {k}: {v}
+                          </span>
+                        ))}
+                      </p>
+                    )}
                   <p className="text-sm text-gray-500">
                     {item.quantity} × {formatPrice(item.price)}
                   </p>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { ShoppingCart, Heart, Check } from "lucide-react";
@@ -12,6 +13,11 @@ import {
   extractPublicIdFromUrl,
 } from "@/lib/cloudinary";
 import type { Product } from "@/types";
+import {
+  productRequiresPurchaseSelection,
+  productHasAnyStock,
+  totalSellableStock,
+} from "@/lib/product-purchase-options";
 
 interface ProductCardProps {
   product: Product;
@@ -22,10 +28,13 @@ export default function ProductCard({
   product,
   priority = false,
 }: ProductCardProps) {
+  const router = useRouter();
   const addItem = useCartStore((state) => state.addItem);
   const totalItems = useCartStore((state) => state.getTotalItems());
   const [added, setAdded] = useState(false);
-  const hasStock = product.inStock && (product.stock ?? 0) > 0;
+  const hasStock = product.inStock && productHasAnyStock(product);
+  const totalStock = totalSellableStock(product);
+  const needsOptions = productRequiresPurchaseSelection(product);
   const primaryMedia =
     product.images.find((img) => img.isPrimary && img.mediaType !== "video") ||
     product.images.find((img) => img.mediaType !== "video");
@@ -56,11 +65,14 @@ export default function ProductCard({
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (hasStock) {
-      addItem(product, 1);
-      setAdded(true);
-      setTimeout(() => setAdded(false), 1800);
+    if (!hasStock) return;
+    if (needsOptions) {
+      router.push(`/productos/${product.id}`);
+      return;
     }
+    addItem(product, 1);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1800);
   };
 
   return (
@@ -105,9 +117,9 @@ export default function ProductCard({
               Agotado
             </span>
           )}
-          {hasStock && (product.stock ?? 0) <= 5 && (
+          {hasStock && totalStock > 0 && totalStock <= 5 && (
             <span className="absolute top-2 right-2 bg-amber-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              Solo quedan {(product.stock ?? 0)}
+              Solo quedan {totalStock}
             </span>
           )}
           {product.originalPrice && (
@@ -146,14 +158,24 @@ export default function ProductCard({
               disabled={!hasStock}
               className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                 hasStock
-                  ? added
+                  ? added && !needsOptions
                     ? "bg-green-600 text-white"
                     : "bg-[#6B5BB6] text-white hover:bg-[#5B4BA5]"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
             >
-              {added ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
-              {hasStock ? (added ? "Agregado" : "Agregar") : "Agotado"}
+              {added && !needsOptions ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <ShoppingCart className="h-4 w-4" />
+              )}
+              {hasStock
+                ? needsOptions
+                  ? "Elegir opciones"
+                  : added
+                    ? "Agregado"
+                    : "Agregar"
+                : "Agotado"}
             </button>
 
             <button

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { createBlogPost } from "@/lib/firebase/blog";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { isSupportedImageFile } from "@/lib/is-supported-image";
 import { useRouter } from "next/navigation";
 
 export default function NuevoBlogPostPage() {
@@ -15,7 +16,7 @@ export default function NuevoBlogPostPage() {
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [author, setAuthor] = useState("");
-  const [published, setPublished] = useState(false);
+  const [published, setPublished] = useState(true);
   const [tags, setTags] = useState("");
   const [imagePublicId, setImagePublicId] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -32,7 +33,7 @@ export default function NuevoBlogPostPage() {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
+    if (!file || !isSupportedImageFile(file)) return;
     const fd = new FormData();
     fd.append("file", file);
     fd.append("folder", "blog");
@@ -161,7 +162,7 @@ export default function NuevoBlogPostPage() {
             onChange={(e) => setPublished(e.target.checked)}
             className="rounded text-[#6B5BB6]"
           />
-          <span>Publicar (visible en la web)</span>
+          <span>Publicar ahora (visible en la web)</span>
         </label>
         <div className="flex gap-3">
           <button

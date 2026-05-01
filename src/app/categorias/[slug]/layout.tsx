@@ -1,13 +1,13 @@
 import { Metadata } from "next";
-import { getCategoryBySlug } from "@/lib/firebase/categories";
+import { getCategoryBySlugUnfiltered } from "@/lib/firebase/categories";
 import { buildTitle, getBaseUrl } from "@/lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const category = await getCategoryBySlug(slug);
-  if (!category) return { title: buildTitle("Categoría no encontrada") };
+  const category = await getCategoryBySlugUnfiltered(slug);
+  if (!category || !category.active) return { title: buildTitle("Categoría no encontrada") };
 
   const name = category.name;
   const description = category.description || `Explora ${name} en AmarusDesign`;

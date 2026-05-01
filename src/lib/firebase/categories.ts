@@ -6,6 +6,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -205,6 +206,27 @@ export const getCategoryBySlug = async (
   } catch (error) {
     console.error("Error getting category by slug:", error);
     throw error;
+  }
+};
+
+/**
+ * Busca categoría o subcategoría por slug sin filtrar por `active`.
+ * Si hay varios documentos con el mismo slug (no debería), prioriza uno activo.
+ * Útil para rutas y redirecciones; en tienda pública sigue validándose `active` después.
+ */
+export const getCategoryBySlugUnfiltered = async (
+  slug: string
+): Promise<Category | null> => {
+  try {
+    const categoriesRef = collection(db, COLLECTION_NAME);
+    const q = query(categoriesRef, where("slug", "==", slug), limit(25));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    const list = snapshot.docs.map((d) => firestoreToCategory(d.data(), d.id));
+    return list.find((c) => c.active) ?? list[0] ?? null;
+  } catch (error) {
+    console.error("Error getting category by slug (unfiltered):", error);
+    return null;
   }
 };
 

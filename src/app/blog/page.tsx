@@ -3,6 +3,7 @@ import Image from "next/image";
 import AnimatedSection from "@/components/AnimatedSection";
 import { getPublishedBlogPosts } from "@/lib/firebase/blog";
 import { getCloudinaryUrl } from "@/lib/cloudinary";
+import type { BlogPost } from "@/types";
 import { Calendar } from "lucide-react";
 
 export const metadata = {
@@ -12,7 +13,12 @@ export const metadata = {
 };
 
 export default async function BlogPage() {
-  const posts = await getPublishedBlogPosts().catch(() => []);
+  let posts: BlogPost[] = [];
+  try {
+    posts = await getPublishedBlogPosts();
+  } catch (error) {
+    console.error("Error loading published blog posts:", error);
+  }
 
   return (
     <div className="min-h-screen bg-white">

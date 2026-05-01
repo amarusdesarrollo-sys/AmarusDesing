@@ -21,6 +21,7 @@ import {
   totalRevenueCents,
 } from "@/lib/order-stats";
 import type { Category, Order, Product } from "@/types";
+import { totalSellableStock } from "@/lib/product-purchase-options";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -53,7 +54,9 @@ export default function AdminDashboard() {
 
         const totalSales = totalRevenueCents(orders);
 
-        const lowStockProducts = products.filter((p) => p.stock < 10 && p.inStock).length;
+        const lowStockProducts = products.filter(
+          (p) => totalSellableStock(p) < 10 && p.inStock
+        ).length;
 
         const productSales: Record<string, number> = {};
         orders.forEach((order) => {

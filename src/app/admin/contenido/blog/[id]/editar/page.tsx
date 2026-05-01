@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Save } from "lucide-react";
 import { getBlogPostById, updateBlogPost } from "@/lib/firebase/blog";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { isSupportedImageFile } from "@/lib/is-supported-image";
 
 export default function EditarBlogPostPage() {
   const params = useParams();
@@ -56,7 +57,7 @@ export default function EditarBlogPostPage() {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !file.type.startsWith("image/")) return;
+    if (!file || !isSupportedImageFile(file)) return;
     const fd = new FormData();
     fd.append("file", file);
     fd.append("folder", "blog");

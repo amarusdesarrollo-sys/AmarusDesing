@@ -40,6 +40,12 @@ function firestoreToOrder(data: any, id: string): Order {
     product: normalizeProduct(item.product),
     quantity: item.quantity ?? 0,
     price: item.price ?? 0,
+    selectedVariants:
+      item.selectedVariants &&
+      typeof item.selectedVariants === "object" &&
+      !Array.isArray(item.selectedVariants)
+        ? (item.selectedVariants as Record<string, string>)
+        : undefined,
   }));
   const addr = data.shippingAddress ?? {};
   return {

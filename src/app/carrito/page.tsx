@@ -1,5 +1,6 @@
 "use client";
 
+import { getAvailableStockForSelection } from "@/lib/product-purchase-options";
 import { useCartStore } from "@/store/cartStore";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import Link from "next/link";
@@ -70,8 +71,13 @@ export default function CarritoPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Lista de productos */}
           <div className="lg:col-span-2 space-y-4">
-            {items.map((item) => (
-              <AnimatedSection key={item.productId}>
+            {items.map((item) => {
+              const maxQty = getAvailableStockForSelection(
+                item.product,
+                item.selectedVariants ?? {}
+              );
+              return (
+              <AnimatedSection key={item.lineId}>
                 <div className="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row gap-6">
                   {/* Imagen del producto */}
                   <div className="relative w-full md:w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden">
@@ -95,6 +101,21 @@ export default function CarritoPage() {
                           {item.product.name}
                         </h3>
                       </Link>
+                      {item.selectedVariants &&
+                        Object.keys(item.selectedVariants).length > 0 && (
+                          <p className="text-sm text-gray-700 mb-2">
+                            {Object.entries(item.selectedVariants).map(
+                              ([k, v]) => (
+                                <span
+                                  key={k}
+                                  className="inline-block mr-3 rounded-md bg-[#F5EFFF] px-2 py-0.5 text-[#5B4BA5]"
+                                >
+                                  {k}: <strong>{v}</strong>
+                                </span>
+                              )
+                            )}
+                          </p>
+                        )}
                       <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                         {item.product.description}
                       </p>
@@ -109,7 +130,7 @@ export default function CarritoPage() {
                       <div className="flex items-center border border-gray-300 rounded-lg">
                         <button
                           onClick={() =>
-                            updateQuantity(item.productId, item.quantity - 1)
+                            updateQuantity(item.lineId, item.quantity - 1)
                           }
                           className="p-2 hover:bg-gray-100 transition-colors rounded-l-lg"
                           aria-label="Disminuir cantidad"
@@ -121,13 +142,12 @@ export default function CarritoPage() {
                         </span>
                         <button
                           onClick={() =>
-                            updateQuantity(item.productId, item.quantity + 1)
+                            updateQuantity(item.lineId, item.quantity + 1)
                           }
                           className="p-2 hover:bg-gray-100 transition-colors rounded-r-lg"
                           aria-label="Aumentar cantidad"
                           disabled={
-                            !item.product.inStock ||
-                            item.quantity >= item.product.stock
+                            !item.product.inStock || item.quantity >= maxQty
                           }
                         >
                           <Plus className="h-5 w-5 text-gray-700" />
@@ -141,7 +161,7 @@ export default function CarritoPage() {
 
                       {/* Botón eliminar */}
                       <button
-                        onClick={() => removeItem(item.productId)}
+                        onClick={() => removeItem(item.lineId)}
                         className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                         aria-label="Eliminar producto"
                       >
@@ -151,7 +171,8 @@ export default function CarritoPage() {
                   </div>
                 </div>
               </AnimatedSection>
-            ))}
+            );
+            })}
 
             {/* Botón limpiar carrito */}
             <button

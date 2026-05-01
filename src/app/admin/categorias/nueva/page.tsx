@@ -10,6 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createCategory } from "@/lib/firebase/categories";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { isSupportedImageFile } from "@/lib/is-supported-image";
 
 // Esquema de validación
 const categorySchema = z.object({
@@ -103,7 +104,7 @@ export default function NuevaCategoriaPage() {
     if (!file) return;
 
     // Validar tipo de archivo
-    if (!file.type.startsWith("image/")) {
+    if (!isSupportedImageFile(file)) {
       setError("Por favor, selecciona un archivo de imagen válido");
       return;
     }
@@ -510,7 +511,7 @@ export default function NuevaCategoriaPage() {
                 <input
                   type="file"
                   id="image"
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,image/heic,image/heif"
                   onChange={handleImageUpload}
                   disabled={uploadingImage}
                   className="hidden"
@@ -524,7 +525,7 @@ export default function NuevaCategoriaPage() {
                     {uploadingImage ? "Subiendo..." : "Haz clic para subir una imagen"}
                   </span>
                   <span className="text-sm text-gray-500">
-                    PNG, JPG, WEBP hasta 5MB
+                    PNG, JPG, WebP, HEIC hasta 5&nbsp;MB
                   </span>
                 </label>
               </div>

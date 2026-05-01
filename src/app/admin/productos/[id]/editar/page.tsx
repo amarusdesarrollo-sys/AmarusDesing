@@ -1,17 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Save, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, Plus, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { getProductById, updateProduct } from "@/lib/firebase/products";
 import { getActiveCategories, getSubcategoriesByParentSlug } from "@/lib/firebase/categories";
 import type { ProductImage as ProductImageType } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
 import { parseProductAttributesText } from "@/lib/parse-attributes-text";
+import { matchSubcategoryToAllowedList } from "@/lib/product-subcategory";
+import {
+  parseAdminPurchaseOptionRows,
+  allPurchaseSelections,
+} from "@/lib/product-purchase-options";
+import { variantSelectionKey } from "@/lib/cart-line-id";
+import VariantStockTable from "@/components/admin/VariantStockTable";
 
 const productSchema = z.object({
   name: z.string().optional(),
@@ -31,6 +38,14 @@ const productSchema = z.object({
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
+
+type PurchaseOptionRow = { id: string; name: string; valuesText: string };
+
+function newPurchaseRowId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `po-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
 interface UploadedImage {
   id: string;
@@ -64,11 +79,45 @@ export default function EditarProductoPage() {
   const [originalPublicIds, setOriginalPublicIds] = useState<string[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [purchaseOptionRows, setPurchaseOptionRows] = useState<
+    PurchaseOptionRow[]
+  >([]);
+  const [variantStockByKey, setVariantStockByKey] = useState<
+    Record<string, number>
+  >({});
+  const skipFirstVariantMerge = useRef(true);
+
+  const parsedPurchaseOptions = useMemo(
+    () => parseAdminPurchaseOptionRows(purchaseOptionRows),
+    [purchaseOptionRows]
+  );
+
+  useEffect(() => {
+    if (!parsedPurchaseOptions?.length) {
+      setVariantStockByKey({});
+      skipFirstVariantMerge.current = true;
+      return;
+    }
+    if (skipFirstVariantMerge.current) {
+      skipFirstVariantMerge.current = false;
+      return;
+    }
+    const combos = allPurchaseSelections(parsedPurchaseOptions);
+    setVariantStockByKey((prev) => {
+      const next: Record<string, number> = {};
+      for (const sel of combos) {
+        const k = variantSelectionKey(sel);
+        next[k] = prev[k] ?? 0;
+      }
+      return next;
+    });
+  }, [parsedPurchaseOptions]);
 
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
     watch,
     formState: { errors },
   } = useForm<ProductFormData>({
@@ -135,23 +184,54 @@ export default function EditarProductoPage() {
             .map((img) => img.publicId)
             .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
         );
+        setPurchaseOptionRows(
+          (product.purchaseOptions ?? []).map((o) => ({
+            id: newPurchaseRowId(),
+            name: o.name,
+            valuesText: o.values.join("\n"),
+          }))
+        );
+        const po = product.purchaseOptions ?? [];
+        if (po.length > 0) {
+          const combos = allPurchaseSelections(po);
+          const init: Record<string, number> = {};
+          for (const sel of combos) {
+            const k = variantSelectionKey(sel);
+            init[k] = product.variantStock?.[k] ?? 0;
+          }
+          setVariantStockByKey(init);
+        } else {
+          setVariantStockByKey({});
+        }
         setLoading(false);
       }
     );
   }, [id, setValue]);
 
   const selectedCategory = watch("category");
+  const watchedSubcategory = watch("subcategory");
   useEffect(() => {
     if (!selectedCategory) {
       setSubcategories([]);
+      setValue("subcategory", "");
       return;
     }
     getSubcategoriesByParentSlug(selectedCategory)
-      .then((subs) =>
-        setSubcategories(subs.map((s) => ({ id: s.id, name: s.name, slug: s.slug })))
-      )
+      .then((subs) => {
+        const list = subs.map((s) => ({
+          id: s.id,
+          name: s.name,
+          slug: s.slug,
+        }));
+        setSubcategories(list);
+        const current = getValues("subcategory")?.trim() ?? "";
+        if (!current) return;
+        const hit = matchSubcategoryToAllowedList(current, list);
+        if (!hit) setValue("subcategory", "");
+        else if (hit.slug !== current) setValue("subcategory", hit.slug);
+      })
       .catch(() => setSubcategories([]));
-  }, [selectedCategory]);
+  }, [selectedCategory, getValues, setValue]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -309,6 +389,9 @@ export default function EditarProductoPage() {
         mediaType: img.mediaType,
         ...(img.mimeType ? { mimeType: img.mimeType } : {}),
       }));
+      const purchaseOptions = parseAdminPurchaseOptionRows(
+        purchaseOptionRows
+      );
       const attributes = parseProductAttributesText(data.attributesText);
       if (data.attributesText?.trim() && Object.keys(attributes).length === 0) {
         setError(
@@ -317,12 +400,42 @@ export default function EditarProductoPage() {
         setSaving(false);
         return;
       }
+      const rawSub = data.subcategory?.trim() ?? "";
+      let subToSave: string | null;
+      if (rawSub) {
+        const hit = matchSubcategoryToAllowedList(rawSub, subcategories);
+        if (!hit) {
+          setError(
+            "La subcategoría no coincide con ninguna activa de la categoría elegida. Elige una opción del desplegable (o “Sin subcategoría”)."
+          );
+          setSaving(false);
+          return;
+        }
+        subToSave = hit.slug;
+      } else {
+        subToSave = null;
+      }
       const originalPriceEur = data.price ?? 0;
       const discount =
         data.discountPercent != null && data.discountPercent > 0
           ? data.discountPercent
           : 0;
       const salePriceEur = originalPriceEur * (1 - discount / 100);
+
+      let stockNum = data.stock ?? 0;
+      let variantStockPayload: Record<string, number> | null = null;
+      if (purchaseOptions && purchaseOptions.length > 0) {
+        const combos = allPurchaseSelections(purchaseOptions);
+        variantStockPayload = {};
+        for (const sel of combos) {
+          const k = variantSelectionKey(sel);
+          variantStockPayload[k] = Math.max(
+            0,
+            Math.floor(Number(variantStockByKey[k]) || 0)
+          );
+        }
+        stockNum = Object.values(variantStockPayload).reduce((a, b) => a + b, 0);
+      }
 
       // Si se quitaron imágenes, borrar las anteriores en Cloudinary
       const currentPublicIds = images
@@ -352,10 +465,10 @@ export default function EditarProductoPage() {
             : null,
         category: data.category?.trim() || "",
         // Vacío -> null para borrar subcategoría existente en Firestore.
-        subcategory: data.subcategory?.trim() ? data.subcategory.trim() : null,
+        subcategory: subToSave,
         images: productImages,
         inStock: data.inStock ?? true,
-        stock: data.stock ?? 0,
+        stock: stockNum,
         featured: data.featured ?? false,
         tags: data.tags
           ? data.tags
@@ -376,6 +489,11 @@ export default function EditarProductoPage() {
           data.weight != null && !Number.isNaN(data.weight) ? data.weight : null,
         // Si se borran todos los atributos, enviar null para eliminarlos en Firestore.
         attributes: Object.keys(attributes).length > 0 ? attributes : null,
+        purchaseOptions: purchaseOptions ?? null,
+        variantStock:
+          purchaseOptions && purchaseOptions.length > 0 && variantStockPayload
+            ? variantStockPayload
+            : null,
         seo: {
           title: productName,
           description: productDescription.substring(0, 160),
@@ -572,8 +690,28 @@ export default function EditarProductoPage() {
               ))}
             </select>
             <p className="mt-1 text-xs text-gray-500">
-              Si no eliges ninguna, el producto se guardará solo en la categoría.
+              Solo se guarda el <strong>slug</strong> de la subcategoría (el mismo que en Admin → Categorías). El desplegable muestra el nombre para evitar errores.
             </p>
+            {selectedCategory && subcategories.length > 0 && watchedSubcategory?.trim()
+              ? (() => {
+                  const hit = matchSubcategoryToAllowedList(
+                    watchedSubcategory,
+                    subcategories
+                  );
+                  return hit ? (
+                    <p className="mt-1 text-xs text-gray-600">
+                      Slug que se usará en la tienda:{" "}
+                      <code className="rounded bg-gray-100 px-1 py-0.5 text-[11px]">
+                        {hit.slug}
+                      </code>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-amber-800">
+                      Este valor no coincide con ninguna subcategoría de la categoría actual. Elige una del listado o “Sin subcategoría”.
+                    </p>
+                  );
+                })()
+              : null}
           </div>
 
           <div>
@@ -654,20 +792,37 @@ export default function EditarProductoPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Stock
+                {parsedPurchaseOptions && parsedPurchaseOptions.length > 0
+                  ? "Stock total (suma de variantes)"
+                  : "Stock"}
               </label>
-              <input
-                type="number"
-                min="0"
-                {...register("stock", {
-                  setValueAs: (v) => (v === "" || Number.isNaN(Number(v)) ? undefined : Number(v)),
-                })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
-              />
-              {errors.stock && (
-                <p className="mt-1 text-sm text-red-600">
-                  {errors.stock.message}
+              {parsedPurchaseOptions && parsedPurchaseOptions.length > 0 ? (
+                <p className="px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 font-medium">
+                  {Object.values(variantStockByKey).reduce(
+                    (a, v) => a + Math.max(0, Math.floor(Number(v)) || 0),
+                    0
+                  )}{" "}
+                  uds.
                 </p>
+              ) : (
+                <>
+                  <input
+                    type="number"
+                    min="0"
+                    {...register("stock", {
+                      setValueAs: (v) =>
+                        v === "" || Number.isNaN(Number(v))
+                          ? undefined
+                          : Number(v),
+                    })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+                  />
+                  {errors.stock && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.stock.message}
+                    </p>
+                  )}
+                </>
               )}
             </div>
             <div className="flex items-center gap-4 pt-8">
@@ -755,6 +910,108 @@ export default function EditarProductoPage() {
                   </p>
                 </div>
               </div>
+              <div className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Opciones al comprar (talles, medidas…)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPurchaseOptionRows((rows) => [
+                        ...rows,
+                        { id: newPurchaseRowId(), name: "", valuesText: "" },
+                      ])
+                    }
+                    className="inline-flex items-center gap-1 text-sm font-medium text-[#6B5BB6] hover:text-[#5B4BA5]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Añadir opción
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Cada fila es un desplegable en la tienda: nombre (ej. Talle) y
+                  valores, uno por línea o separados por coma.
+                </p>
+                {purchaseOptionRows.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">
+                    Sin opciones: el producto se añade al carrito directamente.
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {purchaseOptionRows.map((row, idx) => (
+                      <li
+                        key={row.id}
+                        className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start border-t border-gray-100 pt-3 first:border-0 first:pt-0"
+                      >
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Nombre ({idx + 1})
+                          </label>
+                          <input
+                            type="text"
+                            value={row.name}
+                            onChange={(e) =>
+                              setPurchaseOptionRows((rows) =>
+                                rows.map((r) =>
+                                  r.id === row.id
+                                    ? { ...r, name: e.target.value }
+                                    : r
+                                )
+                              )
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+                            placeholder="Ej: Talle, Talla de anillo"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="flex-1 min-w-0">
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Valores
+                            </label>
+                            <textarea
+                              value={row.valuesText}
+                              onChange={(e) =>
+                                setPurchaseOptionRows((rows) =>
+                                  rows.map((r) =>
+                                    r.id === row.id
+                                      ? { ...r, valuesText: e.target.value }
+                                      : r
+                                  )
+                                )
+                              }
+                              rows={3}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6] text-sm"
+                              placeholder={"S\nM\nL\no: S, M, L"}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPurchaseOptionRows((rows) =>
+                                rows.filter((r) => r.id !== row.id)
+                              )
+                            }
+                            className="mt-6 p-2 text-gray-400 hover:text-red-600 rounded-lg border border-transparent hover:border-red-100"
+                            aria-label="Quitar opción"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {parsedPurchaseOptions && parsedPurchaseOptions.length > 0 && (
+                <VariantStockTable
+                  options={parsedPurchaseOptions}
+                  value={variantStockByKey}
+                  onChange={setVariantStockByKey}
+                />
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Atributos adicionales

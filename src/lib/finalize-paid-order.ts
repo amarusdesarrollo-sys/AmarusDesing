@@ -2,6 +2,11 @@ import { FieldValue, getFirestore, type Firestore } from "firebase-admin/firesto
 import { getFirebaseAdminApp, hasFirebaseAdminCredentials } from "@/lib/firebase-admin-server";
 import { sendOrderConfirmationEmail, sendNewOrderAlertToAdmin } from "@/lib/email";
 import type { Order, OrderItem } from "@/types";
+import {
+  normalizePurchaseOptionsFromFirestore,
+  normalizeVariantStockFromFirestore,
+} from "@/lib/product-purchase-options";
+import { variantSelectionKey } from "@/lib/cart-line-id";
 
 const toDate = (v: unknown): Date => {
   if (v && typeof v === "object" && "toDate" in v) {
@@ -18,6 +23,12 @@ export function firestoreDataToOrder(data: Record<string, unknown> | undefined, 
     product: item.product,
     quantity: item.quantity ?? 0,
     price: item.price ?? 0,
+    selectedVariants:
+      item.selectedVariants &&
+      typeof item.selectedVariants === "object" &&
+      !Array.isArray(item.selectedVariants)
+        ? (item.selectedVariants as Record<string, string>)
+        : undefined,
   }));
   const addr = (data?.shippingAddress as Record<string, unknown>) || {};
   return {
@@ -101,7 +112,37 @@ export async function finalizePaidOrder(
           const productRef = db.collection("products").doc(pid);
           const productSnap = await tx.get(productRef);
           if (!productSnap.exists) return;
-          const currentStock = (productSnap.data()?.stock ?? 0) as number;
+          const raw = productSnap.data() as Record<string, unknown>;
+          const variantOpts = normalizePurchaseOptionsFromFirestore(
+            raw.purchaseOptions
+          );
+          const variantMap =
+            normalizeVariantStockFromFirestore(raw.variantStock) ?? {};
+          const usesVariantInventory =
+            (variantOpts?.length ?? 0) > 0 &&
+            Object.keys(variantMap).length > 0;
+          const sel = item.selectedVariants;
+          const hasSelection = sel && Object.keys(sel).length > 0;
+
+          if (usesVariantInventory && hasSelection) {
+            const key = variantSelectionKey(sel);
+            const variantStock = { ...variantMap };
+            const cur = Math.max(0, Math.floor(Number(variantStock[key]) || 0));
+            variantStock[key] = Math.max(0, cur - item.quantity);
+            const newTotal = Object.values(variantStock).reduce(
+              (acc, v) => acc + Math.max(0, Math.floor(Number(v)) || 0),
+              0
+            );
+            tx.update(productRef, {
+              variantStock,
+              stock: newTotal,
+              inStock: newTotal > 0,
+              updatedAt: FieldValue.serverTimestamp(),
+            });
+            return;
+          }
+
+          const currentStock = (raw.stock ?? 0) as number;
           const newStock = Math.max(0, currentStock - item.quantity);
           tx.update(productRef, {
             stock: newStock,

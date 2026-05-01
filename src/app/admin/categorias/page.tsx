@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment, useMemo } from "react";
 import Link from "next/link";
 import { Plus, Edit, Trash2, Eye, EyeOff } from "lucide-react";
 import {
@@ -139,6 +139,41 @@ export default function AdminCategoriasPage() {
     }
   };
 
+  const parentCategories = useMemo(
+    () =>
+      [...categories]
+        .filter((c) => !c.parentId)
+        .sort((a, b) => a.order - b.order),
+    [categories]
+  );
+
+  const subsByParentId = useMemo(() => {
+    const map = new Map<string, Category[]>();
+    for (const c of categories) {
+      if (!c.parentId) continue;
+      const list = map.get(c.parentId) || [];
+      list.push(c);
+      map.set(c.parentId, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.order - b.order);
+    }
+    return map;
+  }, [categories]);
+
+  const parentIdSet = useMemo(
+    () => new Set(parentCategories.map((p) => p.id)),
+    [parentCategories]
+  );
+
+  const orphanSubcategories = useMemo(
+    () =>
+      categories
+        .filter((c) => c.parentId && !parentIdSet.has(c.parentId))
+        .sort((a, b) => a.order - b.order),
+    [categories, parentIdSet]
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -228,87 +263,256 @@ export default function AdminCategoriasPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {categories.map((category) => (
-                  <tr
-                    key={category.id}
-                    className={!category.active ? "opacity-50" : ""}
-                  >
-                    <td className="px-3 py-3">
-                      <div className="text-sm font-medium text-gray-900">
-                        {category.name}
-                      </div>
-                      {category.description && (
-                        <div className="text-xs text-gray-500 truncate max-w-[200px]">
-                          {category.description}
+                {parentCategories.map((category) => (
+                  <Fragment key={category.id}>
+                    <tr
+                      className={`${!category.active ? "opacity-50" : ""} bg-white`}
+                    >
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-[#6B5BB6]/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#5B4BA5]">
+                            Principal
+                          </span>
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">
+                              {category.name}
+                            </div>
+                            {category.description && (
+                              <div className="text-xs text-gray-500 truncate max-w-[220px]">
+                                {category.description}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-3">
-                      <code className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
-                        {category.slug}
-                      </code>
-                    </td>
-                    <td className="px-3 py-3 text-center text-sm text-gray-500">
-                      {category.order}
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      <span
-                        className={`px-2 py-0.5 inline-flex text-xs font-semibold rounded-full ${
-                          category.active
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {category.active ? "Activa" : "Inactiva"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-center">
-                      {category.featured ? (
-                        <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
-                          Sí
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <div className="flex justify-end gap-1">
-                        <Link href={`/admin/categorias/${category.id}/editar`}>
-                          <button
-                            className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors"
-                            title="Editar"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                        </Link>
-                        <button
-                          onClick={() => handleToggleActive(category)}
-                          className={`p-1.5 rounded transition-colors ${
+                      </td>
+                      <td className="px-3 py-3">
+                        <code className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                          {category.slug}
+                        </code>
+                      </td>
+                      <td className="px-3 py-3 text-center text-sm text-gray-500">
+                        {category.order}
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span
+                          className={`px-2 py-0.5 inline-flex text-xs font-semibold rounded-full ${
                             category.active
-                              ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
-                              : "bg-green-100 text-green-800 hover:bg-green-200"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
                           }`}
-                          title={category.active ? "Desactivar" : "Activar"}
                         >
-                          {category.active ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleDelete(category.id, category.name)
-                          }
-                          className="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 transition-colors"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                          {category.active ? "Activa" : "Inactiva"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        {category.featured ? (
+                          <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-amber-100 text-amber-800">
+                            Sí
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <div className="flex justify-end gap-1">
+                          <Link href={`/admin/categorias/${category.id}/editar`}>
+                            <button
+                              className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors"
+                              title="Editar"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          </Link>
+                          <button
+                            onClick={() => handleToggleActive(category)}
+                            className={`p-1.5 rounded transition-colors ${
+                              category.active
+                                ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                : "bg-green-100 text-green-800 hover:bg-green-200"
+                            }`}
+                            title={category.active ? "Desactivar" : "Activar"}
+                          >
+                            {category.active ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleDelete(category.id, category.name)
+                            }
+                            className="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {(subsByParentId.get(category.id) || []).map((sub) => (
+                      <tr
+                        key={sub.id}
+                        className={!sub.active ? "opacity-50" : ""}
+                      >
+                        <td className="px-3 py-2.5 pl-6">
+                          <div className="flex items-start gap-2 border-l-2 border-[#6B5BB6]/30 pl-3">
+                            <span className="mt-0.5 shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
+                              Sub
+                            </span>
+                            <div>
+                              <div className="text-sm font-medium text-gray-800">
+                                {sub.name}
+                              </div>
+                              <div className="text-[11px] text-gray-500">
+                                Dentro de: {category.name}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <code className="text-xs text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded">
+                            {sub.slug}
+                          </code>
+                        </td>
+                        <td className="px-3 py-2.5 text-center text-sm text-gray-500">
+                          {sub.order}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span
+                            className={`px-2 py-0.5 inline-flex text-xs font-semibold rounded-full ${
+                              sub.active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {sub.active ? "Activa" : "Inactiva"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className="text-xs text-gray-400">—</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <div className="flex justify-end gap-1">
+                            <Link href={`/admin/categorias/${sub.id}/editar`}>
+                              <button
+                                className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors"
+                                title="Editar"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            </Link>
+                            <button
+                              onClick={() => handleToggleActive(sub)}
+                              className={`p-1.5 rounded transition-colors ${
+                                sub.active
+                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                  : "bg-green-100 text-green-800 hover:bg-green-200"
+                              }`}
+                              title={sub.active ? "Desactivar" : "Activar"}
+                            >
+                              {sub.active ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(sub.id, sub.name)}
+                              className="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
+                {orphanSubcategories.length > 0 && (
+                  <Fragment key="orphan-subs">
+                    <tr className="bg-amber-50">
+                      <td
+                        colSpan={6}
+                        className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-900"
+                      >
+                        Subcategorías sin categoría principal coincidente
+                      </td>
+                    </tr>
+                    {orphanSubcategories.map((sub) => (
+                      <tr
+                        key={sub.id}
+                        className={`bg-amber-50/60 ${!sub.active ? "opacity-50" : ""}`}
+                      >
+                        <td className="px-3 py-2.5">
+                          <div className="text-sm font-medium text-gray-900">
+                            {sub.name}
+                          </div>
+                          <div className="text-[11px] text-amber-800">
+                            parentId: {sub.parentId}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <code className="text-xs text-gray-600 bg-white px-1.5 py-0.5 rounded">
+                            {sub.slug}
+                          </code>
+                        </td>
+                        <td className="px-3 py-2.5 text-center text-sm text-gray-500">
+                          {sub.order}
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span
+                            className={`px-2 py-0.5 inline-flex text-xs font-semibold rounded-full ${
+                              sub.active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {sub.active ? "Activa" : "Inactiva"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className="text-xs text-gray-400">—</span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <div className="flex justify-end gap-1">
+                            <Link href={`/admin/categorias/${sub.id}/editar`}>
+                              <button
+                                className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors"
+                                title="Editar"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            </Link>
+                            <button
+                              onClick={() => handleToggleActive(sub)}
+                              className={`p-1.5 rounded transition-colors ${
+                                sub.active
+                                  ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                                  : "bg-green-100 text-green-800 hover:bg-green-200"
+                              }`}
+                              title={sub.active ? "Desactivar" : "Activar"}
+                            >
+                              {sub.active ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                            <button
+                              onClick={() => handleDelete(sub.id, sub.name)}
+                              className="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                )}
               </tbody>
             </table>
             </div>

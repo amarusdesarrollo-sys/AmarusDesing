@@ -16,6 +16,7 @@ import {
 } from "@/lib/firebase/categories";
 import { getProductImageUrl } from "@/lib/cloudinary";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { isSupportedImageFile } from "@/lib/is-supported-image";
 import type { Category } from "@/types";
 
 // Esquema de validación
@@ -56,6 +57,7 @@ export default function EditarCategoriaPage() {
   const [subcatSlug, setSubcatSlug] = useState("");
   const [subcatOrder, setSubcatOrder] = useState(0);
   const [subcatActive, setSubcatActive] = useState(true);
+  const [editingIsSubcategory, setEditingIsSubcategory] = useState(false);
 
   const {
     register,
@@ -73,6 +75,7 @@ export default function EditarCategoriaPage() {
         const category = await getCategoryById(categoryId);
 
         if (!category) {
+          setEditingIsSubcategory(false);
           setError("Categoría no encontrada");
           return;
         }
@@ -94,6 +97,13 @@ export default function EditarCategoriaPage() {
           setImagePreview(
             category.imageUrl || getProductImageUrl(category.image, "medium")
           );
+        }
+
+        setEditingIsSubcategory(!!category.parentId);
+        if (!category.parentId) {
+          await loadSubcategories();
+        } else {
+          setSubcategoriesList([]);
         }
       } catch (err) {
         console.error("Error loading category:", err);
@@ -123,15 +133,11 @@ export default function EditarCategoriaPage() {
     }
   };
 
-  useEffect(() => {
-    if (categoryId) loadSubcategories();
-  }, [categoryId]);
-
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
+    if (!isSupportedImageFile(file)) {
       setError("Por favor, selecciona un archivo de imagen válido");
       return;
     }
@@ -307,9 +313,13 @@ export default function EditarCategoriaPage() {
             Volver a categorías
           </Link>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Editar Categoría
+            {editingIsSubcategory ? "Editar subcategoría" : "Editar categoría"}
           </h1>
-          <p className="text-gray-600">Modifica los datos de la categoría</p>
+          <p className="text-gray-600">
+            {editingIsSubcategory
+              ? "Modifica los datos de esta subcategoría (nombre, slug, imagen, etc.)."
+              : "Modifica los datos de la categoría principal."}
+          </p>
         </div>
 
         {/* Formulario */}
@@ -369,7 +379,8 @@ export default function EditarCategoriaPage() {
             )}
           </div>
 
-          {/* Subcategorías */}
+          {/* Subcategorías: solo en la categoría padre; las subs se crean desde ahí */}
+          {!editingIsSubcategory && (
           <div className="border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between gap-4 mb-3">
               <div>
@@ -524,6 +535,7 @@ export default function EditarCategoriaPage() {
               </div>
             )}
           </div>
+          )}
 
           {/* Imagen */}
           <div>
@@ -531,9 +543,17 @@ export default function EditarCategoriaPage() {
               htmlFor="image"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Imagen de la Categoría
+              {editingIsSubcategory ? "Imagen de la subcategoría" : "Imagen de la categoría"}
             </label>
-            
+            {editingIsSubcategory ? (
+              <p className="text-sm text-gray-600 mb-3">
+                Se muestra en la tienda en la sección de subcategorías (círculos). Formatos: JPEG, PNG, WebP o HEIC desde iPad.
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600 mb-3">
+                Opcional; si marcas la categoría como destacada, se usa también en el hero. HEIC/JPEG/PNG/WebP hasta 5&nbsp;MB.
+              </p>
+            )}
             {imagePreview ? (
               <div className="relative w-full max-w-md">
                 <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-gray-300">
@@ -562,7 +582,7 @@ export default function EditarCategoriaPage() {
                 <input
                   type="file"
                   id="image"
-                  accept="image/*"
+                  accept="image/*,.heic,.heif,image/heic,image/heif"
                   onChange={handleImageUpload}
                   disabled={uploadingImage}
                   className="hidden"
@@ -576,7 +596,7 @@ export default function EditarCategoriaPage() {
                     {uploadingImage ? "Subiendo..." : "Haz clic para subir o cambiar la imagen"}
                   </span>
                   <span className="text-sm text-gray-500">
-                    PNG, JPG, WEBP hasta 5MB
+                    PNG, JPG, WebP, HEIC hasta 5&nbsp;MB
                   </span>
                 </label>
               </div>

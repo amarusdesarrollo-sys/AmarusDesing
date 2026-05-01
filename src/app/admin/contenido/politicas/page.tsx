@@ -9,6 +9,7 @@ import {
 } from "@/lib/firebase/content";
 import type { PoliticasContent } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
+import { isSupportedImageFile } from "@/lib/is-supported-image";
 
 export default function AdminPoliticasPage() {
   const [content, setContent] = useState<PoliticasContent | null>(null);
@@ -39,7 +40,7 @@ export default function AdminPoliticasPage() {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) return;
+    if (!isSupportedImageFile(file)) return;
 
     setUploadingImage(true);
     setError(null);

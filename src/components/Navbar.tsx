@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Menu, X, User, Search, Instagram, Mail } from "lucide-react";
+import { Menu, X, User, Instagram, Mail } from "lucide-react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import CartIcon from "./CartIcon";
@@ -12,6 +12,7 @@ import type { Category } from "@/types";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileShopOpen, setIsMobileShopOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -111,8 +112,21 @@ const Navbar = () => {
   }, []);
 
   const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+    const next = !isMenuOpen;
+    setIsMenuOpen(next);
+    if (!next) setIsMobileShopOpen(false);
   };
+
+  const topCategories = categories.filter((c) => !c.parentId);
+  const subcategoriesByParentId = categories.reduce<Record<string, Category[]>>(
+    (acc, c) => {
+      if (!c.parentId) return acc;
+      if (!acc[c.parentId]) acc[c.parentId] = [];
+      acc[c.parentId].push(c);
+      return acc;
+    },
+    {}
+  );
 
   return (
     <nav
@@ -178,7 +192,7 @@ const Navbar = () => {
                   </svg>
                   <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
                 </Link>
-                <div className="absolute left-0 top-full pt-1 w-60 bg-white shadow-xl rounded-b-lg border border-gray-200 border-t-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100]">
+                <div className="absolute left-0 top-full pt-1 w-72 max-h-[min(70vh,28rem)] overflow-y-auto bg-white shadow-xl rounded-b-lg border border-gray-200 border-t-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100]">
                   <div className="py-1.5">
                     <Link
                       href="/tienda-online"
@@ -189,14 +203,27 @@ const Navbar = () => {
                     {categories.length > 0 && (
                       <>
                         <div className="border-t border-gray-200 my-2" />
-                        {categories.map((category) => (
-                          <Link
-                            key={category.id}
-                            href={`/categorias/${category.slug}`}
-                            className="block px-3 py-2 text-sm text-gray-700 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md mx-1"
-                          >
-                            {category.name}
-                          </Link>
+                        {topCategories.map((category) => (
+                          <div key={category.id} className="mx-1">
+                            <Link
+                              href={`/categorias/${category.slug}`}
+                              className="block px-3 py-2 text-sm font-semibold text-gray-800 hover:bg-[#F5EFFF] transition-colors duration-200 rounded-md"
+                            >
+                              {category.name}
+                            </Link>
+                            {(subcategoriesByParentId[category.id] || [])
+                              .slice()
+                              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                              .map((sub) => (
+                                <Link
+                                  key={sub.id}
+                                  href={`/categorias/${category.slug}?sub=${encodeURIComponent(sub.slug)}`}
+                                  className="block py-1.5 pl-6 pr-3 text-xs text-gray-600 hover:bg-[#F5EFFF] hover:text-gray-900 transition-colors duration-200 rounded-md"
+                                >
+                                  {sub.name}
+                                </Link>
+                              ))}
+                          </div>
                         ))}
                       </>
                     )}
@@ -278,13 +305,6 @@ const Navbar = () => {
                 </Link>
               </>
             )}
-            <Link
-              href="/buscar"
-              className="flex items-center justify-center p-1.5 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
-              aria-label="Buscar productos"
-            >
-              <Search className="h-5 w-5" />
-            </Link>
             <CartIcon />
           </div>
 
@@ -313,30 +333,65 @@ const Navbar = () => {
               >
                 Inicio
               </Link>
-              <Link
-                href="/tienda-online"
-                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
-                onClick={() => setIsMenuOpen(false)}
+              <button
+                type="button"
+                onClick={() => setIsMobileShopOpen((v) => !v)}
+                className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
               >
-                Tienda Online
-              </Link>
-              <Link
-                href="/buscar"
-                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Buscar
-              </Link>
-              {categories.map((category) => (
-                <Link
-                  key={category.id}
-                  href={`/categorias/${category.slug}`}
-                  className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
+                Tienda
+                <svg
+                  className={`h-4 w-4 transition-transform duration-200 ${isMobileShopOpen ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  {category.name}
-                </Link>
-              ))}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              {isMobileShopOpen && (
+                <div className="ml-3 mt-1 mb-1 space-y-0.5 border-l border-[#8a7ad0] pl-3">
+                  <Link
+                    href="/tienda-online"
+                    className="block px-2 py-1.5 text-sm font-medium text-white/95 hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Ver tienda
+                  </Link>
+                  <Link
+                    href="/buscar"
+                    className="block px-2 py-1.5 text-sm font-medium text-white/95 hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Buscar productos
+                  </Link>
+                  {topCategories.map((category) => (
+                    <div key={category.id}>
+                      <Link
+                        href={`/categorias/${category.slug}`}
+                        className="block px-2 py-1.5 text-sm font-medium text-white/95 hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {category.name}
+                      </Link>
+                      {(subcategoriesByParentId[category.id] || []).map((sub) => (
+                        <Link
+                          key={sub.id}
+                          href={`/categorias/${category.slug}?sub=${encodeURIComponent(sub.slug)}`}
+                          className="ml-2 block px-2 py-1.5 text-xs font-medium text-white/80 hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          - {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
               <Link
                 href="/equipo"
                 className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"

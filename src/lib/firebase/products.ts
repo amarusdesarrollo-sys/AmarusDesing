@@ -15,6 +15,14 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import type { Product, ProductCategory } from "@/types";
+import {
+  normalizePurchaseOptionsFromFirestore,
+  normalizeVariantStockFromFirestore,
+  getAvailableStockForSelection,
+  describeSelection,
+  productUsesVariantStock,
+} from "@/lib/product-purchase-options";
+import { makeCartLineId, variantSelectionKey } from "@/lib/cart-line-id";
 
 const COLLECTION_NAME = "products";
 const CACHE_TTL_MS = 30 * 1000;
@@ -66,6 +74,10 @@ const firestoreToProduct = (data: any, id: string): Product => {
       data.attributes && typeof data.attributes === "object"
         ? data.attributes
         : undefined,
+    purchaseOptions: normalizePurchaseOptionsFromFirestore(
+      data.purchaseOptions
+    ),
+    variantStock: normalizeVariantStockFromFirestore(data.variantStock),
     artisan: data.artisan,
     createdAt: convertTimestamp(data.createdAt),
     updatedAt: convertTimestamp(data.updatedAt),
@@ -324,9 +336,16 @@ export const deleteProductPermanently = async (id: string): Promise<void> => {
 /** @deprecated Use deactivateProduct para desactivar. Se mantiene por compatibilidad. */
 export const deleteProduct = deactivateProduct;
 
-/** Valida que haya stock suficiente para los ítems. Devuelve valid y lista de ítems sin stock. */
+/** Línea de carrito/pedido para validar stock (incluye variante si aplica). */
+export type StockCheckLine = {
+  productId: string;
+  quantity: number;
+  selectedVariants?: Record<string, string>;
+};
+
+/** Valida que haya stock suficiente para los ítems. Agrupa por producto + variante. */
 export const validateOrderStock = async (
-  items: { productId: string; quantity: number }[]
+  items: StockCheckLine[]
 ): Promise<{
   valid: boolean;
   invalidItems?: Array<{
@@ -342,23 +361,42 @@ export const validateOrderStock = async (
     requested: number;
     available: number;
   }> = [];
+  const totalsByLine = new Map<
+    string,
+    { productId: string; quantity: number; selectedVariants?: Record<string, string> }
+  >();
   for (const item of items) {
-    const product = await getProductById(item.productId);
+    const lineKey = makeCartLineId(item.productId, item.selectedVariants);
+    const prev = totalsByLine.get(lineKey);
+    if (prev) {
+      prev.quantity += item.quantity;
+    } else {
+      totalsByLine.set(lineKey, {
+        productId: item.productId,
+        quantity: item.quantity,
+        selectedVariants: item.selectedVariants,
+      });
+    }
+  }
+  for (const { productId, quantity, selectedVariants } of totalsByLine.values()) {
+    const product = await getProductById(productId);
     if (!product) {
       invalidItems.push({
-        productId: item.productId,
+        productId,
         name: "Producto no encontrado",
-        requested: item.quantity,
+        requested: quantity,
         available: 0,
       });
       continue;
     }
-    const available = product.stock ?? 0;
-    if (available < item.quantity) {
+    const selection = selectedVariants ?? {};
+    const available = getAvailableStockForSelection(product, selection);
+    if (available < quantity) {
+      const suffix = describeSelection(selection);
       invalidItems.push({
-        productId: item.productId,
-        name: product.name,
-        requested: item.quantity,
+        productId,
+        name: suffix ? `${product.name} (${suffix})` : product.name,
+        requested: quantity,
         available,
       });
     }
@@ -369,10 +407,11 @@ export const validateOrderStock = async (
   };
 };
 
-/** Descuenta stock al confirmar pago. Usado desde webhook de Stripe. */
+/** Descuenta stock al confirmar pago (global o por variante según el producto). */
 export const decrementStock = async (
   productId: string,
-  quantity: number
+  quantity: number,
+  selectedVariants?: Record<string, string>
 ): Promise<void> => {
   await runTransaction(db, async (transaction) => {
     const productRef = doc(db, COLLECTION_NAME, productId);
@@ -381,6 +420,30 @@ export const decrementStock = async (
       throw new Error(`Producto ${productId} no encontrado`);
     }
     const data = snap.data();
+    const product = firestoreToProduct(data, productId);
+    if (
+      selectedVariants &&
+      Object.keys(selectedVariants).length > 0 &&
+      productUsesVariantStock(product)
+    ) {
+      const key = variantSelectionKey(selectedVariants);
+      const variantStock = {
+        ...(normalizeVariantStockFromFirestore(data?.variantStock) ?? {}),
+      };
+      const cur = Math.max(0, Math.floor(Number(variantStock[key]) || 0));
+      variantStock[key] = Math.max(0, cur - quantity);
+      const newTotal = Object.values(variantStock).reduce(
+        (a, v) => a + Math.max(0, Math.floor(Number(v)) || 0),
+        0
+      );
+      transaction.update(productRef, {
+        variantStock,
+        stock: newTotal,
+        inStock: newTotal > 0,
+        updatedAt: Timestamp.now(),
+      });
+      return;
+    }
     const currentStock = (data?.stock ?? 0) as number;
     const newStock = Math.max(0, currentStock - quantity);
     transaction.update(productRef, {

@@ -1,3 +1,9 @@
+/** Opciones obligatorias al comprar (talle, talla de anillo, etc.): nombre + valores posibles. */
+export interface ProductPurchaseOption {
+  name: string;
+  values: string[];
+}
+
 // Tipos para productos
 export interface Product {
   id: string;
@@ -17,6 +23,16 @@ export interface Product {
   weight?: number;
   /** Atributos libres: ej. { "Color": "Plateado", "Talla": "16", "Piedra": "Cuarzo rosa" } */
   attributes?: Record<string, string>;
+  /**
+   * Opciones con desplegable en la ficha (joyería: talla de anillo; indumentaria: talle, etc.).
+   * Independiente de `attributes` (informativos en ficha).
+   */
+  purchaseOptions?: ProductPurchaseOption[];
+  /**
+   * Stock por combinación de opciones. La clave coincide con `variantSelectionKey` (JSON de pares ordenados).
+   * Si existe y el producto tiene `purchaseOptions`, la tienda usa esto; `stock` suele ser la suma para listados.
+   */
+  variantStock?: Record<string, number>;
   artisan?: Artisan;
   createdAt: Date;
   updatedAt: Date;
@@ -119,9 +135,12 @@ export interface UserPreferences {
 
 // Tipos para carrito y órdenes
 export interface CartItem {
+  /** Identificador único de la línea (producto + variante). */
+  lineId: string;
   productId: string;
   product: Product;
   quantity: number;
+  /** Elección del comprador: clave = nombre de `purchaseOptions`, valor = opción elegida. */
   selectedVariants?: Record<string, string>;
 }
 
@@ -179,6 +198,8 @@ export interface OrderItem {
   product: Product;
   quantity: number;
   price: number;
+  /** Misma semántica que en el carrito (opciones elegidas al comprar). */
+  selectedVariants?: Record<string, string>;
 }
 
 export type OrderStatus =
