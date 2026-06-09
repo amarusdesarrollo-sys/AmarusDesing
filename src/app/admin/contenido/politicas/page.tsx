@@ -98,7 +98,7 @@ export default function AdminPoliticasPage() {
         originalHeroImagePublicId &&
         originalHeroImagePublicId !== nextHeroImagePublicId
       ) {
-        await fetch("/api/admin/delete-cloudinary-assets", {
+        await fetch("/api/admin/delete-storage-assets", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

@@ -1,17 +1,95 @@
 /**
- * Funciones de utilidad para generar URLs de Cloudinary
- * Estas funciones NO requieren el SDK de Cloudinary y pueden ejecutarse en el cliente
+ * Resolución de URLs de medios (Supabase Storage + compatibilidad Cloudinary legacy).
+ * El nombre del archivo se mantiene por imports existentes en el proyecto.
  */
 
-// El SDK de Cloudinary solo se usa en el servidor (API routes)
-// Para usarlo, importa desde '@/lib/cloudinary-server'
+import {
+  buildStoragePublicUrl,
+  getSupabaseUrl,
+  isCloudinaryUrl,
+  isSupabaseConfigured,
+  isSupabaseStorageUrl,
+  storagePathFromPublicUrl,
+} from "@/lib/supabase/config";
+
+export { isCloudinaryUrl, isSupabaseStorageUrl };
+
+const STORAGE_PREFIXES = [
+  "categories/",
+  "products/",
+  "team/",
+  "blog/",
+  "content/",
+] as const;
+
+function isLikelyStoragePath(path: string): boolean {
+  return STORAGE_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
+function getCloudName(): string | undefined {
+  let cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  if (!cloudName && typeof window === "undefined") {
+    const cloudinaryUrl = process.env.CLOUDINARY_URL;
+    if (cloudinaryUrl) {
+      const match = cloudinaryUrl.match(/cloudinary:\/\/[^@]+@(.+)/);
+      if (match) cloudName = match[1];
+    }
+  }
+  return cloudName;
+}
+
+function cleanPublicIdPath(publicId: string): string {
+  if (!publicId.includes("/")) return publicId;
+  const parts = publicId.split("/");
+  const cleanedParts: string[] = [];
+  let lastPart = "";
+  for (const part of parts) {
+    if (part !== lastPart) {
+      cleanedParts.push(part);
+      lastPart = part;
+    }
+  }
+  return cleanedParts.join("/");
+}
+
+/** URL Cloudinary legacy sin recursión. */
+function buildLegacyCloudinaryUrl(
+  publicId: string,
+  transformation = "f_auto,q_auto"
+): string {
+  const cloudName = getCloudName();
+  if (!cloudName || !publicId?.trim()) return "";
+  const clean = cleanPublicIdPath(publicId.trim());
+  const encoded = encodeURIComponent(clean).replace(/%2F/g, "/");
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${transformation}/${encoded}`;
+}
 
 /**
- * Genera una URL optimizada de Cloudinary con transformaciones
- * @param publicId - El public ID de la imagen en Cloudinary
- * @param options - Opciones de transformación
- * @returns URL optimizada de Cloudinary
+ * Resuelve la URL pública a mostrar.
+ * Prioridad: `preferredUrl` → URL absoluta en `pathOrUrl` → Supabase → Cloudinary legacy.
  */
+export function resolveMediaUrl(
+  pathOrUrl: string,
+  preferredUrl?: string
+): string {
+  const pref = preferredUrl?.trim();
+  if (pref) return pref;
+
+  const raw = pathOrUrl?.trim();
+  if (!raw) return "";
+
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    return raw;
+  }
+
+  if (getSupabaseUrl() && isLikelyStoragePath(raw)) {
+    const supabaseUrl = buildStoragePublicUrl(raw);
+    if (supabaseUrl) return supabaseUrl;
+  }
+
+  return buildLegacyCloudinaryUrl(raw) || raw;
+}
+
 export function getCloudinaryUrl(
   publicId: string,
   options: {
@@ -24,21 +102,15 @@ export function getCloudinaryUrl(
     fetchFormat?: "auto";
   } = {}
 ): string {
-  // Limpiar publicId: eliminar folders duplicados (ej: "categories/categories/..." -> "categories/...")
-  let cleanPublicId = publicId;
-  if (cleanPublicId.includes("/")) {
-    const parts = cleanPublicId.split("/");
-    // Si hay folders duplicados consecutivos, eliminar duplicados
-    const cleanedParts: string[] = [];
-    let lastPart = "";
-    for (const part of parts) {
-      if (part !== lastPart) {
-        cleanedParts.push(part);
-        lastPart = part;
-      }
-    }
-    cleanPublicId = cleanedParts.join("/");
+  const direct = resolveMediaUrl(publicId);
+  if (
+    direct &&
+    (isSupabaseStorageUrl(direct) || !getCloudName())
+  ) {
+    return direct;
   }
+
+  const cleanPublicId = cleanPublicIdPath(publicId);
   const {
     width,
     height,
@@ -46,123 +118,59 @@ export function getCloudinaryUrl(
     format = "auto",
     crop = "fill",
     gravity = "auto",
-    fetchFormat = "auto",
   } = options;
 
-  // Obtener cloud name de variable separada o de CLOUDINARY_URL
-  let cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  
-  // Si no está en variable separada, intentar extraer de CLOUDINARY_URL
-  if (!cloudName && typeof window === "undefined") {
-    // Solo en servidor podemos leer CLOUDINARY_URL (no tiene NEXT_PUBLIC_)
-    const cloudinaryUrl = process.env.CLOUDINARY_URL;
-    if (cloudinaryUrl) {
-      const match = cloudinaryUrl.match(/cloudinary:\/\/[^@]+@(.+)/);
-      if (match) {
-        cloudName = match[1];
-      }
-    }
-  }
-
+  const cloudName = getCloudName();
   if (!cloudName) {
-    // Si no está configurado, retornar null o un placeholder
-    // No generar URL inválida que cause error 400
     console.warn("⚠️ Cloudinary no configurado. No se puede generar URL para:", publicId);
-    return ""; // Retornar string vacío, el componente manejará el fallback
+    return direct || "";
   }
 
-  // Construir la URL de transformación
   const transformations: string[] = [];
-
   if (width) transformations.push(`w_${width}`);
   if (height) transformations.push(`h_${height}`);
   transformations.push(`c_${crop}`);
   if (gravity !== "auto") transformations.push(`g_${gravity}`);
   transformations.push(`q_${quality}`);
   transformations.push(`f_${format}`);
-  // Nota: evitamos fl_auto porque en algunos assets de Cloudinary provoca 400.
-  // f_auto ya cubre selección automática de formato.
-  void fetchFormat;
 
   const transformationString = transformations.join(",");
-
-  // Codificar publicId para URLs (espacios → %20, preservar / para carpetas)
   const encodedPublicId = encodeURIComponent(cleanPublicId).replace(/%2F/g, "/");
 
   return `https://res.cloudinary.com/${cloudName}/image/upload/${transformationString}/${encodedPublicId}`;
 }
 
-/**
- * URL de Cloudinary con transformaciones mínimas - más compatible que la versión completa
- * f_auto = formato automático, q_auto = calidad automática
- */
 export function getCloudinaryBaseUrl(publicId: string): string {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  if (!cloudName) return "";
-
-  let cleanPublicId = publicId;
-  if (cleanPublicId.includes("/")) {
-    const parts = cleanPublicId.split("/");
-    const cleanedParts: string[] = [];
-    let lastPart = "";
-    for (const part of parts) {
-      if (part !== lastPart) {
-        cleanedParts.push(part);
-        lastPart = part;
-      }
-    }
-    cleanPublicId = cleanedParts.join("/");
+  const raw = publicId?.trim();
+  if (!raw) return "";
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    return raw;
   }
-  const encoded = encodeURIComponent(cleanPublicId).replace(/%2F/g, "/");
-  // f_auto,q_auto son transformaciones mínimas que mejoran compatibilidad
-  return `https://res.cloudinary.com/${cloudName}/image/upload/f_auto,q_auto/${encoded}`;
+  if (getSupabaseUrl() && isLikelyStoragePath(raw)) {
+    const supabaseUrl = buildStoragePublicUrl(raw);
+    if (supabaseUrl) return supabaseUrl;
+  }
+  return buildLegacyCloudinaryUrl(raw) || raw;
 }
 
-/**
- * Genera una URL optimizada para imágenes de productos
- * @param publicId - El public ID de la imagen (o URL completa si no está configurado Cloudinary)
- * @param size - Tamaño de la imagen (small, medium, large)
- * @param originalUrl - URL original de la imagen (fallback si Cloudinary no está configurado)
- * @returns URL optimizada o URL original
- */
 export function getProductImageUrl(
   publicId: string,
-  size: "small" | "medium" | "large" | "thumbnail" = "medium",
+  _size: "small" | "medium" | "large" | "thumbnail" = "medium",
   originalUrl?: string
 ): string {
-  // Si es URL completa, devolverla tal cual
-  if (publicId.startsWith("http://") || publicId.startsWith("https://")) {
-    return publicId;
-  }
-
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  if (!cloudName) {
-    if (originalUrl) return originalUrl;
-    return "";
-  }
-
-  // Usar URL base con f_auto,q_auto - misma que funciona en el hero
-  // Las transformaciones complejas (w_, h_, c_fill) fallaban con algunas imágenes
-  return getCloudinaryBaseUrl(publicId);
+  return resolveMediaUrl(publicId, originalUrl);
 }
 
-/**
- * Genera srcSet para imágenes responsive de Cloudinary
- * @param publicId - El public ID de la imagen
- * @param aspectRatio - Ratio de aspecto (ej: "1:1", "16:9")
- * @returns Objeto con srcSet y sizes
- */
 export function getCloudinarySrcSet(
   publicId: string,
   aspectRatio: string = "1:1"
 ): { srcSet: string; sizes: string } {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-
-  if (!cloudName) {
-    return { srcSet: "", sizes: "" };
+  const cloudName = getCloudName();
+  if (!cloudName || isSupabaseConfigured()) {
+    const url = resolveMediaUrl(publicId);
+    return url ? { srcSet: `${url} 1x`, sizes: "100vw" } : { srcSet: "", sizes: "" };
   }
 
-  // Calcular dimensiones basadas en aspect ratio
   const [widthRatio, heightRatio] = aspectRatio.split(":").map(Number);
   const ratio = widthRatio / heightRatio;
 
@@ -192,19 +200,11 @@ export function getCloudinarySrcSet(
   return { srcSet, sizes };
 }
 
-/**
- * Verifica si una URL es de Cloudinary
- */
-export function isCloudinaryUrl(url: string): boolean {
-  return url.includes("cloudinary.com") || url.includes("res.cloudinary.com");
-}
-
-/**
- * Extrae el publicId de una URL de Cloudinary
- */
 export function extractPublicIdFromUrl(url: string): string | null {
+  if (isSupabaseStorageUrl(url)) {
+    return storagePathFromPublicUrl(url);
+  }
   if (!isCloudinaryUrl(url)) return null;
-
-  const match = url.match(/\/upload\/(?:[^\/]+\/)*([^\/]+)$/);
+  const match = url.match(/\/upload\/(?:[^/]+\/)*([^/]+)$/);
   return match ? match[1] : null;
 }

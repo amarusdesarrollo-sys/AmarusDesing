@@ -203,7 +203,7 @@ export default function EditarCategoriaPage() {
 
       // Si se cambió o eliminó la imagen, borrar la anterior en Cloudinary
       if (currentImagePublicId && currentImagePublicId !== imagePublicId) {
-        await fetch("/api/admin/delete-cloudinary-assets", {
+        await fetch("/api/admin/delete-storage-assets", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

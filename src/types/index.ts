@@ -43,7 +43,7 @@ export interface ProductImage {
   id: string;
   url: string;
   alt: string;
-  publicId: string; // Cloudinary public ID
+  publicId: string; // Ruta en Supabase Storage (compat: publicId legacy Cloudinary)
   width: number;
   height: number;
   isPrimary: boolean;
@@ -61,7 +61,7 @@ export interface Category {
   name: string;
   slug: string; // URL-friendly (ej: "joyeria-artesanal")
   description: string;
-  image?: string; // Cloudinary public ID - para cards y generar URLs
+  image?: string; // Ruta en Supabase Storage (compat: publicId legacy Cloudinary)
   imageUrl?: string; // URL completa (de upload) - prioritaria para hero, garantiza que funciona
   icon?: string;
   order: number; // Orden de visualización

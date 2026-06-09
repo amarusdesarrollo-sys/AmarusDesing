@@ -97,7 +97,7 @@ export default function AdminHomePage() {
       const nextHistoriaPublicId = content.historia.imagePublicId;
       const original = originalHistoriaImagePublicId;
       if (original && original !== nextHistoriaPublicId) {
-        await fetch("/api/admin/delete-cloudinary-assets", {
+        await fetch("/api/admin/delete-storage-assets", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

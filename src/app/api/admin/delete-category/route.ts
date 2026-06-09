@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCloudinary } from "@/lib/cloudinary-server";
 import { requireAdmin } from "@/lib/firebase-admin";
+import { removeStoragePaths } from "@/lib/storage/server";
+import { toStoragePaths } from "@/lib/storage/resolve-paths";
 import { getFirebaseAdminApp } from "@/lib/firebase-admin-server";
 import { getFirestore } from "firebase-admin/firestore";
 
@@ -33,29 +34,18 @@ export async function POST(request: NextRequest) {
     }
 
     const data = snap.data() as any;
-    // En categorías usamos `image` como Cloudinary publicId (y `imageUrl` como URL opcional).
-    const publicIds = [data?.image]
-      .filter((v): v is string => typeof v === "string" && v.trim().length > 0);
-
-    const cloudinary = getCloudinary();
-    const results = await Promise.allSettled(
-      publicIds.map((publicId) =>
-        cloudinary.uploader.destroy(publicId, { invalidate: true })
-      )
-    );
-
-    const cloudinaryDeleted = results.filter((r) => r.status === "fulfilled").length;
-    const cloudinaryFailed = results.length - cloudinaryDeleted;
+    const paths = toStoragePaths([data?.image, data?.imageUrl]);
+    const storage = await removeStoragePaths(paths);
 
     await categoryRef.delete();
 
     return NextResponse.json({
       success: true,
       categoryId,
-      cloudinary: {
-        total: results.length,
-        deleted: cloudinaryDeleted,
-        failed: cloudinaryFailed,
+      storage: {
+        total: paths.length,
+        deleted: storage.removed,
+        failed: storage.failed,
       },
       firestore: { deleted: true },
     });

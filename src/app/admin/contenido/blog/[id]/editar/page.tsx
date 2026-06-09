@@ -82,7 +82,7 @@ export default function EditarBlogPostPage() {
     try {
       // Si se reemplazó o eliminó la imagen, borrar la anterior en Cloudinary
       if (originalImagePublicId && originalImagePublicId !== imagePublicId) {
-        await fetch("/api/admin/delete-cloudinary-assets", {
+        await fetch("/api/admin/delete-storage-assets", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

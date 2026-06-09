@@ -22,7 +22,7 @@ interface OptimizedImageProps {
   fallback?: string;
   avifSrc?: string;
   webpSrc?: string;
-  publicId?: string; // Cloudinary public ID
+  publicId?: string; // Ruta en Storage o publicId legacy Cloudinary
   cloudinarySize?: "small" | "medium" | "large" | "thumbnail";
 }
 
@@ -50,9 +50,8 @@ export default function OptimizedImage({
   const getBestImageSrc = () => {
     if (imageError && fallback) return fallback;
 
-    // Si hay publicId de Cloudinary, usar función optimizada
     if (publicId) {
-      return getProductImageUrl(publicId, cloudinarySize);
+      return getProductImageUrl(publicId, cloudinarySize, src);
     }
 
     // Si hay versión AVIF específica, usarla
@@ -80,6 +79,8 @@ export default function OptimizedImage({
     setIsLoading(false);
   };
 
+  const resolvedSrc = getBestImageSrc();
+
   return (
     <div className={`relative ${className}`}>
       {isLoading && (
@@ -89,7 +90,7 @@ export default function OptimizedImage({
       )}
 
       <Image
-        src={getBestImageSrc()}
+        src={resolvedSrc}
         alt={alt}
         width={width}
         height={height}
@@ -108,10 +109,7 @@ export default function OptimizedImage({
         }
         onLoad={handleImageLoad}
         onError={handleImageError}
-        // Cloudinary maneja la optimización, no necesitamos que Next.js lo haga
-        unoptimized={
-          isCloudinaryUrl(src) || !!publicId || src.includes("cloudinary.com")
-        }
+        unoptimized={isCloudinaryUrl(resolvedSrc)}
       />
 
       {imageError && (
@@ -159,7 +157,9 @@ export function ProductImage({
   if (src && (src.startsWith("http://") || src.startsWith("https://"))) {
     imageUrl = src;
   } else if (publicId) {
-    imageUrl = getProductImageUrl(publicId, size);
+    const preferred =
+      src && (src.startsWith("http://") || src.startsWith("https://")) ? src : undefined;
+    imageUrl = getProductImageUrl(publicId, size, preferred);
   } else if (src && src.trim() !== "") {
     if (isCloudinaryUrl(src)) {
       const extractedPublicId = extractPublicIdFromUrl(src);
@@ -188,7 +188,7 @@ export function ProductImage({
       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
       quality={90}
       placeholder="empty"
-      unoptimized={true}
+      unoptimized={isCloudinaryUrl(imageUrl)}
       onError={() => setError(true)}
     />
   );
@@ -215,7 +215,7 @@ export function HeroImage({
       sizes="100vw"
       quality={85}
       placeholder="empty"
-      unoptimized={src.includes("cloudinary.com")}
+      unoptimized={isCloudinaryUrl(src)}
     />
   );
 }

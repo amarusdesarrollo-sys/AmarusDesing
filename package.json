@@ -8,11 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "optimize:images": "node scripts/convert-to-avif.js",
-    "optimize:image": "node scripts/optimize-image.js"
+    "optimize:image": "node scripts/optimize-image.js",
+    "migrate:storage": "node scripts/migrate-cloudinary-to-supabase.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
     "@next/font": "^14.2.15",
+    "@supabase/supabase-js": "^2.108.0",
     "cloudinary": "^2.7.0",
     "clsx": "^2.1.1",
     "firebase": "^12.4.0",
