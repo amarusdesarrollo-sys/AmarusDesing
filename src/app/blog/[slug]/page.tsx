@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Calendar } from "lucide-react";
 import { getBlogPostBySlug } from "@/lib/firebase/blog";
-import { getCloudinaryUrl } from "@/lib/cloudinary";
+import { getCloudinaryUrl, isDirectMediaUrl } from "@/lib/cloudinary";
 
 export async function generateMetadata({
   params,
@@ -78,6 +78,7 @@ export default async function BlogPostPage({
               className="object-cover"
               priority
               sizes="(max-width: 1024px) 100vw, 896px"
+              unoptimized={isDirectMediaUrl(imageUrl)}
             />
           </div>
         )}

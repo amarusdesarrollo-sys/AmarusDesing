@@ -10,6 +10,7 @@ import { useCartStore } from "@/store/cartStore";
 import {
   getProductImageUrl,
   isCloudinaryUrl,
+  isDirectMediaUrl,
   extractPublicIdFromUrl,
 } from "@/lib/cloudinary";
 import type { Product } from "@/types";
@@ -75,6 +76,10 @@ export default function ProductCard({
     setTimeout(() => setAdded(false), 1800);
   };
 
+  const primaryImageSrc = primaryMedia
+    ? getImageUrl(primaryMedia)
+    : "/images/placeholder.jpg";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -91,19 +96,13 @@ export default function ProductCard({
         {/* Imagen del producto */}
         <div className="relative w-full aspect-[4/5] overflow-hidden bg-gray-100">
           <Image
-            src={
-              primaryMedia
-                ? getImageUrl(primaryMedia)
-                : "/images/placeholder.jpg"
-            }
+            src={primaryImageSrc}
             alt={primaryMedia?.alt || product.name}
             fill
             className="object-cover group-hover:scale-110 transition-transform duration-300"
             priority={priority}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            unoptimized={
-              primaryMedia ? isCloudinaryUrl(primaryMedia.url) : false
-            }
+            unoptimized={isDirectMediaUrl(primaryImageSrc)}
           />
 
           {/* Badges */}

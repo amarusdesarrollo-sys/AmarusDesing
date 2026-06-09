@@ -27,6 +27,7 @@ import AnimatedSection from "@/components/AnimatedSection";
 import {
   getProductImageUrl,
   isCloudinaryUrl,
+  isDirectMediaUrl,
   extractPublicIdFromUrl,
 } from "@/lib/cloudinary";
 import type { Product, Category } from "@/types";
@@ -337,8 +338,12 @@ export default function ProductDetailPage() {
                       className="object-cover"
                       priority
                       sizes="(max-width: 1024px) 100vw, 50vw"
-                      unoptimized={isCloudinaryUrl(
-                        selectedMedia?.url || primaryMedia?.url || ""
+                      unoptimized={isDirectMediaUrl(
+                        selectedMedia
+                          ? getImageUrl(selectedMedia, "large")
+                          : primaryMedia
+                            ? getImageUrl(primaryMedia, "large")
+                            : ""
                       )}
                     />
                   )}
@@ -427,7 +432,7 @@ export default function ProductDetailPage() {
                         fill
                         className="object-cover"
                         sizes="(max-width: 768px) 25vw, 12vw"
-                        unoptimized={isCloudinaryUrl(image.url)}
+                        unoptimized={isDirectMediaUrl(getImageUrl(image, "thumbnail"))}
                       />
                     )}
                   </button>

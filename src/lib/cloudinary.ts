@@ -14,6 +14,11 @@ import {
 
 export { isCloudinaryUrl, isSupabaseStorageUrl };
 
+/** URLs que Next.js debe cargar directo (sin optimizador). */
+export function isDirectMediaUrl(url: string): boolean {
+  return isCloudinaryUrl(url) || isSupabaseStorageUrl(url);
+}
+
 const STORAGE_PREFIXES = [
   "categories/",
   "products/",

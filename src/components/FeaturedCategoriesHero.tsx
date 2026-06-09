@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
 import { getFeaturedCategories } from "@/lib/firebase/categories";
-import { getCloudinaryUrl, getCloudinaryBaseUrl } from "@/lib/cloudinary";
+import {
+  getCloudinaryUrl,
+  getCloudinaryBaseUrl,
+  isSupabaseStorageUrl,
+} from "@/lib/cloudinary";
 import AnimatedButton from "@/components/AnimatedButton";
 import type { Category } from "@/types";
 
@@ -26,6 +30,14 @@ function CategoryHeroSection({
   const getHeroImageUrls = (): { optimized: string | null; fallback: string | null } => {
     const img = category.image?.trim();
     const imageUrl = category.imageUrl?.trim() || null;
+
+    // URL guardada en Firestore (Supabase) tiene prioridad sobre publicId legacy
+    if (
+      imageUrl &&
+      (isSupabaseStorageUrl(imageUrl) || imageUrl.startsWith("http"))
+    ) {
+      return { optimized: imageUrl, fallback: imageUrl };
+    }
 
     if (img && !img.startsWith("http://") && !img.startsWith("https://")) {
       const optimized = getCloudinaryUrl(img, {

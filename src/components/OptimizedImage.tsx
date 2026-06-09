@@ -5,6 +5,8 @@ import { useState } from "react";
 import {
   getProductImageUrl,
   isCloudinaryUrl,
+  isSupabaseStorageUrl,
+  isDirectMediaUrl,
   extractPublicIdFromUrl,
 } from "@/lib/cloudinary";
 
@@ -109,7 +111,7 @@ export default function OptimizedImage({
         }
         onLoad={handleImageLoad}
         onError={handleImageError}
-        unoptimized={isCloudinaryUrl(resolvedSrc)}
+        unoptimized={isDirectMediaUrl(resolvedSrc)}
       />
 
       {imageError && (
@@ -188,7 +190,7 @@ export function ProductImage({
       sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
       quality={90}
       placeholder="empty"
-      unoptimized={isCloudinaryUrl(imageUrl)}
+      unoptimized={isDirectMediaUrl(imageUrl)}
       onError={() => setError(true)}
     />
   );
@@ -215,7 +217,7 @@ export function HeroImage({
       sizes="100vw"
       quality={85}
       placeholder="empty"
-      unoptimized={isCloudinaryUrl(src)}
+      unoptimized={isDirectMediaUrl(src)}
     />
   );
 }

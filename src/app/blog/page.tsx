@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import AnimatedSection from "@/components/AnimatedSection";
 import { getPublishedBlogPosts } from "@/lib/firebase/blog";
-import { getCloudinaryUrl } from "@/lib/cloudinary";
+import { getCloudinaryUrl, isDirectMediaUrl } from "@/lib/cloudinary";
 import type { BlogPost } from "@/types";
 import { Calendar } from "lucide-react";
 
@@ -74,6 +74,7 @@ export default async function BlogPage() {
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            unoptimized={isDirectMediaUrl(imageUrl)}
                           />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center">
