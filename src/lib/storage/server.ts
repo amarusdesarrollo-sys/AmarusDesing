@@ -24,12 +24,20 @@ export async function uploadBufferToStorage(input: {
   contentType: string;
   originalName: string;
   isVideo: boolean;
+  outputExt?: string;
+  width?: number;
+  height?: number;
 }): Promise<UploadResult> {
   const pseudoFile = {
     name: input.originalName,
     type: input.contentType,
   } as File;
-  const storagePath = buildStoragePath(input.folder, pseudoFile, input.isVideo);
+  const storagePath = buildStoragePath(
+    input.folder,
+    pseudoFile,
+    input.isVideo,
+    input.outputExt
+  );
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.storage
     .from(STORAGE_BUCKET)
@@ -46,6 +54,8 @@ export async function uploadBufferToStorage(input: {
     publicId: storagePath,
     storagePath,
     url,
+    width: input.width,
+    height: input.height,
     resourceType: input.isVideo ? "video" : "image",
     format: storagePath.split(".").pop(),
   };

@@ -33,10 +33,11 @@ export function extensionFromFile(file: File, isVideo: boolean): string {
 export function buildStoragePath(
   folder: StorageFolder,
   file: File,
-  isVideo: boolean
+  isVideo: boolean,
+  outputExt?: string
 ): string {
   const stem = sanitizeFileStem(file.name || "file");
-  const ext = extensionFromFile(file, isVideo);
+  const ext = outputExt || extensionFromFile(file, isVideo);
   const ts = Date.now();
   const sub = isVideo && folder === "products" ? "videos" : null;
   return sub

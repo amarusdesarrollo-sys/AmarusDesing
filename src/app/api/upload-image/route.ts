@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/firebase-admin";
+import { compressImageForWeb } from "@/lib/storage/compress-image";
 import { uploadBufferToStorage } from "@/lib/storage/server";
 import {
   isAllowedStorageFolder,
   sanitizeFileStem,
+  type StorageFolder,
 } from "@/lib/storage/upload-path";
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+/** Límite del archivo original (iPhone); se comprime antes de subir a Storage. */
+const MAX_IMAGE_SIZE = 12 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const ALLOWED_EXTENSIONS = [
   ".jpg",
@@ -61,21 +64,29 @@ export async function POST(request: NextRequest) {
 
     if (file.size > MAX_IMAGE_SIZE) {
       return NextResponse.json(
-        { success: false, message: "La imagen no puede superar 5 MB" },
+        { success: false, message: "La imagen no puede superar 12 MB" },
         { status: 400 }
       );
     }
 
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const rawBuffer = Buffer.from(bytes);
     const cleanFileName = sanitizeFileStem(file.name || "image");
 
+    const compressed = await compressImageForWeb(
+      rawBuffer,
+      folder as StorageFolder
+    );
+
     const result = await uploadBufferToStorage({
-      folder,
-      buffer,
-      contentType: mime || "image/jpeg",
-      originalName: `${cleanFileName}.jpg`,
+      folder: folder as StorageFolder,
+      buffer: compressed.buffer,
+      contentType: compressed.contentType,
+      originalName: `${cleanFileName}.${compressed.extension}`,
       isVideo: false,
+      outputExt: compressed.extension,
+      width: compressed.width,
+      height: compressed.height,
     });
 
     return NextResponse.json(
@@ -88,6 +99,7 @@ export async function POST(request: NextRequest) {
         height: result.height,
         resourceType: "image",
         format: result.format,
+        optimized: !compressed.passthrough,
       },
       { status: 200 }
     );

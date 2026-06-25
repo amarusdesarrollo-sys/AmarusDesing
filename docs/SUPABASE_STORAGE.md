@@ -94,6 +94,32 @@ El script descarga cada URL de Cloudinary, sube a Supabase y actualiza Firestore
 
 **Nota:** Si Cloudinary bloqueó la cuenta y las URLs ya no responden, habrá que recuperar archivos desde backup local o resubir desde el admin.
 
+## Compresión automática (subidas nuevas)
+
+Desde el deploy con `sharp`, `/api/upload-image` comprime antes de subir (WebP, max ~1920px en heroes). La clienta sube desde el iPhone igual que antes.
+
+## Recomprimir imágenes ya en el bucket
+
+Para heroes/productos que ya están en Supabase a ~3 MB:
+
+```bash
+# Simulación (solo muestra qué haría)
+npm run recompress:storage -- --dry-run
+
+# Aplicar en todo el bucket
+npm run recompress:storage
+
+# Solo categorías (heroes de home)
+npm run recompress:storage -- --folder=categories
+
+# Solo archivos > 300 KB
+npm run recompress:storage -- --min-kb=300
+```
+
+El script **sobrescribe el mismo archivo** (`upsert`) con la versión comprimida. La URL pública y el `publicId` en Firestore **no cambian**. En el dashboard de Supabase verás el **tamaño del objeto bajar** (puede tardar unos segundos en refrescar).
+
+Requisitos: `.env.local` con `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **producción**.
+
 ## Imágenes estáticas
 
 Los archivos en `public/images/` no pasan por Supabase (logo, placeholders, fotos por defecto del equipo en admin).
