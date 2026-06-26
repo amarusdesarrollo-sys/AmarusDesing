@@ -57,7 +57,7 @@ export default async function Home() {
   return (
     <>
       {/* Categorías destacadas (desde admin: marcar "Destacada" en cada categoría) */}
-      <FeaturedCategoriesHero initialCategories={featuredCategories} />
+      <FeaturedCategoriesHero categories={featuredCategories} />
 
       {/* Sección Conoce nuestro proyecto familiar */}
       <section className="flex flex-col lg:flex-row min-h-[90vh]">
@@ -131,10 +131,11 @@ export default async function Home() {
         <div className="relative w-full bg-gray-200">
           <OptimizedImage
             src={histHeroImageSrc}
-            alt="¿Cómo llegamos aquí? - Historia de AmarusDesign"
-            width={1920}
-            height={1080}
-            imageClassName="object-contain"
+              alt=""
+              aria-hidden
+              width={1920}
+              height={1080}
+              imageClassName="object-contain"
             priority={false}
             sizes="100vw"
           />

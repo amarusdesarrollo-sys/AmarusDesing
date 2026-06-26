@@ -1,6 +1,5 @@
 import "./globals.css";
-import ConditionalSiteChrome from "@/components/ConditionalSiteChrome";
-import ShippingConfigLoader from "@/components/ShippingConfigLoader";
+import SiteChrome from "@/components/SiteChrome";
 import { buildTitle, SITE_DESCRIPTION, SITE_KEYWORDS, getBaseUrl } from "@/lib/seo";
 
 const baseUrl = getBaseUrl();
@@ -41,8 +40,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="min-h-screen flex flex-col">
-        <ShippingConfigLoader />
-        <ConditionalSiteChrome>{children}</ConditionalSiteChrome>
+        <SiteChrome>{children}</SiteChrome>
       </body>
     </html>
   );

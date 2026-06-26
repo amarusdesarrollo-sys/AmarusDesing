@@ -3,28 +3,36 @@
 import { useEffect } from "react";
 import { getSiteConfig } from "@/lib/firebase/site-config";
 import { useCartStore } from "@/store/cartStore";
+import type { SiteConfig } from "@/types";
 
-/**
- * Carga la configuración de envío desde Firestore y la guarda en el store del carrito.
- * Así el coste y el umbral de envío gratis los eliges tú en Admin > Configuración.
- */
-export default function ShippingConfigLoader() {
+function applyShippingConfig(
+  setShippingConfig: ReturnType<typeof useCartStore.getState>["setShippingConfig"],
+  config: SiteConfig
+) {
+  setShippingConfig({
+    freeShippingThreshold: config.shipping.freeShippingThreshold ?? 0,
+    standardShippingCost: config.shipping.standardShippingCost ?? 0,
+    expressShippingCost: config.shipping.expressShippingCost ?? 0,
+    zones: config.shipping.zones,
+  });
+}
+
+export default function ShippingConfigLoader({
+  initialSiteConfig = null,
+}: {
+  initialSiteConfig?: SiteConfig | null;
+}) {
   const setShippingConfig = useCartStore((s) => s.setShippingConfig);
 
   useEffect(() => {
+    if (initialSiteConfig) {
+      applyShippingConfig(setShippingConfig, initialSiteConfig);
+      return;
+    }
     getSiteConfig()
-      .then((config) => {
-        setShippingConfig({
-          freeShippingThreshold: config.shipping.freeShippingThreshold ?? 0,
-          standardShippingCost: config.shipping.standardShippingCost ?? 0,
-          expressShippingCost: config.shipping.expressShippingCost ?? 0,
-          zones: config.shipping.zones,
-        });
-      })
-      .catch(() => {
-        setShippingConfig(null);
-      });
-  }, [setShippingConfig]);
+      .then((config) => applyShippingConfig(setShippingConfig, config))
+      .catch(() => setShippingConfig(null));
+  }, [initialSiteConfig, setShippingConfig]);
 
   return null;
 }

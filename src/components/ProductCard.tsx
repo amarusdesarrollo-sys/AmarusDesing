@@ -155,7 +155,16 @@ export default function ProductCard({
             <button
               onClick={handleAddToCart}
               disabled={!hasStock}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-sm font-medium transition-colors ${
+              aria-label={
+                hasStock
+                  ? needsOptions
+                    ? `Elegir opciones para ${product.name}`
+                    : added
+                      ? `${product.name} agregado al carrito`
+                      : `Agregar ${product.name} al carrito`
+                  : `${product.name} agotado`
+              }
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 min-h-11 rounded-lg text-sm font-medium transition-colors ${
                 hasStock
                   ? added && !needsOptions
                     ? "bg-green-600 text-white"
@@ -178,8 +187,9 @@ export default function ProductCard({
             </button>
 
             <button
-              className="p-1.5 border-2 border-gray-300 rounded-lg hover:border-[#6B5BB6] hover:text-[#6B5BB6] transition-colors"
-              aria-label="Agregar a favoritos"
+              type="button"
+              className="flex items-center justify-center min-h-11 min-w-11 p-2 border-2 border-gray-300 rounded-lg hover:border-[#6B5BB6] hover:text-[#6B5BB6] transition-colors"
+              aria-label={`Agregar ${product.name} a favoritos`}
             >
               <Heart className="h-4 w-4" />
             </button>

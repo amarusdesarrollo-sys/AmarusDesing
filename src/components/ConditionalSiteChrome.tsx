@@ -3,15 +3,20 @@
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import ShippingConfigLoader from "@/components/ShippingConfigLoader";
+import type { Category, SiteConfig } from "@/types";
 
 export default function ConditionalSiteChrome({
   children,
+  initialCategories = [],
+  initialSiteConfig = null,
 }: {
   children: React.ReactNode;
+  initialCategories?: Category[];
+  initialSiteConfig?: SiteConfig | null;
 }) {
   const pathname = usePathname();
   const hideChrome = pathname?.startsWith("/admin") ?? false;
-  /** Rutas donde el propio layout de la página ya cierra bien y no hace falta colchón extra antes del footer. */
   const compactMainBottom =
     pathname === "/" ||
     pathname === "/politicas" ||
@@ -31,7 +36,8 @@ export default function ConditionalSiteChrome({
 
   return (
     <>
-      <Navbar />
+      <ShippingConfigLoader initialSiteConfig={initialSiteConfig} />
+      <Navbar initialCategories={initialCategories} />
       <main
         className={
           compactMainBottom
@@ -41,7 +47,7 @@ export default function ConditionalSiteChrome({
       >
         {children}
       </main>
-      <Footer />
+      <Footer initialSiteConfig={initialSiteConfig} />
     </>
   );
 }

@@ -49,7 +49,7 @@ export default function EquipoFromCms({ members, cierre }: EquipoFromCmsProps) {
                         {imgSrc ? (
                           <OptimizedImage
                             src={imgSrc}
-                            alt={m.name}
+                            alt=""
                             width={600}
                             height={600}
                             fill

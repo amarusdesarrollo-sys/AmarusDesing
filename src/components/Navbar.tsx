@@ -10,11 +10,74 @@ import CartIcon from "./CartIcon";
 import { getActiveCategories } from "@/lib/firebase/categories";
 import type { Category } from "@/types";
 
-const Navbar = () => {
+const FALLBACK_CATEGORIES: Category[] = [
+  {
+    id: "joyeria-artesanal",
+    name: "Joyería Artesanal",
+    slug: "joyeria-artesanal",
+    description: "",
+    order: 1,
+    active: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: "minerales-del-mundo",
+    name: "Minerales del mundo",
+    slug: "minerales-del-mundo",
+    description: "",
+    order: 2,
+    active: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: "macrame",
+    name: "Macramé",
+    slug: "macrame",
+    description: "",
+    order: 3,
+    active: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: "tesoros-del-mundo",
+    name: "Tesoros del mundo",
+    slug: "tesoros-del-mundo",
+    description: "",
+    order: 4,
+    active: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: "ropa-artesanal",
+    name: "Ropa Artesanal",
+    slug: "ropa-artesanal",
+    description: "",
+    order: 5,
+    active: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: "coleccion-etiopia",
+    name: "Colección ETIOPÍA",
+    slug: "coleccion-etiopia",
+    description: "",
+    order: 6,
+    active: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
+
+const Navbar = ({ initialCategories = [] }: { initialCategories?: Category[] }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileShopOpen, setIsMobileShopOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
@@ -26,82 +89,21 @@ const Navbar = () => {
     return () => unsubscribe();
   }, []);
 
-  // Cargar categorías activas desde Firestore
   useEffect(() => {
+    if (initialCategories.length > 0) return;
+
     const loadCategories = async () => {
       try {
         const activeCategories = await getActiveCategories();
         setCategories(activeCategories);
       } catch (error) {
         console.error("Error loading categories:", error);
-        // Fallback: usar categorías estáticas si falla Firestore
-        setCategories([
-          {
-            id: "joyeria-artesanal",
-            name: "Joyería Artesanal",
-            slug: "joyeria-artesanal",
-            description: "",
-            order: 1,
-            active: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: "minerales-del-mundo",
-            name: "Minerales del mundo",
-            slug: "minerales-del-mundo",
-            description: "",
-            order: 2,
-            active: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: "macrame",
-            name: "Macramé",
-            slug: "macrame",
-            description: "",
-            order: 3,
-            active: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: "tesoros-del-mundo",
-            name: "Tesoros del mundo",
-            slug: "tesoros-del-mundo",
-            description: "",
-            order: 4,
-            active: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: "ropa-artesanal",
-            name: "Ropa Artesanal",
-            slug: "ropa-artesanal",
-            description: "",
-            order: 5,
-            active: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          {
-            id: "coleccion-etiopia",
-            name: "Colección ETIOPÍA",
-            slug: "coleccion-etiopia",
-            description: "",
-            order: 6,
-            active: true,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ]);
+        setCategories(FALLBACK_CATEGORIES);
       }
     };
 
     loadCategories();
-  }, []);
+  }, [initialCategories.length]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -131,6 +133,7 @@ const Navbar = () => {
 
   return (
     <nav
+      aria-label="Principal"
       className={`sticky top-0 z-50 transition-all duration-300 ${
         isScrolled
           ? "bg-[#6B5BB6]/70 backdrop-blur-md shadow-md"
@@ -144,11 +147,12 @@ const Navbar = () => {
           <Link
             href="/"
             className="flex items-center group transition-transform duration-300 hover:scale-105 shrink-0"
+            aria-label="Amarus Design — Inicio"
           >
             <div className="flex items-center gap-2">
               <Image
                 src="/images/logo.avif"
-                alt="Amarus Design"
+                alt=""
                 width={40}
                 height={40}
                 priority
@@ -267,17 +271,17 @@ const Navbar = () => {
           <div className="hidden md:flex items-center justify-end space-x-2 shrink-0 min-w-[17rem] min-h-10">
             <Link
               href="/contacto"
-              className="flex items-center justify-center p-1.5 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
-              aria-label="Contacto"
+              className="flex items-center justify-center min-h-11 min-w-11 p-2 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
+              aria-label="Contacto por email"
             >
               <Mail className="h-5 w-5" />
             </Link>
             <Link
               href="https://instagram.com/amarusdesign"
               target="_blank"
-              className="flex items-center justify-center p-1.5 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
+              className="flex items-center justify-center min-h-11 min-w-11 p-2 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
               rel="noopener noreferrer"
-              aria-label="Instagram"
+              aria-label="Instagram de Amarus Design"
             >
               <Instagram className="h-5 w-5" />
             </Link>
@@ -314,8 +318,12 @@ const Navbar = () => {
           {/* Mobile menu button */}
           <div className="md:hidden shrink-0">
             <button
+              type="button"
               onClick={toggleMenu}
-              className="text-white hover:text-[#F5EFFF] focus:outline-none focus:text-[#F5EFFF]"
+              className="flex items-center justify-center min-h-11 min-w-11 p-2 text-white hover:text-[#F5EFFF] focus:outline-none focus-visible:ring-2 focus-visible:ring-white rounded-lg"
+              aria-label={isMenuOpen ? "Cerrar menú de navegación" : "Abrir menú de navegación"}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-nav-menu"
             >
               {isMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -328,20 +336,23 @@ const Navbar = () => {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-2 space-y-0.5 sm:px-3 bg-[#6B5BB6] border-t border-[#7B6BC7]">
+          <div className="md:hidden" id="mobile-nav-menu">
+            <div className="px-2 pt-2 pb-3 space-y-0.5 sm:px-3 bg-[#6B5BB6] border-t border-[#7B6BC7]">
               <Link
                 href="/"
-                className="block px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="block px-3 py-2.5 min-h-11 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                onClick={() => setIsMenuOpen(false)}
               >
                 Inicio
               </Link>
               <button
                 type="button"
                 onClick={() => setIsMobileShopOpen((v) => !v)}
-                className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                aria-expanded={isMobileShopOpen}
+                aria-controls="mobile-shop-menu"
+                className="flex w-full items-center justify-between px-3 py-2.5 min-h-11 text-left text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
               >
-                Tienda
+                Tienda Online
                 <svg
                   className={`h-4 w-4 transition-transform duration-200 ${isMobileShopOpen ? "rotate-180" : ""}`}
                   fill="none"
@@ -357,7 +368,7 @@ const Navbar = () => {
                 </svg>
               </button>
               {isMobileShopOpen && (
-                <div className="ml-3 mt-1 mb-1 space-y-0.5 border-l border-[#8a7ad0] pl-3">
+                <div id="mobile-shop-menu" className="ml-3 mt-1 mb-1 space-y-0.5 border-l border-[#8a7ad0] pl-3">
                   <Link
                     href="/tienda-online"
                     className="block px-2 py-1.5 text-sm font-medium text-white/95 hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
@@ -425,11 +436,11 @@ const Navbar = () => {
                 href="https://instagram.com/amarusdesign"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
+                className="flex items-center gap-2 px-3 py-2.5 min-h-11 text-sm font-medium text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-md transition-colors"
                 onClick={() => setIsMenuOpen(false)}
-                aria-label="Instagram"
               >
-                <Instagram className="h-5 w-5" />
+                <Instagram className="h-5 w-5 shrink-0" aria-hidden />
+                Instagram
               </a>
               <Link
                 href="/contacto"
