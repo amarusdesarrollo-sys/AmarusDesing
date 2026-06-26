@@ -32,7 +32,7 @@ const productByIdCache = new Map<string, { data: Product | null; ts: number }>()
 const productsByCategoryCache = new Map<string, { data: Product[]; ts: number }>();
 
 const isFresh = (ts: number) => Date.now() - ts < CACHE_TTL_MS;
-const clearProductCaches = () => {
+export const clearProductCaches = () => {
   allProductsCache = null;
   productByIdCache.clear();
   productsByCategoryCache.clear();
@@ -106,9 +106,15 @@ const productToFirestore = (
   return firestoreData;
 };
 
-// Obtener todos los productos
-export const getAllProducts = async (): Promise<Product[]> => {
-  if (allProductsCache && isFresh(allProductsCache.ts)) {
+// Obtener todos los productos (admin: usar { fresh: true } tras cambios)
+export const getAllProducts = async (options?: {
+  fresh?: boolean;
+}): Promise<Product[]> => {
+  if (
+    !options?.fresh &&
+    allProductsCache &&
+    isFresh(allProductsCache.ts)
+  ) {
     return allProductsCache.data;
   }
   try {

@@ -24,90 +24,74 @@ export default function Footer({
 
   return (
     <footer className="bg-gray-900 text-white mt-auto border-t border-gray-800/80">
-      <div className="pt-10 pb-8 md:pt-12 md:pb-10">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-            <div className="text-center md:text-left">
-              <h3 className="text-base md:text-lg font-bold mb-3 md:mb-4">
-                AmarusDesign
-              </h3>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-5">
+        <div className="flex flex-col gap-3 sm:gap-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 sm:gap-x-6 sm:gap-y-2">
+            <p className="text-sm font-semibold text-white text-center sm:text-left">
+              AmarusDesign
+            </p>
 
-              <div className="mb-4 md:mb-5">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-center md:justify-start space-x-2">
-                    <Mail className="h-4 w-4 text-[#a899e0] shrink-0" aria-hidden />
-                    <a
-                      href={`mailto:${email}`}
-                      className="text-gray-200 hover:text-white transition-colors text-sm md:text-base"
-                    >
-                      {email}
-                    </a>
-                  </div>
-                  <div className="flex items-center justify-center md:justify-start space-x-2">
-                    <Instagram className="h-4 w-4 text-[#a899e0] shrink-0" aria-hidden />
-                    <a
-                      href={instagramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-gray-200 hover:text-white transition-colors text-sm md:text-base"
-                    >
-                      @{instagramHandle} en Instagram
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-700 pt-4 md:pt-5">
-                <p className="text-gray-200 mb-1 md:mb-2 text-sm md:text-base">
-                  Desarrollo web realizado por{" "}
-                  <a
-                    href="https://www.iarabaudinodev.com.ar/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#c4b8f0] hover:text-white transition-colors font-medium underline-offset-2 hover:underline"
-                  >
-                    Iara Baudino
-                  </a>
-                </p>
-                <div className="flex justify-center md:justify-start">
-                  <a
-                    href="https://instagram.com/iar.web"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 min-h-11 min-w-11 px-3 text-gray-200 hover:text-white transition-colors rounded-lg"
-                    aria-label="Instagram de Iara Baudino (@iar.web)"
-                  >
-                    <Instagram className="h-5 w-5" aria-hidden />
-                    <span className="text-sm">@iar.web</span>
-                  </a>
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-4 gap-y-1.5 text-sm text-gray-300">
+              <a
+                href={`mailto:${email}`}
+                className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
+              >
+                <Mail className="h-3.5 w-3.5 text-[#a899e0] shrink-0" aria-hidden />
+                {email}
+              </a>
+              <a
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
+              >
+                <Instagram className="h-3.5 w-3.5 text-[#a899e0] shrink-0" aria-hidden />
+                @{instagramHandle}
+              </a>
             </div>
-
-            <div />
           </div>
-        </div>
-      </div>
 
-      <div className="border-t border-gray-800 py-4 md:py-5">
-        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-3">
-            <p className="text-gray-300 text-sm">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 pt-2 border-t border-gray-800 text-xs text-gray-400">
+            <p className="text-center sm:text-left">
               © 2024 AmarusDesign. Todos los derechos reservados.
             </p>
-            <div className="flex items-center gap-4">
+
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-4 gap-y-1">
               <Link
                 href="/admin/categorias"
-                className="flex items-center gap-2 min-h-11 px-2 text-gray-300 hover:text-[#c4b8f0] transition-colors text-sm"
+                className="inline-flex items-center gap-1 hover:text-[#c4b8f0] transition-colors"
               >
-                <Settings className="h-4 w-4" aria-hidden />
-                <span>Admin</span>
+                <Settings className="h-3.5 w-3.5" aria-hidden />
+                Admin
               </Link>
-              <div className="flex items-center space-x-1 text-gray-300 text-sm">
-                <span>Hecho con</span>
-                <Heart className="h-4 w-4 text-red-400" aria-hidden />
-                <span>para artesanos</span>
-              </div>
+              <span className="inline-flex items-center gap-1">
+                Hecho con
+                <Heart className="h-3 w-3 text-red-400" aria-hidden />
+                para artesanos
+              </span>
+              <span className="hidden sm:inline text-gray-600" aria-hidden>
+                ·
+              </span>
+              <span className="text-center sm:text-right">
+                Web:{" "}
+                <a
+                  href="https://www.iarabaudinodev.com.ar/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#c4b8f0] hover:text-white transition-colors"
+                >
+                  Iara Baudino
+                </a>
+                {" · "}
+                <a
+                  href="https://instagram.com/iar.web"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#c4b8f0] hover:text-white transition-colors"
+                >
+                  @iar.web
+                </a>
+              </span>
             </div>
           </div>
         </div>

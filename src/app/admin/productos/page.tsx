@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Plus, Edit, Trash2, Package, Search, Filter, X, CheckCircle2, CheckSquare, Square } from "lucide-react";
-import { getAllProducts, deactivateProduct, activateProduct } from "@/lib/firebase/products";
+import { getAllProducts, deactivateProduct, activateProduct, clearProductCaches } from "@/lib/firebase/products";
 import { getAllCategories } from "@/lib/firebase/categories";
 import { getAdminThumbnailUrl } from "@/lib/cloudinary";
 import type { Product, Category } from "@/types";
@@ -20,6 +20,7 @@ export default function AdminProductosPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [stockFilter, setStockFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -49,7 +50,25 @@ export default function AdminProductosPage() {
   useEffect(() => {
     filterProducts();
     setSelectedIds(new Set());
-  }, [searchTerm, categoryFilter, stockFilter, allProducts]);
+  }, [searchTerm, categoryFilter, stockFilter, statusFilter, allProducts]);
+
+  const revalidateStorefront = async () => {
+    try {
+      await fetch("/api/admin/revalidate-catalog", {
+        method: "POST",
+        headers: await getAuthHeaders(),
+      });
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const reloadProductsList = async () => {
+    clearProductCaches();
+    const list = await getAllProducts({ fresh: true });
+    setAllProducts(list);
+    setError(null);
+  };
 
   const loadCategories = async () => {
     try {
@@ -63,7 +82,8 @@ export default function AdminProductosPage() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const list = await getAllProducts();
+      clearProductCaches();
+      const list = await getAllProducts({ fresh: true });
       setAllProducts(list);
       setProducts(list);
       setError(null);
@@ -94,6 +114,12 @@ export default function AdminProductosPage() {
       filtered = filtered.filter((p) => p.category === categoryFilter);
     }
 
+    if (statusFilter === "active") {
+      filtered = filtered.filter((p) => p.inStock);
+    } else if (statusFilter === "inactive") {
+      filtered = filtered.filter((p) => !p.inStock);
+    }
+
     if (stockFilter === "low") {
       filtered = filtered.filter(
         (p) => totalSellableStock(p) < 10 && p.inStock
@@ -120,7 +146,14 @@ export default function AdminProductosPage() {
       } else {
         await activateProduct(product.id);
       }
-      await loadProducts();
+      clearProductCaches();
+      await reloadProductsList();
+      await revalidateStorefront();
+      setFlashSuccess(
+        action === "desactivar"
+          ? `"${product.name}" desactivado. Ya no aparece en la tienda.`
+          : `"${product.name}" activado. Ya visible en la tienda.`
+      );
     } catch (err) {
       console.error("Error al cambiar estado:", err);
       alert(`Error al ${action} el producto`);
@@ -179,7 +212,8 @@ export default function AdminProductosPage() {
       setSelectedIds(new Set());
       setBulkDeleteOpen(false);
       setFlashSuccess(data.message || "Operación completada.");
-      await loadProducts();
+      clearProductCaches();
+      await reloadProductsList();
     } catch (err) {
       console.error("Bulk action error:", err);
       setError(err instanceof Error ? err.message : "Error en operación masiva");
@@ -202,7 +236,8 @@ export default function AdminProductosPage() {
       }
       setProductToDelete(null);
       setFlashSuccess("Producto eliminado. Imágenes y vídeos borrados de Storage.");
-      await loadProducts();
+      clearProductCaches();
+      await reloadProductsList();
     } catch (err) {
       console.error("Error eliminando producto:", err);
       alert("Error al eliminar el producto");
@@ -277,7 +312,7 @@ export default function AdminProductosPage() {
 
       {/* Búsqueda y filtros */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
@@ -305,10 +340,20 @@ export default function AdminProductosPage() {
               ))}
           </select>
           <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filtrar por estado del producto"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+          >
+            <option value="">Activos y desactivados</option>
+            <option value="active">Solo activos</option>
+            <option value="inactive">Solo desactivados</option>
+          </select>
+          <select
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value)}
             aria-label="Filtrar por stock"
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6] sm:col-span-2 lg:col-span-1"
           >
             <option value="">Todo el stock</option>
             <option value="in">En stock</option>
@@ -316,7 +361,7 @@ export default function AdminProductosPage() {
             <option value="out">Sin stock</option>
           </select>
         </div>
-        {(searchTerm || categoryFilter || stockFilter) && (
+        {(searchTerm || categoryFilter || stockFilter || statusFilter) && (
           <div className="mt-3 flex items-center gap-2 text-sm text-gray-700">
             <Filter className="h-4 w-4" />
             <span>
@@ -328,6 +373,7 @@ export default function AdminProductosPage() {
                 setSearchTerm("");
                 setCategoryFilter("");
                 setStockFilter("");
+                setStatusFilter("");
               }}
               className="text-[#6B5BB6] hover:underline ml-2"
               aria-label="Limpiar todos los filtros de búsqueda"

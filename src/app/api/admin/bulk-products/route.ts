@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/firebase-admin";
 import { deleteProductWithAssets } from "@/lib/admin/delete-product-server";
+import { revalidateProductCatalog } from "@/lib/revalidate-catalog";
 import { getFirebaseAdminApp } from "@/lib/firebase-admin-server";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest) {
         0
       );
 
+      revalidateProductCatalog();
+
       return NextResponse.json({
         success: failed.length === 0,
         action,
@@ -72,6 +75,8 @@ export async function POST(request: NextRequest) {
       });
     }
     await batch.commit();
+
+    revalidateProductCatalog();
 
     return NextResponse.json({
       success: true,

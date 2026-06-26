@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/firebase-admin";
 import { deleteProductWithAssets } from "@/lib/admin/delete-product-server";
+import { revalidateProductCatalog } from "@/lib/revalidate-catalog";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest) {
           { status: result.error === "Producto no encontrado" ? 404 : 500 }
         );
       }
+      revalidateProductCatalog();
       return NextResponse.json({
         success: true,
         productId: result.productId,
@@ -45,6 +47,7 @@ export async function POST(request: NextRequest) {
     const results = await Promise.all(
       uniqueIds.map((id) => deleteProductWithAssets(id))
     );
+    revalidateProductCatalog();
     const deleted = results.filter((r) => r.ok);
     const failed = results.filter((r) => !r.ok);
 
