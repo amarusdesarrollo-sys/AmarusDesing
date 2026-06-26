@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Edit, Trash2, Package, Search, Filter, X, CheckCircle2 } from "lucide-react";
+import { Plus, Edit, Trash2, Package, Search, Filter, X, CheckCircle2, CheckSquare, Square } from "lucide-react";
 import { getAllProducts, deactivateProduct, activateProduct } from "@/lib/firebase/products";
 import { getAllCategories } from "@/lib/firebase/categories";
 import { getAdminThumbnailUrl } from "@/lib/cloudinary";
@@ -21,6 +21,9 @@ export default function AdminProductosPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [stockFilter, setStockFilter] = useState<string>("");
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
   const [flashSuccess, setFlashSuccess] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,6 +48,7 @@ export default function AdminProductosPage() {
 
   useEffect(() => {
     filterProducts();
+    setSelectedIds(new Set());
   }, [searchTerm, categoryFilter, stockFilter, allProducts]);
 
   const loadCategories = async () => {
@@ -123,6 +127,67 @@ export default function AdminProductosPage() {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map((p) => p.id)));
+    }
+  };
+
+  const runBulkAction = async (action: "deactivate" | "activate" | "delete") => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+
+    if (action === "deactivate") {
+      const n = ids.filter((id) => products.find((p) => p.id === id)?.inStock).length;
+      if (n === 0) {
+        alert("Ninguno de los seleccionados está activo.");
+        return;
+      }
+      if (!confirm(`¿Desactivar ${n} producto(s)? No se verán en la tienda.`)) return;
+    } else if (action === "activate") {
+      const n = ids.filter((id) => !products.find((p) => p.id === id)?.inStock).length;
+      if (n === 0) {
+        alert("Ninguno de los seleccionados está desactivado.");
+        return;
+      }
+      if (!confirm(`¿Activar ${n} producto(s)?`)) return;
+    }
+
+    try {
+      setBulkWorking(true);
+      setError(null);
+      const res = await fetch("/api/admin/bulk-products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        body: JSON.stringify({ action, productIds: ids }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.message || "Error en la operación masiva");
+      }
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+      setFlashSuccess(data.message || "Operación completada.");
+      await loadProducts();
+    } catch (err) {
+      console.error("Bulk action error:", err);
+      setError(err instanceof Error ? err.message : "Error en operación masiva");
+    } finally {
+      setBulkWorking(false);
+    }
+  };
+
   const handleDeletePermanently = async () => {
     if (!productToDelete) return;
     try {
@@ -136,6 +201,7 @@ export default function AdminProductosPage() {
         throw new Error(data?.message || "Error al eliminar definitivamente");
       }
       setProductToDelete(null);
+      setFlashSuccess("Producto eliminado. Imágenes y vídeos borrados de Storage.");
       await loadProducts();
     } catch (err) {
       console.error("Error eliminando producto:", err);
@@ -272,6 +338,45 @@ export default function AdminProductosPage() {
         )}
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-[#6B5BB6]/30 bg-[#6B5BB6]/5 px-4 py-3">
+          <span className="text-sm font-medium text-gray-800">
+            {selectedIds.size} seleccionado{selectedIds.size !== 1 ? "s" : ""}
+          </span>
+          <button
+            type="button"
+            disabled={bulkWorking}
+            onClick={() => runBulkAction("deactivate")}
+            className="px-3 py-1.5 text-sm font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 disabled:opacity-50"
+          >
+            Desactivar
+          </button>
+          <button
+            type="button"
+            disabled={bulkWorking}
+            onClick={() => runBulkAction("activate")}
+            className="px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 disabled:opacity-50"
+          >
+            Activar
+          </button>
+          <button
+            type="button"
+            disabled={bulkWorking}
+            onClick={() => setBulkDeleteOpen(true)}
+            className="px-3 py-1.5 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 disabled:opacity-50"
+          >
+            Eliminar definitivamente
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set())}
+            className="ml-auto text-sm text-gray-600 hover:text-gray-900"
+          >
+            Limpiar selección
+          </button>
+        </div>
+      )}
+
       {products.length === 0 ? (
         <div className="bg-white rounded-lg shadow-md p-12 text-center">
           <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -288,6 +393,24 @@ export default function AdminProductosPage() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-3 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={toggleSelectAll}
+                      className="p-1 text-gray-600 hover:text-[#6B5BB6]"
+                      aria-label={
+                        selectedIds.size === products.length
+                          ? "Desmarcar todos"
+                          : "Seleccionar todos"
+                      }
+                    >
+                      {selectedIds.size === products.length && products.length > 0 ? (
+                        <CheckSquare className="h-5 w-5" aria-hidden />
+                      ) : (
+                        <Square className="h-5 w-5" aria-hidden />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Imagen
                   </th>
@@ -315,8 +438,28 @@ export default function AdminProductosPage() {
                 {products.map((product) => (
                   <tr
                     key={product.id}
-                    className={!product.inStock ? "opacity-60" : ""}
+                    className={`${!product.inStock ? "opacity-60" : ""} ${
+                      selectedIds.has(product.id) ? "bg-[#6B5BB6]/5" : ""
+                    }`}
                   >
+                    <td className="px-3 py-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(product.id)}
+                        className="p-1 text-gray-600 hover:text-[#6B5BB6]"
+                        aria-label={
+                          selectedIds.has(product.id)
+                            ? `Quitar selección de ${product.name}`
+                            : `Seleccionar ${product.name}`
+                        }
+                      >
+                        {selectedIds.has(product.id) ? (
+                          <CheckSquare className="h-5 w-5 text-[#6B5BB6]" aria-hidden />
+                        ) : (
+                          <Square className="h-5 w-5" aria-hidden />
+                        )}
+                      </button>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                         {primaryImage(product) ? (
@@ -416,7 +559,7 @@ export default function AdminProductosPage() {
             </h3>
             <p className="text-gray-600 mb-4">
               Vas a eliminar <strong>"{productToDelete.name}"</strong> de forma definitiva.
-              Esta acción no se puede deshacer. El producto se borrará de la base de datos.
+              Esta acción no se puede deshacer. Se borrará de Firestore y sus imágenes/vídeos de Supabase Storage.
             </p>
             <p className="text-sm text-amber-600 mb-6">
               Si solo quieres ocultarlo en la tienda, usa "Desactivar" en lugar de eliminar.
@@ -433,6 +576,41 @@ export default function AdminProductosPage() {
                 className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
               >
                 Sí, eliminar permanentemente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulkDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              ¿Eliminar {selectedIds.size} producto(s)?
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Se borrarán de Firestore y se eliminarán automáticamente sus imágenes y vídeos en Supabase Storage.
+              Esta acción no se puede deshacer.
+            </p>
+            <p className="text-sm text-amber-600 mb-6">
+              Para ocultarlos en la tienda sin borrar, usa «Desactivar».
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setBulkDeleteOpen(false)}
+                disabled={bulkWorking}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => runBulkAction("delete")}
+                disabled={bulkWorking}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {bulkWorking ? "Eliminando…" : "Sí, eliminar todo"}
               </button>
             </div>
           </div>

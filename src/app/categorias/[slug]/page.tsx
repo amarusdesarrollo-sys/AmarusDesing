@@ -114,6 +114,12 @@ export default async function CategoryPage({
   if (sort === "price-asc") filteredProducts.sort((a, b) => a.price - b.price);
   else if (sort === "price-desc") filteredProducts.sort((a, b) => b.price - a.price);
 
+  const selectedSubcategoryData = selectedSubcategory
+    ? activeSubcategories.find((s) => s.slug === selectedSubcategory)
+    : undefined;
+  const headerDescription =
+    selectedSubcategoryData?.description?.trim() || category.description;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F5EFFF] to-white py-12 px-4">
       <div className="max-w-7xl mx-auto">
@@ -169,11 +175,11 @@ export default async function CategoryPage({
                 </Link>
               </p>
             ) : null}
-            {category.description && (
+            {headerDescription ? (
               <p className="text-lg text-gray-600 mb-4 whitespace-pre-line">
-                {category.description}
+                {headerDescription}
               </p>
-            )}
+            ) : null}
             <p className="text-gray-600">
               {filteredProducts.length}{" "}
               {filteredProducts.length === 1 ? "producto" : "productos"} disponible

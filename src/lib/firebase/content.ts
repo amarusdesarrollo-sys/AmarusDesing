@@ -175,6 +175,8 @@ export async function getHomeContent(): Promise<HomeContent> {
       proyectoFamiliar: {
         title: pf.title ?? "CONOCE NUESTRO PROYECTO FAMILIAR",
         paragraphs: Array.isArray(pf.paragraphs) ? pf.paragraphs : [],
+        imagePublicId: pf.imagePublicId,
+        imageUrl: pf.imageUrl,
       },
       historia: {
         title: hist.title ?? "¿Cómo llegamos aquí?",

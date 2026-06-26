@@ -27,6 +27,12 @@ export default async function Home() {
     "Ofreciéndote así más variedad, conociendo siempre el origen de tu joya, ropa o accesorio",
   ];
 
+  const pfImageSrc =
+    pf?.imageUrl ||
+    (pf?.imagePublicId
+      ? getCloudinaryUrl(pf.imagePublicId, { width: 1200, height: 1600 })
+      : "/images/heroes/seccion corazon conoce nuestro proyecto.avif");
+
   const histTitle = historiaContent?.title ?? homeContent?.historia?.title ?? "¿Cómo llegamos aquí?";
   const histParagraphs = historiaContent?.paragraphs?.length
     ? historiaContent.paragraphs
@@ -60,27 +66,24 @@ export default async function Home() {
       <FeaturedCategoriesHero categories={featuredCategories} />
 
       {/* Sección Conoce nuestro proyecto familiar */}
-      <section className="flex flex-col lg:flex-row min-h-[90vh]">
-        {/* Columna izquierda - Imagen con gradiente hacia la derecha */}
-        <div className="w-full lg:w-1/2 relative bg-gray-200 overflow-hidden min-h-[400px] lg:min-h-[90vh]">
-          <div className="relative w-full h-full">
-            <Image
-              src="/images/heroes/seccion corazon conoce nuestro proyecto.avif"
-              alt="Conoce nuestro proyecto familiar"
-              width={1200}
-              height={1600}
-              className="w-full h-full object-cover"
-              priority={false}
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              quality={80}
-            />
-            {/* Gradiente de transición hacia el fondo lila - muy intenso */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#e5d9f2]/60 to-[#e5d9f2] pointer-events-none"></div>
-          </div>
+      <section className="flex flex-col lg:flex-row lg:min-h-[90vh]">
+        {/* Columna izquierda - Imagen a ancho completo */}
+        <div className="relative w-full lg:w-1/2 aspect-[4/5] lg:aspect-auto lg:min-h-[90vh] shrink-0 overflow-hidden bg-[#e5d9f2]">
+          <Image
+            src={pfImageSrc}
+            alt="Conoce nuestro proyecto familiar"
+            fill
+            className="object-cover"
+            priority={false}
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            quality={80}
+          />
+          {/* Degradado hacia el bloque de texto (abajo en móvil, derecha en desktop) */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#e5d9f2]/50 to-[#e5d9f2] lg:bg-gradient-to-r lg:from-transparent lg:via-[#e5d9f2]/60 lg:to-[#e5d9f2] pointer-events-none" />
         </div>
 
-        {/* Columna derecha - Contenido con fondo lila y gradiente desde la imagen */}
-        <div className="w-full lg:w-1/2 bg-gradient-to-r from-[#e5d9f2]/90 lg:from-[#e5d9f2] to-[#e5d9f2] flex flex-col justify-center items-center px-8 lg:px-12 py-12 lg:py-8 min-h-[400px] lg:min-h-[90vh]">
+        {/* Columna derecha - Contenido con fondo lila */}
+        <div className="w-full lg:w-1/2 bg-[#e5d9f2] flex flex-col justify-center items-center px-8 lg:px-12 py-12 lg:py-8 lg:min-h-[90vh]">
           <div className="max-w-lg text-center w-full my-auto">
             <AnimatedSection delay={0.2}>
               <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold mb-4 lg:mb-6 leading-tight">
@@ -127,19 +130,18 @@ export default async function Home() {
 
       {/* Sección AMARUSDESIGN - Historia */}
       <section id="historia" className="relative scroll-mt-20">
-        {/* Imagen con altura ajustada para verse completa */}
-        <div className="relative w-full bg-gray-200">
+        <div className="relative w-full aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/9] overflow-hidden">
           <OptimizedImage
             src={histHeroImageSrc}
-              alt=""
-              aria-hidden
-              width={1920}
-              height={1080}
-              imageClassName="object-contain"
+            alt=""
+            aria-hidden
+            fill
+            imageClassName="object-cover"
+            wrapperClassName="!bg-neutral-900"
             priority={false}
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none z-[1]" />
 
           {/* Título posicionado a la derecha y abajo */}
           <div className="absolute inset-0 flex items-end justify-end pb-8 pr-4 md:pb-16 md:pr-12 z-10">
@@ -175,9 +177,9 @@ export default async function Home() {
       </section>
 
       {/* Formulario de suscripción */}
-      <section className="bg-[#e5d9f2] min-h-[60vh] flex flex-col items-center justify-center py-24 md:py-32">
-        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 w-full flex flex-col items-center pt-12 pb-12 md:pt-16 md:pb-16">
-          <div className="text-center space-y-10 md:space-y-14 w-full flex flex-col items-center">
+      <section className="bg-[#e5d9f2] py-16 md:py-20">
+        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 w-full">
+          <div className="text-center space-y-8 md:space-y-10 w-full flex flex-col items-center">
             <AnimatedSection delay={0.2}>
               <h3 className="text-2xl md:text-4xl font-bold text-gray-900">
                 Formulario de suscripción

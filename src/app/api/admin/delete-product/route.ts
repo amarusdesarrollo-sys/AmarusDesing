@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/firebase-admin";
-import { removeStoragePaths } from "@/lib/storage/server";
-import { toStoragePaths } from "@/lib/storage/resolve-paths";
-import { getFirebaseAdminApp } from "@/lib/firebase-admin-server";
-import { getFirestore } from "firebase-admin/firestore";
+import { deleteProductWithAssets } from "@/lib/admin/delete-product-server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,50 +8,52 @@ export async function POST(request: NextRequest) {
     if (authResult && "json" in authResult) return authResult;
 
     const body = (await request.json().catch(() => null)) as
-      | { productId?: string }
+      | { productId?: string; productIds?: string[] }
       | null;
-    const productId = body?.productId?.toString().trim();
-    if (!productId) {
+
+    const ids = [
+      ...(body?.productIds ?? []).map((id) => id?.toString().trim()).filter(Boolean),
+      ...(body?.productId?.trim() ? [body.productId.trim()] : []),
+    ];
+    const uniqueIds = [...new Set(ids)];
+
+    if (uniqueIds.length === 0) {
       return NextResponse.json(
         { success: false, message: "Falta productId" },
         { status: 400 }
       );
     }
 
-    const app = getFirebaseAdminApp();
-    const db = getFirestore(app);
-
-    const productRef = db.collection("products").doc(productId);
-    const snap = await productRef.get();
-    if (!snap.exists) {
-      return NextResponse.json(
-        { success: false, message: "Producto no encontrado" },
-        { status: 404 }
-      );
+    if (uniqueIds.length === 1) {
+      const result = await deleteProductWithAssets(uniqueIds[0]);
+      if (!result.ok) {
+        return NextResponse.json(
+          { success: false, message: result.error ?? "Error al eliminar" },
+          { status: result.error === "Producto no encontrado" ? 404 : 500 }
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        productId: result.productId,
+        storage: result.storage,
+        firestore: { deleted: true },
+        message:
+          "Producto eliminado de Firestore y archivos de medios borrados de Storage.",
+      });
     }
 
-    const data = snap.data() as any;
-    const images: Array<{ publicId?: string; url?: string }> = Array.isArray(
-      data?.images
-    )
-      ? data.images
-      : [];
-    const paths = toStoragePaths(
-      images.flatMap((i) => [i?.publicId, i?.url])
+    const results = await Promise.all(
+      uniqueIds.map((id) => deleteProductWithAssets(id))
     );
-    const storage = await removeStoragePaths(paths);
-
-    await productRef.delete();
+    const deleted = results.filter((r) => r.ok);
+    const failed = results.filter((r) => !r.ok);
 
     return NextResponse.json({
-      success: true,
-      productId,
-      storage: {
-        total: paths.length,
-        deleted: storage.removed,
-        failed: storage.failed,
-      },
-      firestore: { deleted: true },
+      success: failed.length === 0,
+      processed: deleted.length,
+      failed: failed.length,
+      results,
+      message: `${deleted.length} producto(s) eliminado(s) con medios en Storage.`,
     });
   } catch (error) {
     return NextResponse.json(
@@ -67,4 +66,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

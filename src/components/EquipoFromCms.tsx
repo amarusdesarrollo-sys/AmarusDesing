@@ -10,7 +10,7 @@ interface EquipoFromCmsProps {
 
 export default function EquipoFromCms({ members, cierre }: EquipoFromCmsProps) {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="bg-white">
       <section className="bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-4 md:py-6">
           <AnimatedSection delay={0.2}>
@@ -79,8 +79,8 @@ export default function EquipoFromCms({ members, cierre }: EquipoFromCmsProps) {
         </div>
       </section>
 
-      <section className="bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2] px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center py-10 md:py-16">
+      <section className="bg-gradient-to-br from-[#F5EFFF] to-[#E5D9F2] px-4 sm:px-6 lg:px-8 pb-0">
+        <div className="max-w-4xl mx-auto text-center pt-10 md:pt-16 pb-10 md:pb-12">
           <AnimatedSection delay={0.3}>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-8">
               {cierre.title}

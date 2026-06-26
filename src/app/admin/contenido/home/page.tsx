@@ -15,13 +15,16 @@ export default function AdminHomePage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingProyectoImage, setUploadingProyectoImage] = useState(false);
   const [originalHistoriaImagePublicId, setOriginalHistoriaImagePublicId] = useState<string | undefined>(undefined);
+  const [originalProyectoImagePublicId, setOriginalProyectoImagePublicId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     getHomeContent()
       .then((data) => {
         setContent(data);
         setOriginalHistoriaImagePublicId(data.historia.imagePublicId);
+        setOriginalProyectoImagePublicId(data.proyectoFamiliar.imagePublicId);
       })
       .catch((err) => {
         console.error("Error loading home:", err);
@@ -29,6 +32,62 @@ export default function AdminHomePage() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  const handleProyectoImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!isSupportedImageFile(file)) return;
+
+    setUploadingProyectoImage(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "content");
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        headers: await getAuthHeaders(),
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.message || "Error al subir imagen");
+
+      setContent((c) => {
+        if (!c) return c;
+        return {
+          ...c,
+          proyectoFamiliar: {
+            ...c.proyectoFamiliar,
+            imagePublicId: data.publicId,
+            imageUrl: data.url ?? "",
+          },
+        };
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error al subir la imagen"
+      );
+    } finally {
+      setUploadingProyectoImage(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  const handleProyectoRemoveImage = () => {
+    setContent((c) => {
+      if (!c) return c;
+      return {
+        ...c,
+        proyectoFamiliar: {
+          ...c.proyectoFamiliar,
+          imagePublicId: undefined,
+          imageUrl: undefined,
+        },
+      };
+    });
+  };
 
   const handleHistoriaImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -93,20 +152,33 @@ export default function AdminHomePage() {
     setSaving(true);
     setError(null);
     try {
-      // Si se reemplazó o quitó la imagen, limpiamos el asset anterior en Cloudinary
       const nextHistoriaPublicId = content.historia.imagePublicId;
-      const original = originalHistoriaImagePublicId;
-      if (original && original !== nextHistoriaPublicId) {
+      const originalHist = originalHistoriaImagePublicId;
+      if (originalHist && originalHist !== nextHistoriaPublicId) {
         await fetch("/api/admin/delete-storage-assets", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             ...(await getAuthHeaders()),
           },
-          body: JSON.stringify({ publicIds: [original] }),
+          body: JSON.stringify({ publicIds: [originalHist] }),
+        }).catch(() => null);
+      }
+      const nextProyectoPublicId = content.proyectoFamiliar.imagePublicId;
+      const originalPf = originalProyectoImagePublicId;
+      if (originalPf && originalPf !== nextProyectoPublicId) {
+        await fetch("/api/admin/delete-storage-assets", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await getAuthHeaders()),
+          },
+          body: JSON.stringify({ publicIds: [originalPf] }),
         }).catch(() => null);
       }
       await updateHomeContent(content);
+      setOriginalHistoriaImagePublicId(nextHistoriaPublicId);
+      setOriginalProyectoImagePublicId(nextProyectoPublicId);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch {
@@ -201,6 +273,52 @@ export default function AdminHomePage() {
                 rows={6}
                 className="w-full px-4 py-2 border rounded-lg"
               />
+            </div>
+            <div className="space-y-2 pt-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Imagen (proyecto familiar)
+              </label>
+              <p className="text-xs text-gray-600">
+                Se muestra a la izquierda de la sección «Conoce nuestro proyecto familiar» en la home.
+              </p>
+              <div className="flex items-center gap-4 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = "image/*";
+                    input.onchange = handleProyectoImageUpload as any;
+                    input.click();
+                  }}
+                  disabled={uploadingProyectoImage}
+                  className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-60"
+                >
+                  {uploadingProyectoImage
+                    ? "Subiendo..."
+                    : content?.proyectoFamiliar?.imageUrl
+                      ? "Cambiar imagen"
+                      : "Seleccionar imagen"}
+                </button>
+                {content?.proyectoFamiliar?.imageUrl && (
+                  <button
+                    type="button"
+                    onClick={handleProyectoRemoveImage}
+                    className="px-3 py-2 text-sm rounded-lg border border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    Quitar imagen
+                  </button>
+                )}
+              </div>
+              {content?.proyectoFamiliar?.imageUrl && (
+                <div className="mt-2 w-32 h-40 rounded overflow-hidden border border-gray-200 bg-gray-100">
+                  <img
+                    src={content.proyectoFamiliar.imageUrl}
+                    alt="Preview proyecto familiar"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

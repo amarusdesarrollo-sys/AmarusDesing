@@ -41,8 +41,8 @@ export default function ConditionalSiteChrome({
       <main
         className={
           compactMainBottom
-            ? "flex-grow w-full min-w-0 pb-0"
-            : "flex-grow w-full min-w-0 pb-12 md:pb-16 lg:pb-20"
+            ? "w-full min-w-0"
+            : "w-full min-w-0 pb-12 md:pb-16 lg:pb-20"
         }
       >
         {children}

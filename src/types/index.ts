@@ -279,6 +279,8 @@ export interface PoliticasContent {
 export interface HomeProyectoFamiliar {
   title: string;
   paragraphs: string[];
+  imagePublicId?: string;
+  imageUrl?: string;
 }
 
 export interface HomeHistoria {
