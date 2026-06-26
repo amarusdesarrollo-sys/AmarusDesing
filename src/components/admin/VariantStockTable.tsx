@@ -37,7 +37,7 @@ export default function VariantStockTable({
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm border-collapse">
           <thead>
-            <tr className="border-b border-gray-200 text-left text-gray-600">
+            <tr className="border-b border-gray-200 text-left text-gray-700">
               <th className="py-2 pr-4 font-medium">Combinación</th>
               <th className="py-2 pr-2 font-medium w-28">Unidades</th>
             </tr>

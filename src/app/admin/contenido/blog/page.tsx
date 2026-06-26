@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Plus, Edit, Trash2, FileText } from "lucide-react";
 import { getAllBlogPosts } from "@/lib/firebase/blog";
-import { getCloudinaryBaseUrl } from "@/lib/cloudinary";
+import { getAdminThumbnailUrl } from "@/lib/cloudinary";
 import type { BlogPost } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
 
@@ -50,7 +50,7 @@ export default function AdminBlogPage() {
     <div className="admin-shell">
       <Link
         href="/admin/contenido"
-        className="inline-flex items-center gap-2 text-gray-600 hover:text-[#6B5BB6] mb-6"
+        className="inline-flex items-center gap-2 text-gray-700 hover:text-[#6B5BB6] mb-6"
       >
         <ArrowLeft className="h-5 w-5" />
         Volver a Contenido
@@ -101,9 +101,11 @@ export default function AdminBlogPage() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {posts.map((post) => {
-                const imgUrl =
-                  post.imageUrl ||
-                  (post.imagePublicId ? getCloudinaryBaseUrl(post.imagePublicId) : null);
+                const imgUrl = post.imageUrl
+                  ? getAdminThumbnailUrl(post.imageUrl)
+                  : post.imagePublicId
+                    ? getAdminThumbnailUrl(post.imagePublicId)
+                    : null;
                 return (
                   <tr key={post.id}>
                     <td className="px-4 py-3">
@@ -115,6 +117,7 @@ export default function AdminBlogPage() {
                             width={56}
                             height={56}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                             unoptimized
                           />
                         ) : (
@@ -134,25 +137,25 @@ export default function AdminBlogPage() {
                         {post.published ? "Publicado" : "Borrador"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-700">
                       {new Date(post.updatedAt).toLocaleDateString("es-ES")}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <Link href={`/admin/contenido/blog/${post.id}/editar`}>
-                          <button
-                            className="p-2 text-[#6B5BB6] hover:bg-[#6B5BB6]/10 rounded-lg"
-                            title="Editar"
-                          >
-                            <Edit className="h-5 w-5" />
-                          </button>
+                        <Link
+                          href={`/admin/contenido/blog/${post.id}/editar`}
+                          aria-label={`Editar entrada: ${post.title}`}
+                          className="p-2 text-[#6B5BB6] hover:bg-[#6B5BB6]/10 rounded-lg inline-flex"
+                        >
+                          <Edit className="h-5 w-5" aria-hidden />
                         </Link>
                         <button
+                          type="button"
                           onClick={() => handleDelete(post)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                          title="Eliminar"
+                          aria-label={`Eliminar entrada: ${post.title}`}
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Trash2 className="h-5 w-5" aria-hidden />
                         </button>
                       </div>
                     </td>

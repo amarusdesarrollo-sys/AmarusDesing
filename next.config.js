@@ -15,6 +15,8 @@ const nextConfig = {
     ],
     domains: ["res.cloudinary.com"],
     qualities: [75, 80, 85, 90, 95],
+    /** Cachea imágenes optimizadas en el CDN de Vercel (menos egress en Supabase). */
+    minimumCacheTTL: 2678400,
   },
   async redirects() {
     return [

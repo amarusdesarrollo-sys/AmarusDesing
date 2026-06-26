@@ -79,6 +79,7 @@ export default function EditarProductoPage() {
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [originalPublicIds, setOriginalPublicIds] = useState<string[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [purchaseOptionRows, setPurchaseOptionRows] = useState<
     PurchaseOptionRow[]
@@ -260,8 +261,11 @@ export default function EditarProductoPage() {
     }
     setUploadingImage(true);
     setError(null);
+    setUploadStatus(null);
     try {
-      const data = await uploadAdminMedia(file, "products");
+      const data = await uploadAdminMedia(file, "products", (p) => {
+        setUploadStatus(p.message);
+      });
       const hasAnyImage = images.some((media) => media.mediaType === "image");
       setImages((prev) => [
         ...prev,
@@ -286,6 +290,7 @@ export default function EditarProductoPage() {
       }
     } finally {
       setUploadingImage(false);
+      setUploadStatus(null);
     }
   };
 
@@ -717,7 +722,9 @@ export default function EditarProductoPage() {
                   disabled={uploadingImage}
                 />
                 {uploadingImage ? (
-                  <span className="text-sm text-gray-500">Subiendo...</span>
+                  <span className="text-sm text-gray-500">
+                    {uploadStatus || "Subiendo…"}
+                  </span>
                 ) : (
                   <>
                     <ImageIcon className="h-8 w-8 text-gray-400 mb-1" />

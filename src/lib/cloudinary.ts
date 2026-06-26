@@ -14,9 +14,9 @@ import {
 
 export { isCloudinaryUrl, isSupabaseStorageUrl };
 
-/** URLs que Next.js debe cargar directo (sin optimizador). */
+/** Solo Cloudinary legacy: ya incluye transformaciones en la URL. Supabase debe pasar por el optimizador de Next.js para reducir egress. */
 export function isDirectMediaUrl(url: string): boolean {
-  return isCloudinaryUrl(url) || isSupabaseStorageUrl(url);
+  return isCloudinaryUrl(url);
 }
 
 const STORAGE_PREFIXES = [
@@ -156,6 +156,11 @@ export function getCloudinaryBaseUrl(publicId: string): string {
     if (supabaseUrl) return supabaseUrl;
   }
   return buildLegacyCloudinaryUrl(raw) || raw;
+}
+
+/** Miniatura para listas del panel admin. Usa el archivo ya comprimido (sin transformaciones de Supabase). */
+export function getAdminThumbnailUrl(pathOrUrl: string): string {
+  return resolveMediaUrl(pathOrUrl);
 }
 
 export function getProductImageUrl(

@@ -228,7 +228,7 @@ export default function AdminUsuariosPage() {
     <div className="admin-shell">
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">Usuarios</h1>
-        <p className="text-gray-600">
+        <p className="text-gray-700">
           Clientes registrados y datos de pedidos. Los usuarios bloqueados no
           pueden acceder a Mi cuenta.
         </p>
@@ -244,6 +244,7 @@ export default function AdminUsuariosPage() {
         <input
           type="text"
           placeholder="Buscar por email o nombre..."
+          aria-label="Buscar usuarios por email o nombre"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
@@ -307,7 +308,7 @@ export default function AdminUsuariosPage() {
                         </span>
                       )}
                       <div className="font-medium text-gray-900">{user.name}</div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                      <div className="text-sm text-gray-700">{user.email}</div>
                       {user.uid && (
                         <div className="text-xs text-gray-400 font-mono mt-0.5">
                           {user.uid.slice(0, 8)}...
@@ -316,7 +317,7 @@ export default function AdminUsuariosPage() {
                     </td>
                     <td className="px-6 py-4">
                       {user.phone && (
-                        <div className="text-sm text-gray-600 flex items-center gap-1">
+                        <div className="text-sm text-gray-700 flex items-center gap-1">
                           <Phone className="h-4 w-4" />
                           {user.phone}
                         </div>
@@ -339,33 +340,35 @@ export default function AdminUsuariosPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-6 py-4 text-gray-700">
                       {user.orderCount} pedido{user.orderCount !== 1 ? "s" : ""}
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-900">
                       {formatPrice(user.totalSpent)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-700">
                       {formatDate(user.lastOrderDate)}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
+                          type="button"
                           onClick={() => openDetail(user)}
                           className="text-[#6B5BB6] hover:text-[#5B4BA5] p-2 hover:bg-[#6B5BB6]/10 rounded-lg transition-colors inline-flex items-center gap-1"
-                          title="Ver datos"
+                          aria-label={`Ver datos de ${user.name || user.email}`}
                         >
-                          <Eye className="h-5 w-5" />
+                          <Eye className="h-5 w-5" aria-hidden />
                           Ver datos
                         </button>
                         {user.uid && (
                           getUserKind(user) === "registered" ? (
                             user.blocked ? (
                               <button
+                                type="button"
                                 onClick={() => handleBlock(user.uid!, false)}
                                 disabled={blockingUid === user.uid}
                                 className="text-green-600 hover:text-green-700 p-2 hover:bg-green-50 rounded-lg transition-colors"
-                                title="Desbloquear"
+                                aria-label={`Desbloquear a ${user.name || user.email}`}
                               >
                                 {blockingUid === user.uid ? (
                                   <span className="animate-spin">⏳</span>
@@ -375,10 +378,11 @@ export default function AdminUsuariosPage() {
                               </button>
                             ) : (
                               <button
+                                type="button"
                                 onClick={() => handleBlock(user.uid!, true)}
                                 disabled={blockingUid === user.uid}
                                 className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Bloquear"
+                                aria-label={`Bloquear a ${user.name || user.email}`}
                               >
                                 {blockingUid === user.uid ? (
                                   <span className="animate-spin">⏳</span>
@@ -389,9 +393,10 @@ export default function AdminUsuariosPage() {
                             )
                           ) : (
                             <button
+                              type="button"
                               disabled
                               className="text-gray-300 p-2 rounded-lg cursor-not-allowed"
-                              title="No aplica: no es una cuenta activa"
+                              aria-label="Bloqueo no disponible: no es una cuenta activa"
                             >
                               <Ban className="h-5 w-5" />
                             </button>
@@ -399,13 +404,14 @@ export default function AdminUsuariosPage() {
                         )}
                         {user.email && (
                           <button
+                            type="button"
                             onClick={() => handleDeleteUser(user)}
                             disabled={deletingKey === (user.uid || user.email.toLowerCase())}
                             className="text-red-700 hover:text-red-800 p-2 hover:bg-red-100 rounded-lg transition-colors"
-                            title={
+                            aria-label={
                               getUserKind(user) === "guest"
-                                ? "Eliminar invitado (borra su historial)"
-                                : "Eliminar usuario"
+                                ? `Eliminar invitado ${user.email}`
+                                : `Eliminar usuario ${user.name || user.email}`
                             }
                           >
                             {deletingKey === (user.uid || user.email.toLowerCase()) ? (
@@ -419,9 +425,9 @@ export default function AdminUsuariosPage() {
                           <Link
                             href={`/admin/pedidos?search=${encodeURIComponent(user.email)}`}
                             className="text-[#6B5BB6] hover:text-[#5B4BA5] p-2 hover:bg-[#6B5BB6]/10 rounded-lg transition-colors"
-                            title="Ver pedidos"
+                            aria-label={`Ver pedidos de ${user.email}`}
                           >
-                            <ChevronDown className="h-5 w-5 rotate-[-90deg]" />
+                            <ChevronDown className="h-5 w-5 rotate-[-90deg]" aria-hidden />
                           </Link>
                         )}
                       </div>
@@ -455,8 +461,10 @@ export default function AdminUsuariosPage() {
                 Datos del usuario
               </h2>
               <button
+                type="button"
                 onClick={() => setDetailUser(null)}
                 className="p-2 hover:bg-gray-100 rounded-lg"
+                aria-label="Cerrar detalle de usuario"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -464,7 +472,7 @@ export default function AdminUsuariosPage() {
             <div className="p-6 space-y-6">
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">Perfil</h3>
-                <div className="space-y-1 text-gray-600">
+                <div className="space-y-1 text-gray-700">
                   <p>
                     <strong>Nombre:</strong> {detailUser.name}
                   </p>

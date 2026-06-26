@@ -196,7 +196,7 @@ export default function AdminCategoriasPage() {
             <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">
               Gestión de Categorías
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-700">
               Crea y gestiona las categorías de productos
             </p>
           </div>
@@ -278,7 +278,7 @@ export default function AdminCategoriasPage() {
                               {category.name}
                             </div>
                             {category.description && (
-                              <div className="text-xs text-gray-500 truncate max-w-[220px]">
+                              <div className="text-xs text-gray-700 truncate max-w-[220px]">
                                 {category.description}
                               </div>
                             )}
@@ -286,7 +286,7 @@ export default function AdminCategoriasPage() {
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <code className="text-xs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
+                        <code className="text-xs text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded">
                           {category.slug}
                         </code>
                       </td>
@@ -315,37 +315,42 @@ export default function AdminCategoriasPage() {
                       </td>
                       <td className="px-3 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <Link href={`/admin/categorias/${category.id}/editar`}>
-                            <button
-                              className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors"
-                              title="Editar"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
+                          <Link
+                            href={`/admin/categorias/${category.id}/editar`}
+                            aria-label={`Editar categoría ${category.name}`}
+                            className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors inline-flex"
+                          >
+                            <Edit className="h-4 w-4" aria-hidden />
                           </Link>
                           <button
+                            type="button"
                             onClick={() => handleToggleActive(category)}
                             className={`p-1.5 rounded transition-colors ${
                               category.active
                                 ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
                                 : "bg-green-100 text-green-800 hover:bg-green-200"
                             }`}
-                            title={category.active ? "Desactivar" : "Activar"}
+                            aria-label={
+                              category.active
+                                ? `Desactivar categoría ${category.name}`
+                                : `Activar categoría ${category.name}`
+                            }
                           >
                             {category.active ? (
-                              <EyeOff className="h-4 w-4" />
+                              <EyeOff className="h-4 w-4" aria-hidden />
                             ) : (
-                              <Eye className="h-4 w-4" />
+                              <Eye className="h-4 w-4" aria-hidden />
                             )}
                           </button>
                           <button
+                            type="button"
                             onClick={() =>
                               handleDelete(category.id, category.name)
                             }
                             className="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 transition-colors"
-                            title="Eliminar"
+                            aria-label={`Eliminar categoría ${category.name}`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" aria-hidden />
                           </button>
                         </div>
                       </td>
@@ -357,7 +362,7 @@ export default function AdminCategoriasPage() {
                       >
                         <td className="px-3 py-2.5 pl-6">
                           <div className="flex items-start gap-2 border-l-2 border-[#6B5BB6]/30 pl-3">
-                            <span className="mt-0.5 shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
+                            <span className="mt-0.5 shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-700">
                               Sub
                             </span>
                             <div>
@@ -371,7 +376,7 @@ export default function AdminCategoriasPage() {
                           </div>
                         </td>
                         <td className="px-3 py-2.5">
-                          <code className="text-xs text-gray-600 bg-gray-50 px-1.5 py-0.5 rounded">
+                          <code className="text-xs text-gray-700 bg-gray-50 px-1.5 py-0.5 rounded">
                             {sub.slug}
                           </code>
                         </td>
@@ -394,35 +399,40 @@ export default function AdminCategoriasPage() {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <div className="flex justify-end gap-1">
-                            <Link href={`/admin/categorias/${sub.id}/editar`}>
-                              <button
-                                className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors"
-                                title="Editar"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
+                            <Link
+                              href={`/admin/categorias/${sub.id}/editar`}
+                              aria-label={`Editar subcategoría ${sub.name}`}
+                              className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors inline-flex"
+                            >
+                              <Edit className="h-4 w-4" aria-hidden />
                             </Link>
                             <button
+                              type="button"
                               onClick={() => handleToggleActive(sub)}
                               className={`p-1.5 rounded transition-colors ${
                                 sub.active
                                   ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
                                   : "bg-green-100 text-green-800 hover:bg-green-200"
                               }`}
-                              title={sub.active ? "Desactivar" : "Activar"}
+                              aria-label={
+                                sub.active
+                                  ? `Desactivar subcategoría ${sub.name}`
+                                  : `Activar subcategoría ${sub.name}`
+                              }
                             >
                               {sub.active ? (
-                                <EyeOff className="h-4 w-4" />
+                                <EyeOff className="h-4 w-4" aria-hidden />
                               ) : (
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-4 w-4" aria-hidden />
                               )}
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDelete(sub.id, sub.name)}
                               className="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 transition-colors"
-                              title="Eliminar"
+                              aria-label={`Eliminar subcategoría ${sub.name}`}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" aria-hidden />
                             </button>
                           </div>
                         </td>
@@ -454,7 +464,7 @@ export default function AdminCategoriasPage() {
                           </div>
                         </td>
                         <td className="px-3 py-2.5">
-                          <code className="text-xs text-gray-600 bg-white px-1.5 py-0.5 rounded">
+                          <code className="text-xs text-gray-700 bg-white px-1.5 py-0.5 rounded">
                             {sub.slug}
                           </code>
                         </td>
@@ -477,35 +487,40 @@ export default function AdminCategoriasPage() {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <div className="flex justify-end gap-1">
-                            <Link href={`/admin/categorias/${sub.id}/editar`}>
-                              <button
-                                className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors"
-                                title="Editar"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
+                            <Link
+                              href={`/admin/categorias/${sub.id}/editar`}
+                              aria-label={`Editar subcategoría ${sub.name}`}
+                              className="bg-[#6B5BB6] text-white p-1.5 rounded hover:bg-[#5B4BA5] transition-colors inline-flex"
+                            >
+                              <Edit className="h-4 w-4" aria-hidden />
                             </Link>
                             <button
+                              type="button"
                               onClick={() => handleToggleActive(sub)}
                               className={`p-1.5 rounded transition-colors ${
                                 sub.active
                                   ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
                                   : "bg-green-100 text-green-800 hover:bg-green-200"
                               }`}
-                              title={sub.active ? "Desactivar" : "Activar"}
+                              aria-label={
+                                sub.active
+                                  ? `Desactivar subcategoría ${sub.name}`
+                                  : `Activar subcategoría ${sub.name}`
+                              }
                             >
                               {sub.active ? (
-                                <EyeOff className="h-4 w-4" />
+                                <EyeOff className="h-4 w-4" aria-hidden />
                               ) : (
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-4 w-4" aria-hidden />
                               )}
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDelete(sub.id, sub.name)}
                               className="bg-red-100 text-red-700 p-1.5 rounded hover:bg-red-200 transition-colors"
-                              title="Eliminar"
+                              aria-label={`Eliminar subcategoría ${sub.name}`}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" aria-hidden />
                             </button>
                           </div>
                         </td>

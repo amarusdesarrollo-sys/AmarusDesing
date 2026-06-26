@@ -428,7 +428,7 @@ export default function AdminDashboard() {
                         {product.name}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-6 py-4 text-gray-700">
                       {quantity} unidad{quantity > 1 ? "es" : ""}
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-900">

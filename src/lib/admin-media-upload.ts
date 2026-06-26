@@ -1,5 +1,8 @@
+"use client";
+
 import { getAuthHeaders } from "@/lib/auth-headers";
 import { getSupabaseBrowser } from "@/lib/supabase/browser";
+import { compressVideoForWeb } from "@/lib/storage/compress-video-client";
 
 export type AdminUploadResult = {
   success: boolean;
@@ -9,17 +12,25 @@ export type AdminUploadResult = {
   height?: number;
   resourceType: "image" | "video";
   message?: string;
+  optimized?: boolean;
+};
+
+export type AdminUploadProgress = {
+  phase: "compressing" | "uploading";
+  progress?: number;
+  message: string;
 };
 
 const IMAGE_SERVER_MAX = 5 * 1024 * 1024;
 const VIDEO_SIGNED_MAX = 30 * 1024 * 1024;
 
 /**
- * Sube imagen o vídeo al admin: imágenes vía API (servidor); vídeos vía URL firmada (evita límite Vercel).
+ * Sube imagen o vídeo al admin: imágenes vía API (servidor); vídeos comprimidos en el navegador y luego subida firmada.
  */
 export async function uploadAdminMedia(
   file: File,
-  folder: string
+  folder: string,
+  onProgress?: (p: AdminUploadProgress) => void
 ): Promise<AdminUploadResult> {
   const isVideo =
     file.type.startsWith("video/") ||
@@ -29,6 +40,39 @@ export async function uploadAdminMedia(
     if (file.size > VIDEO_SIGNED_MAX) {
       throw new Error("El video no puede ser mayor a 30MB");
     }
+
+    let uploadFile = file;
+    let optimized = false;
+
+    try {
+      onProgress?.({
+        phase: "compressing",
+        message: "Comprimiendo vídeo para la web…",
+      });
+      uploadFile = await compressVideoForWeb(file, (p) => {
+        onProgress?.({
+          phase: "compressing",
+          progress: p.progress,
+          message: p.message,
+        });
+      });
+      optimized = uploadFile !== file;
+    } catch (err) {
+      console.warn("Compresión de vídeo omitida:", err);
+      uploadFile = file;
+    }
+
+    if (uploadFile.size > VIDEO_SIGNED_MAX) {
+      throw new Error(
+        "El vídeo comprimido sigue siendo mayor a 30MB. Usa un clip más corto."
+      );
+    }
+
+    onProgress?.({
+      phase: "uploading",
+      message: "Subiendo vídeo…",
+    });
+
     const headers = {
       "Content-Type": "application/json",
       ...(await getAuthHeaders()),
@@ -38,10 +82,10 @@ export async function uploadAdminMedia(
       headers,
       body: JSON.stringify({
         folder,
-        fileName: file.name,
-        contentType: file.type,
+        fileName: uploadFile.name,
+        contentType: uploadFile.type || "video/mp4",
         isVideo: true,
-        fileSize: file.size,
+        fileSize: uploadFile.size,
       }),
     });
     const signText = await signRes.text();
@@ -60,8 +104,8 @@ export async function uploadAdminMedia(
       .from(
         process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET?.trim() || "images"
       )
-      .uploadToSignedUrl(signData.path, signData.token, file, {
-        contentType: file.type || undefined,
+      .uploadToSignedUrl(signData.path, signData.token, uploadFile, {
+        contentType: uploadFile.type || "video/mp4",
         upsert: false,
       });
     if (error) {
@@ -72,12 +116,17 @@ export async function uploadAdminMedia(
       publicId: signData.publicId || signData.path,
       url: signData.url || "",
       resourceType: "video",
+      optimized,
     };
   }
 
   if (file.size > IMAGE_SERVER_MAX) {
     throw new Error("La imagen no puede ser mayor a 5MB");
   }
+  onProgress?.({
+    phase: "uploading",
+    message: "Subiendo imagen…",
+  });
   const formData = new FormData();
   formData.append("file", file);
   formData.append("folder", folder);

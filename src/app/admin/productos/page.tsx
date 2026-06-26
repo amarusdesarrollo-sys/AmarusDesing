@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Plus, Edit, Trash2, Package, Search, Filter, X, CheckCircle2 } from "lucide-react";
 import { getAllProducts, deactivateProduct, activateProduct } from "@/lib/firebase/products";
 import { getAllCategories } from "@/lib/firebase/categories";
-import { getCloudinaryBaseUrl } from "@/lib/cloudinary";
+import { getAdminThumbnailUrl } from "@/lib/cloudinary";
 import type { Product, Category } from "@/types";
 import { getAuthHeaders } from "@/lib/auth-headers";
 import { totalSellableStock } from "@/lib/product-purchase-options";
@@ -147,8 +147,10 @@ export default function AdminProductosPage() {
     const primary =
       p.images?.find((img) => img.isPrimary && img.mediaType !== "video") ||
       p.images?.find((img) => img.mediaType !== "video");
-    if (!primary?.publicId) return null;
-    return getCloudinaryBaseUrl(primary.publicId);
+    if (!primary) return null;
+    const source = primary.url || primary.publicId;
+    if (!source) return null;
+    return getAdminThumbnailUrl(source);
   };
 
   if (loading) {
@@ -187,7 +189,7 @@ export default function AdminProductosPage() {
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">Productos</h1>
-          <p className="text-gray-600">Gestiona el catálogo de la tienda</p>
+          <p className="text-gray-700">Gestiona el catálogo de la tienda</p>
         </div>
         <Link href="/admin/productos/nuevo" className="w-full sm:w-auto shrink-0">
           <button className="bg-[#6B5BB6] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#5B4BA5] transition-colors flex w-full items-center justify-center gap-2 sm:w-auto">
@@ -215,6 +217,7 @@ export default function AdminProductosPage() {
             <input
               type="text"
               placeholder="Buscar por nombre, descripción..."
+              aria-label="Buscar productos por nombre o descripción"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
@@ -223,6 +226,7 @@ export default function AdminProductosPage() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
+            aria-label="Filtrar por categoría"
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
           >
             <option value="">Todas las categorías</option>
@@ -237,6 +241,7 @@ export default function AdminProductosPage() {
           <select
             value={stockFilter}
             onChange={(e) => setStockFilter(e.target.value)}
+            aria-label="Filtrar por stock"
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6B5BB6]"
           >
             <option value="">Todo el stock</option>
@@ -246,18 +251,20 @@ export default function AdminProductosPage() {
           </select>
         </div>
         {(searchTerm || categoryFilter || stockFilter) && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+          <div className="mt-3 flex items-center gap-2 text-sm text-gray-700">
             <Filter className="h-4 w-4" />
             <span>
               Mostrando {products.length} de {allProducts.length} productos
             </span>
             <button
+              type="button"
               onClick={() => {
                 setSearchTerm("");
                 setCategoryFilter("");
                 setStockFilter("");
               }}
               className="text-[#6B5BB6] hover:underline ml-2"
+              aria-label="Limpiar todos los filtros de búsqueda"
             >
               Limpiar filtros
             </button>
@@ -315,10 +322,11 @@ export default function AdminProductosPage() {
                         {primaryImage(product) ? (
                           <Image
                             src={primaryImage(product)!}
-                            alt={product.name}
+                            alt=""
                             width={56}
                             height={56}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                             unoptimized
                           />
                         ) : (
@@ -331,18 +339,18 @@ export default function AdminProductosPage() {
                         {product.name}
                       </div>
                       {product.description && (
-                        <div className="text-sm text-gray-500 truncate max-w-xs">
+                        <div className="text-sm text-gray-700 truncate max-w-xs">
                           {product.description}
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-700">
                       {product.category}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       €{(product.price / 100).toFixed(2)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-700">
                       {totalSellableStock(product)}
                     </td>
                     <td className="px-6 py-4">
@@ -350,7 +358,7 @@ export default function AdminProductosPage() {
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           product.inStock
                             ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
+                            : "bg-gray-100 text-gray-700"
                         }`}
                       >
                         {product.inStock ? "En stock" : "Desactivado"}
@@ -358,31 +366,36 @@ export default function AdminProductosPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end items-center gap-2">
-                        <Link href={`/admin/productos/${product.id}/editar`}>
-                          <button
-                            className="p-2 text-[#6B5BB6] hover:bg-[#6B5BB6]/10 rounded-lg transition-colors"
-                            title="Editar"
-                          >
-                            <Edit className="h-5 w-5" />
-                          </button>
+                        <Link
+                          href={`/admin/productos/${product.id}/editar`}
+                          aria-label={`Editar ${product.name}`}
+                          className="p-2 text-[#6B5BB6] hover:bg-[#6B5BB6]/10 rounded-lg transition-colors inline-flex"
+                        >
+                          <Edit className="h-5 w-5" aria-hidden />
                         </Link>
                         <button
+                          type="button"
                           onClick={() => handleToggleStock(product)}
                           className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors ${
                             product.inStock
                               ? "text-amber-600 hover:bg-amber-50"
                               : "text-green-600 hover:bg-green-50"
                           }`}
-                          title={product.inStock ? "Desactivar (no se verá en la tienda)" : "Activar"}
+                          aria-label={
+                            product.inStock
+                              ? `Desactivar ${product.name}`
+                              : `Activar ${product.name}`
+                          }
                         >
                           {product.inStock ? "Desactivar" : "Activar"}
                         </button>
                         <button
+                          type="button"
                           onClick={() => setProductToDelete(product)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Eliminar permanentemente"
+                          aria-label={`Eliminar permanentemente ${product.name}`}
                         >
-                          <Trash2 className="h-5 w-5" />
+                          <Trash2 className="h-5 w-5" aria-hidden />
                         </button>
                       </div>
                     </td>

@@ -76,6 +76,7 @@ export default function NuevoProductoPage() {
   >([]);
   const [images, setImages] = useState<UploadedImage[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [purchaseOptionRows, setPurchaseOptionRows] = useState<
     PurchaseOptionRow[]
   >([]);
@@ -194,8 +195,11 @@ export default function NuevoProductoPage() {
     }
     setUploadingImage(true);
     setError(null);
+    setUploadStatus(null);
     try {
-      const data = await uploadAdminMedia(file, "products");
+      const data = await uploadAdminMedia(file, "products", (p) => {
+        setUploadStatus(p.message);
+      });
       const hasAnyImage = images.some((media) => media.mediaType === "image");
       setImages((prev) => [
         ...prev,
@@ -220,6 +224,7 @@ export default function NuevoProductoPage() {
       }
     } finally {
       setUploadingImage(false);
+      setUploadStatus(null);
     }
   };
 
@@ -619,7 +624,9 @@ export default function NuevoProductoPage() {
                   disabled={uploadingImage}
                 />
                 {uploadingImage ? (
-                  <span className="text-sm text-gray-500">Subiendo...</span>
+                  <span className="text-sm text-gray-500">
+                    {uploadStatus || "Subiendo…"}
+                  </span>
                 ) : (
                   <>
                     <ImageIcon className="h-8 w-8 text-gray-400 mb-1" />

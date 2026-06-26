@@ -24,6 +24,9 @@ import { getProductById, getProductsByCategory } from "@/lib/firebase/products";
 import { getCategoryBySlug } from "@/lib/firebase/categories";
 import ProductCard from "@/components/ProductCard";
 import AnimatedSection from "@/components/AnimatedSection";
+import LazyProductVideo, {
+  VideoThumbnailPlaceholder,
+} from "@/components/LazyProductVideo";
 import {
   getProductImageUrl,
   isCloudinaryUrl,
@@ -314,15 +317,10 @@ export default function ProductDetailPage() {
               {product.images.length > 0 ? (
                 <>
                   {selectedMediaIsVideo ? (
-                    <video
-                      src={selectedMedia?.url}
-                      className="w-full h-full object-cover"
-                      autoPlay
-                      muted
-                      loop
-                      controls={false}
-                      playsInline
-                      preload="metadata"
+                    <LazyProductVideo
+                      src={selectedMedia?.url ?? ""}
+                      className="h-full w-full object-cover"
+                      autoPlayWhenVisible
                     />
                   ) : (
                     <Image
@@ -418,13 +416,7 @@ export default function ProductDetailPage() {
                     }`}
                   >
                     {image.mediaType === "video" ? (
-                      <video
-                        src={image.url}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                        preload="metadata"
-                      />
+                      <VideoThumbnailPlaceholder className="h-full w-full" />
                     ) : (
                       <Image
                         src={getImageUrl(image, "thumbnail")}

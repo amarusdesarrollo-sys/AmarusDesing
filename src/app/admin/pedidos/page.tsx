@@ -22,7 +22,7 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   processing: "bg-purple-100 text-purple-800",
   shipped: "bg-indigo-100 text-indigo-800",
   delivered: "bg-green-100 text-green-800",
-  cancelled: "bg-gray-100 text-gray-600",
+  cancelled: "bg-gray-100 text-gray-700",
 };
 
 const ORDER_STATUSES: OrderStatus[] = [
@@ -183,7 +183,7 @@ export default function AdminPedidosPage() {
     <div className="admin-shell">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-2 sm:text-4xl">Pedidos</h1>
-        <p className="text-gray-600">Gestiona los pedidos de la tienda. Podés eliminar pedidos uno por uno desde la tabla.</p>
+        <p className="text-gray-700">Gestiona los pedidos de la tienda. Podés eliminar pedidos uno por uno desde la tabla.</p>
       </div>
 
       {error && (
@@ -208,6 +208,7 @@ export default function AdminPedidosPage() {
               setStatusFilter((v || "") as OrderStatus | "");
             }
           }}
+          aria-label="Filtrar pedidos por estado"
           className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#6B5BB6]"
         >
           <option value="">Todos</option>
@@ -275,7 +276,7 @@ export default function AdminPedidosPage() {
                       <div className="font-mono text-sm text-gray-900">
                         {order.id.slice(0, 12)}…
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-700">
                         {formatDate(order.createdAt)}
                       </div>
                     </td>
@@ -283,7 +284,7 @@ export default function AdminPedidosPage() {
                       <div className="font-medium text-gray-900">
                         {order.customerName || "—"}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-700">
                         {order.customerEmail || "—"}
                       </div>
                     </td>
@@ -315,22 +316,20 @@ export default function AdminPedidosPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="inline-flex flex-wrap items-center justify-end gap-1">
-                        <Link href={`/admin/pedidos/${order.id}`}>
-                          <button
-                            type="button"
-                            className="p-2 text-[#6B5BB6] hover:bg-[#6B5BB6]/10 rounded-lg transition-colors inline-flex items-center gap-1"
-                            title="Ver detalle"
-                          >
-                            <Eye className="h-5 w-5" />
-                            Ver
-                          </button>
+                        <Link
+                          href={`/admin/pedidos/${order.id}`}
+                          className="p-2 text-[#6B5BB6] hover:bg-[#6B5BB6]/10 rounded-lg transition-colors inline-flex items-center gap-1"
+                          aria-label={`Ver pedido de ${order.customerName || order.customerEmail || order.id.slice(0, 12)}`}
+                        >
+                          <Eye className="h-5 w-5" aria-hidden />
+                          Ver
                         </Link>
                         <button
                           type="button"
                           onClick={() => handleDeleteOrder(order)}
                           disabled={deletingId === order.id}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1"
-                          title="Eliminar pedido"
+                          aria-label={`Eliminar pedido de ${order.customerName || order.customerEmail || order.id.slice(0, 12)}`}
                         >
                           <Trash2 className="h-5 w-5" />
                           {deletingId === order.id ? "…" : "Eliminar"}
