@@ -10,7 +10,9 @@
     "optimize:images": "node scripts/convert-to-avif.js",
     "optimize:image": "node scripts/optimize-image.js",
     "migrate:storage": "node scripts/migrate-cloudinary-to-supabase.mjs",
-    "recompress:storage": "node scripts/recompress-supabase-images.mjs"
+    "recompress:storage": "node scripts/recompress-supabase-images.mjs",
+    "recompress:videos": "node scripts/recompress-supabase-videos.mjs",
+    "audit:storage": "node scripts/audit-supabase-storage.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",

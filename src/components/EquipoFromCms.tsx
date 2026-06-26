@@ -52,7 +52,8 @@ export default function EquipoFromCms({ members, cierre }: EquipoFromCmsProps) {
                             alt={m.name}
                             width={600}
                             height={600}
-                            className="w-full h-full object-cover"
+                            fill
+                            imageClassName="object-cover"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">

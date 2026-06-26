@@ -129,26 +129,24 @@ export default async function Home() {
       <section id="historia" className="relative scroll-mt-20">
         {/* Imagen con altura ajustada para verse completa */}
         <div className="relative w-full bg-gray-200">
-          <div className="relative w-full">
-            <OptimizedImage
-              src={histHeroImageSrc}
-              alt="¿Cómo llegamos aquí? - Historia de AmarusDesign"
-              width={1920}
-              height={1080}
-              className="w-full h-auto object-contain"
-              priority={false}
-              sizes="100vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
+          <OptimizedImage
+            src={histHeroImageSrc}
+            alt="¿Cómo llegamos aquí? - Historia de AmarusDesign"
+            width={1920}
+            height={1080}
+            imageClassName="object-contain"
+            priority={false}
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none"></div>
 
-            {/* Título posicionado a la derecha y abajo */}
-            <div className="absolute inset-0 flex items-end justify-end pb-8 pr-4 md:pb-16 md:pr-12 z-10">
-              <AnimatedSection delay={0.3} direction="right">
-                <h2 className="text-2xl md:text-5xl lg:text-6xl font-light leading-tight text-white drop-shadow-lg">
-                  <span className="text-white">AMARUSDESIGN</span>
-                </h2>
-              </AnimatedSection>
-            </div>
+          {/* Título posicionado a la derecha y abajo */}
+          <div className="absolute inset-0 flex items-end justify-end pb-8 pr-4 md:pb-16 md:pr-12 z-10">
+            <AnimatedSection delay={0.3} direction="right">
+              <h2 className="text-2xl md:text-5xl lg:text-6xl font-light leading-tight text-white drop-shadow-lg">
+                <span className="text-white">AMARUSDESIGN</span>
+              </h2>
+            </AnimatedSection>
           </div>
         </div>
 

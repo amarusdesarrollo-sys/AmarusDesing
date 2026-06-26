@@ -15,11 +15,14 @@ const Navbar = () => {
   const [isMobileShopOpen, setIsMobileShopOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUser);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setAuthReady(true);
+    });
     return () => unsubscribe();
   }, []);
 
@@ -94,8 +97,6 @@ const Navbar = () => {
             updatedAt: new Date(),
           },
         ]);
-      } finally {
-        setCategoriesLoading(false);
       }
     };
 
@@ -262,8 +263,8 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Right side icons */}
-          <div className="hidden md:flex items-center space-x-2 shrink-0">
+          {/* Right side icons — ancho fijo para evitar saltos al resolver Firebase Auth */}
+          <div className="hidden md:flex items-center justify-end space-x-2 shrink-0 min-w-[17rem] min-h-10">
             <Link
               href="/contacto"
               className="flex items-center justify-center p-1.5 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
@@ -280,7 +281,9 @@ const Navbar = () => {
             >
               <Instagram className="h-5 w-5" />
             </Link>
-            {user ? (
+            {!authReady ? (
+              <div className="h-9 w-[9.5rem] shrink-0" aria-hidden />
+            ) : user ? (
               <Link
                 href="/mi-cuenta"
                 className="flex items-center space-x-1 text-white hover:text-[#F5EFFF] transition-colors duration-200 px-2 py-1.5 rounded-lg hover:bg-white/10 whitespace-nowrap"

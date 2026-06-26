@@ -15,6 +15,10 @@ interface OptimizedImageProps {
   alt: string;
   width?: number;
   height?: number;
+  /** Clases del contenedor (reserva de espacio / layout). */
+  wrapperClassName?: string;
+  /** Clases de la imagen (`object-cover`, etc.). Si no se pasa, usa `className`. */
+  imageClassName?: string;
   className?: string;
   priority?: boolean;
   sizes?: string;
@@ -24,8 +28,10 @@ interface OptimizedImageProps {
   fallback?: string;
   avifSrc?: string;
   webpSrc?: string;
-  publicId?: string; // Ruta en Storage o publicId legacy Cloudinary
+  publicId?: string;
   cloudinarySize?: "small" | "medium" | "large" | "thumbnail";
+  /** Ocupa el contenedor padre (`position: absolute; inset: 0`). El padre debe ser `relative` con tamaño fijo. */
+  fill?: boolean;
 }
 
 export default function OptimizedImage({
@@ -33,6 +39,8 @@ export default function OptimizedImage({
   alt,
   width,
   height,
+  wrapperClassName = "",
+  imageClassName,
   className = "",
   priority = false,
   sizes,
@@ -44,9 +52,14 @@ export default function OptimizedImage({
   webpSrc,
   publicId,
   cloudinarySize = "medium",
+  fill = false,
 }: OptimizedImageProps) {
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const imgClasses = imageClassName ?? className;
+  const reservedAspect =
+    !fill && width && height ? `${width} / ${height}` : undefined;
 
   // Determinar la mejor imagen a usar
   const getBestImageSrc = () => {
@@ -84,21 +97,28 @@ export default function OptimizedImage({
   const resolvedSrc = getBestImageSrc();
 
   return (
-    <div className={`relative ${className}`}>
+    <div
+      className={`overflow-hidden bg-gray-200 ${
+        fill ? `absolute inset-0 ${wrapperClassName}` : `relative w-full ${wrapperClassName}`
+      }`}
+      style={reservedAspect ? { aspectRatio: reservedAspect } : undefined}
+    >
       {isLoading && (
-        <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
-        </div>
+        <div
+          className="absolute inset-0 bg-gray-200 animate-pulse"
+          aria-hidden
+        />
       )}
 
       <Image
         src={resolvedSrc}
         alt={alt}
-        width={width}
-        height={height}
+        {...(fill
+          ? { fill: true }
+          : { width: width ?? 800, height: height ?? 600 })}
         className={`transition-opacity duration-300 ${
-          isLoading ? "opacity-0" : "opacity-100"
-        }`}
+          fill ? `object-cover ${imgClasses}` : `h-full w-full ${imgClasses}`
+        } ${isLoading ? "opacity-0" : "opacity-100"}`}
         priority={priority}
         sizes={
           sizes || "(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

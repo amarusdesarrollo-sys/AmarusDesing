@@ -120,6 +120,29 @@ El script **sobrescribe el mismo archivo** (`upsert`) con la versión comprimida
 
 Requisitos: `.env.local` con `NEXT_PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` de **producción**.
 
+### Ver tamaño total del bucket
+
+Supabase no muestra un total claro en Storage. Usa:
+
+```bash
+npm run audit:storage
+```
+
+Lista total GB, desglose por carpeta, top vídeos e imágenes más pesadas.
+
+### Recomprimir vídeos (`products/videos/`)
+
+Requiere **ffmpeg** instalado en tu PC (`winget install ffmpeg` en Windows).
+
+```bash
+npm run recompress:videos -- --dry-run
+npm run recompress:videos
+```
+
+Convierte a H.264 MP4 (max 1280px, optimizado para web). Mismo path → URLs en Firestore no cambian.
+
+Las subidas nuevas de vídeo siguen yendo directo a Supabase (límite Vercel); comprimir en lote es lo más práctico hoy.
+
 ## Imágenes estáticas
 
 Los archivos en `public/images/` no pasan por Supabase (logo, placeholders, fotos por defecto del equipo en admin).

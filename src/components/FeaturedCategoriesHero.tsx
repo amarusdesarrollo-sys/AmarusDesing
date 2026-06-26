@@ -80,7 +80,10 @@ function CategoryHeroSection({
             <img
               src={heroImageUrl!}
               alt={category.name}
-              className="absolute inset-0 w-full h-full object-cover"
+              width={1600}
+              height={900}
+              decoding="async"
+              className="hero-image"
               loading={index === 0 ? "eager" : "lazy"}
               fetchPriority={index === 0 ? "high" : "auto"}
               onError={() => {
@@ -141,9 +144,12 @@ export default function FeaturedCategoriesHero({
   initialCategories?: Category[];
 }) {
   const [categories, setCategories] = useState<Category[]>(initialCategories ?? []);
-  const [loading, setLoading] = useState(!initialCategories);
+  const [loading, setLoading] = useState(!initialCategories?.length);
 
   useEffect(() => {
+    if (initialCategories?.length) {
+      return;
+    }
     const load = async () => {
       try {
         const featured = await getFeaturedCategories();
@@ -154,9 +160,7 @@ export default function FeaturedCategoriesHero({
         setLoading(false);
       }
     };
-    if (!initialCategories) {
-      load();
-    }
+    load();
   }, [initialCategories]);
 
   if (loading) {
