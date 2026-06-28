@@ -17,6 +17,7 @@ import {
   FileText,
   TicketPercent,
   X,
+  Mail,
 } from "lucide-react";
 
 const menuItems = [
@@ -25,6 +26,7 @@ const menuItems = [
   { name: "Categorías", href: "/admin/categorias", icon: FolderTree },
   { name: "Pedidos", href: "/admin/pedidos", icon: ShoppingCart },
   { name: "Cupones", href: "/admin/cupones", icon: TicketPercent },
+  { name: "Suscriptores", href: "/admin/suscriptores", icon: Mail },
   { name: "Contenido", href: "/admin/contenido", icon: FileText },
   { name: "Configuración", href: "/admin/configuracion", icon: Cog },
   { name: "Usuarios", href: "/admin/usuarios", icon: Users },

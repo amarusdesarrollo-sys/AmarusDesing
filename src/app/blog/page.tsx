@@ -64,7 +64,7 @@ export default async function BlogPage() {
                   <AnimatedSection key={post.id} delay={0.1 * i}>
                     <Link
                       href={`/blog/${post.slug}`}
-                      className="group block bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-[#6B5BB6]/30"
+                      className="group block touch-manipulation overflow-hidden rounded-xl border border-gray-100 bg-white shadow-md transition-all duration-300 [@media(hover:hover)_and_(pointer:fine)]:hover:border-[#6B5BB6]/30 [@media(hover:hover)_and_(pointer:fine)]:hover:shadow-xl"
                     >
                       <div className="aspect-[4/3] bg-[#E5D9F2] relative overflow-hidden">
                         {imageUrl ? (
@@ -72,7 +72,7 @@ export default async function BlogPage() {
                             src={imageUrl}
                             alt={post.title}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="object-cover transition-transform duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-105"
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             unoptimized={isDirectMediaUrl(imageUrl)}
                           />
@@ -91,7 +91,7 @@ export default async function BlogPage() {
                             year: "numeric",
                           })}
                         </p>
-                        <h2 className="text-xl font-bold text-gray-800 group-hover:text-[#6B5BB6] transition-colors line-clamp-2">
+                        <h2 className="line-clamp-2 text-xl font-bold text-gray-800 transition-colors [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-[#6B5BB6]">
                           {post.title}
                         </h2>
                         <p className="mt-2 text-gray-600 text-sm line-clamp-3">

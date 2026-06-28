@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Play } from "lucide-react";
+import { Loader2, Play } from "lucide-react";
 
 type LazyProductVideoProps = {
   src: string;
@@ -10,9 +10,23 @@ type LazyProductVideoProps = {
   autoPlayWhenVisible?: boolean;
 };
 
+const prefetchedVideos = new Set<string>();
+
+/** Precarga en caché del navegador al pasar el ratón por una miniatura de vídeo. */
+export function prefetchProductVideo(url: string) {
+  if (!url || prefetchedVideos.has(url) || typeof document === "undefined") return;
+  prefetchedVideos.add(url);
+  const video = document.createElement("video");
+  video.preload = "auto";
+  video.muted = true;
+  video.playsInline = true;
+  video.src = url;
+  video.load();
+}
+
 /**
- * Evita descargar vídeos de Supabase hasta que el usuario los necesita.
- * Reduce Cached Egress en el plan gratuito de Supabase.
+ * En galería (autoPlayWhenVisible): carga al seleccionar el vídeo, sin segundo clic.
+ * Modo manual: botón play hasta que el usuario lo pida (ahorro de egress).
  */
 export default function LazyProductVideo({
   src,
@@ -20,32 +34,69 @@ export default function LazyProductVideo({
   autoPlayWhenVisible = false,
 }: LazyProductVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [shouldLoad, setShouldLoad] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(autoPlayWhenVisible);
+  const [isBuffering, setIsBuffering] = useState(autoPlayWhenVisible);
 
   useEffect(() => {
-    if (!autoPlayWhenVisible || !shouldLoad) return;
+    if (autoPlayWhenVisible) {
+      setShouldLoad(true);
+      setIsBuffering(true);
+    }
+  }, [src, autoPlayWhenVisible]);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
     const el = videoRef.current;
     if (!el) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.play().catch(() => {});
-        } else {
-          el.pause();
-        }
-      },
-      { threshold: 0.2 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [autoPlayWhenVisible, shouldLoad]);
+    const handlePlaying = () => setIsBuffering(false);
+    const handleWaiting = () => setIsBuffering(true);
+    const handleCanPlay = () => {
+      setIsBuffering(false);
+      if (autoPlayWhenVisible) {
+        el.play().catch(() => {});
+      }
+    };
+
+    el.addEventListener("playing", handlePlaying);
+    el.addEventListener("waiting", handleWaiting);
+    el.addEventListener("canplay", handleCanPlay);
+
+    if (autoPlayWhenVisible && el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      handleCanPlay();
+    }
+
+    let observer: IntersectionObserver | undefined;
+    if (autoPlayWhenVisible) {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            el.play().catch(() => {});
+          } else {
+            el.pause();
+          }
+        },
+        { threshold: 0.1 }
+      );
+      observer.observe(el);
+    }
+
+    return () => {
+      el.removeEventListener("playing", handlePlaying);
+      el.removeEventListener("waiting", handleWaiting);
+      el.removeEventListener("canplay", handleCanPlay);
+      observer?.disconnect();
+    };
+  }, [shouldLoad, src, autoPlayWhenVisible]);
 
   if (!shouldLoad) {
     return (
       <button
         type="button"
-        onClick={() => setShouldLoad(true)}
+        onClick={() => {
+          setShouldLoad(true);
+          setIsBuffering(true);
+        }}
         className={`relative flex h-full w-full items-center justify-center bg-gray-900 ${className}`}
         aria-label="Reproducir video del producto"
       >
@@ -57,17 +108,27 @@ export default function LazyProductVideo({
   }
 
   return (
-    <video
-      ref={videoRef}
-      src={src}
-      className={className}
-      muted
-      loop={autoPlayWhenVisible}
-      playsInline
-      controls={!autoPlayWhenVisible}
-      preload="none"
-      autoPlay={autoPlayWhenVisible}
-    />
+    <div className="relative h-full w-full">
+      <video
+        ref={videoRef}
+        src={src}
+        className={className}
+        muted
+        loop={autoPlayWhenVisible}
+        playsInline
+        controls={!autoPlayWhenVisible}
+        preload="auto"
+        autoPlay={autoPlayWhenVisible}
+      />
+      {isBuffering && autoPlayWhenVisible && (
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gray-900/40"
+          aria-hidden
+        >
+          <Loader2 className="h-10 w-10 animate-spin text-white/90" />
+        </div>
+      )}
+    </div>
   );
 }
 

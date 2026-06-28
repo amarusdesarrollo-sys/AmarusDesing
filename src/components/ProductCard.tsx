@@ -44,14 +44,11 @@ export default function ProductCard({
     return (cents / 100).toFixed(2);
   };
 
-  // Función helper para obtener URL de imagen optimizada
   const getImageUrl = (image: { url: string; publicId?: string }) => {
-    // Si tiene publicId, usar función optimizada de Cloudinary
     if (image.publicId) {
       return getProductImageUrl(image.publicId, "medium", image.url);
     }
 
-    // Si la URL ya es de Cloudinary, intentar extraer publicId
     if (isCloudinaryUrl(image.url)) {
       const publicId = extractPublicIdFromUrl(image.url);
       if (publicId) {
@@ -59,7 +56,6 @@ export default function ProductCard({
       }
     }
 
-    // Fallback a URL directa
     return image.url;
   };
 
@@ -86,128 +82,125 @@ export default function ProductCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.4 }}
-      whileHover={{ y: -5 }}
-      className="group"
+      className="group h-full"
     >
-      <Link
-        href={`/productos/${product.id}`}
-        className="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300 h-full flex flex-col"
-      >
-        {/* Imagen del producto */}
-        <div className="relative w-full aspect-[4/5] overflow-hidden bg-gray-100">
-          <Image
-            src={primaryImageSrc}
-            alt={primaryMedia?.alt || product.name}
-            fill
-            className="object-cover group-hover:scale-110 transition-transform duration-300"
-            priority={priority}
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            unoptimized={isDirectMediaUrl(primaryImageSrc)}
-          />
+      <article className="flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-md touch-manipulation">
+        <Link
+          href={`/productos/${product.id}`}
+          className="flex min-h-0 flex-1 flex-col outline-none focus-visible:ring-2 focus-visible:ring-[#6B5BB6] focus-visible:ring-inset"
+        >
+          <div className="relative aspect-[4/5] w-full overflow-hidden bg-gray-100">
+            <Image
+              src={primaryImageSrc}
+              alt={primaryMedia?.alt || product.name}
+              fill
+              className="object-cover transition-transform duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-110"
+              priority={priority}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              unoptimized={isDirectMediaUrl(primaryImageSrc)}
+            />
 
-          {/* Badges */}
-          {product.featured && (
-            <span className="absolute top-2 left-2 bg-[#6B5BB6] text-white text-xs font-semibold px-2 py-1 rounded-full">
-              Destacado
-            </span>
-          )}
-          {!hasStock && (
-            <span className="absolute top-2 right-2 bg-gray-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              Agotado
-            </span>
-          )}
-          {hasStock && totalStock > 0 && totalStock <= 5 && (
-            <span className="absolute top-2 right-2 bg-amber-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              Solo quedan {totalStock}
-            </span>
-          )}
-          {product.originalPrice && (
-            <span className="absolute bottom-2 left-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              -{Math.round((1 - product.price / product.originalPrice) * 100)}%
-            </span>
-          )}
-        </div>
-
-        {/* Información del producto */}
-        <div className="p-3 flex-1 flex flex-col">
-          <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-1 group-hover:text-[#6B5BB6] transition-colors line-clamp-2">
-            {product.name}
-          </h3>
-
-          <p className="text-xs text-gray-600 mb-2 line-clamp-2 flex-1">
-            {product.description}
-          </p>
-
-          {/* Precio */}
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl font-bold text-[#6B5BB6]">
-              €{formatPrice(product.price)}
-            </span>
+            {product.featured && (
+              <span className="absolute top-2 left-2 rounded-full bg-[#6B5BB6] px-2 py-1 text-xs font-semibold text-white">
+                Destacado
+              </span>
+            )}
+            {!hasStock && (
+              <span className="absolute top-2 right-2 rounded-full bg-gray-500 px-2 py-1 text-xs font-semibold text-white">
+                Agotado
+              </span>
+            )}
+            {hasStock && totalStock > 0 && totalStock <= 5 && (
+              <span className="absolute top-2 right-2 rounded-full bg-amber-500 px-2 py-1 text-xs font-semibold text-white">
+                Solo quedan {totalStock}
+              </span>
+            )}
             {product.originalPrice && (
-              <span className="text-base text-gray-400 line-through">
-                €{formatPrice(product.originalPrice)}
+              <span className="absolute bottom-2 left-2 rounded-full bg-red-500 px-2 py-1 text-xs font-semibold text-white">
+                -{Math.round((1 - product.price / product.originalPrice) * 100)}%
               </span>
             )}
           </div>
 
-          {/* Botones */}
-          <div className="flex gap-1.5">
-            <button
-              onClick={handleAddToCart}
-              disabled={!hasStock}
-              aria-label={
-                hasStock
-                  ? needsOptions
-                    ? `Elegir opciones para ${product.name}`
-                    : added
-                      ? `${product.name} agregado al carrito`
-                      : `Agregar ${product.name} al carrito`
-                  : `${product.name} agotado`
-              }
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 min-h-11 rounded-lg text-sm font-medium transition-colors ${
-                hasStock
-                  ? added && !needsOptions
-                    ? "bg-green-600 text-white"
-                    : "bg-[#6B5BB6] text-white hover:bg-[#5B4BA5]"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-            >
-              {added && !needsOptions ? (
-                <Check className="h-4 w-4" />
-              ) : (
-                <ShoppingCart className="h-4 w-4" />
-              )}
-              {hasStock
-                ? needsOptions
-                  ? "Elegir opciones"
-                  : added
-                    ? "Agregado"
-                    : "Agregar"
-                : "Agotado"}
-            </button>
+          <div className="flex flex-1 flex-col p-3">
+            <h3 className="mb-1 line-clamp-2 text-base font-semibold text-gray-800 transition-colors [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-[#6B5BB6] md:text-lg">
+              {product.name}
+            </h3>
 
-            <button
-              type="button"
-              className="flex items-center justify-center min-h-11 min-w-11 p-2 border-2 border-gray-300 rounded-lg hover:border-[#6B5BB6] hover:text-[#6B5BB6] transition-colors"
-              aria-label={`Agregar ${product.name} a favoritos`}
-            >
-              <Heart className="h-4 w-4" />
-            </button>
-          </div>
-          {added && (
-            <div className="mt-2 text-xs text-green-700">
-              Producto agregado ({totalItems} en carrito).{" "}
-              <Link
-                href="/carrito"
-                className="font-semibold underline underline-offset-2 hover:text-green-800"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Ver carrito
-              </Link>
+            <p className="mb-2 line-clamp-2 flex-1 text-xs text-gray-600">
+              {product.description}
+            </p>
+
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-xl font-bold text-[#6B5BB6]">
+                €{formatPrice(product.price)}
+              </span>
+              {product.originalPrice && (
+                <span className="text-base text-gray-400 line-through">
+                  €{formatPrice(product.originalPrice)}
+                </span>
+              )}
             </div>
-          )}
+          </div>
+        </Link>
+
+        <div className="flex gap-1.5 px-3 pb-3">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={!hasStock}
+            aria-label={
+              hasStock
+                ? needsOptions
+                  ? `Elegir opciones para ${product.name}`
+                  : added
+                    ? `${product.name} agregado al carrito`
+                    : `Agregar ${product.name} al carrito`
+                : `${product.name} agotado`
+            }
+            className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              hasStock
+                ? added && !needsOptions
+                  ? "bg-green-600 text-white"
+                  : "bg-[#6B5BB6] text-white active:bg-[#5B4BA5] [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[#5B4BA5]"
+                : "cursor-not-allowed bg-gray-300 text-gray-500"
+            }`}
+          >
+            {added && !needsOptions ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <ShoppingCart className="h-4 w-4" />
+            )}
+            {hasStock
+              ? needsOptions
+                ? "Elegir opciones"
+                : added
+                  ? "Agregado"
+                  : "Agregar"
+              : "Agotado"}
+          </button>
+
+          <button
+            type="button"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg border-2 border-gray-300 p-2 transition-colors active:border-[#6B5BB6] active:text-[#6B5BB6] [@media(hover:hover)_and_(pointer:fine)]:hover:border-[#6B5BB6] [@media(hover:hover)_and_(pointer:fine)]:hover:text-[#6B5BB6]"
+            aria-label={`Agregar ${product.name} a favoritos`}
+          >
+            <Heart className="h-4 w-4" />
+          </button>
         </div>
-      </Link>
+
+        {added && (
+          <div className="px-3 pb-3 text-xs text-green-700">
+            Producto agregado ({totalItems} en carrito).{" "}
+            <Link
+              href="/carrito"
+              className="font-semibold underline underline-offset-2 hover:text-green-800"
+            >
+              Ver carrito
+            </Link>
+          </div>
+        )}
+      </article>
     </motion.div>
   );
 }

@@ -44,11 +44,12 @@ export default function CarritoPage() {
               <p className="text-xl text-gray-600 mb-8">
                 ¡Agrega algunos productos increíbles a tu carrito!
               </p>
-              <Link href="/tienda-online">
-                <AnimatedButton className="bg-[#6B5BB6] text-white px-8 py-4 text-lg rounded-lg hover:bg-[#5B4BA5] transition-colors">
-                  Explorar Tienda
-                </AnimatedButton>
-              </Link>
+              <AnimatedButton
+                href="/tienda-online"
+                className="bg-[#6B5BB6] text-white px-8 py-4 text-lg rounded-lg [@media(hover:hover)_and_(pointer:fine)]:hover:bg-[#5B4BA5] transition-colors"
+              >
+                Explorar Tienda
+              </AnimatedButton>
             </div>
           </AnimatedSection>
         </div>

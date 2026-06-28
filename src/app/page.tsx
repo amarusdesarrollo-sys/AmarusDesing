@@ -7,6 +7,7 @@ import { getHomeContent } from "@/lib/firebase/content";
 import { getHistoriaContent } from "@/lib/firebase/content";
 import { getFeaturedCategories } from "@/lib/firebase/categories";
 import OptimizedImage from "@/components/OptimizedImage";
+import NewsletterForm from "@/components/NewsletterForm";
 import { getCloudinaryUrl } from "@/lib/cloudinary";
 
 export const revalidate = 300;
@@ -176,55 +177,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Formulario de suscripción */}
-      <section className="bg-[#e5d9f2] py-16 md:py-20">
-        <div className="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 w-full">
-          <div className="text-center space-y-8 md:space-y-10 w-full flex flex-col items-center">
-            <AnimatedSection delay={0.2}>
-              <h3 className="text-2xl md:text-4xl font-bold text-gray-900">
-                Formulario de suscripción
-              </h3>
-            </AnimatedSection>
-            <AnimatedSection delay={0.4}>
-              <p className="text-gray-700 max-w-2xl mx-auto text-base md:text-lg lg:text-xl">
-                Mantente al día con nuestras últimas ofertas especiales
-              </p>
-            </AnimatedSection>
-            <AnimatedSection delay={0.6}>
-              <form className="max-w-lg mx-auto space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    name="nombre"
-                    placeholder="Nombre"
-                    required
-                    className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7b6bc7] text-base md:text-lg"
-                  />
-                  <input
-                    type="text"
-                    name="apellido"
-                    placeholder="Apellido"
-                    className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7b6bc7] text-base md:text-lg"
-                  />
-                </div>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Tu email"
-                  required
-                  className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7b6bc7] text-base md:text-lg"
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-[#6b5bb6] text-white px-8 py-4 rounded-lg hover:bg-[#5b4ba5] transition-colors font-medium text-base md:text-lg"
-                >
-                  Suscribirme
-                </button>
-              </form>
-            </AnimatedSection>
-          </div>
-        </div>
-      </section>
+      <NewsletterForm />
     </>
   );
 }

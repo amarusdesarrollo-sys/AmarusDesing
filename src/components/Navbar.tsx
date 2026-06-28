@@ -146,7 +146,7 @@ const Navbar = ({ initialCategories = [] }: { initialCategories?: Category[] }) 
           {/* Logo */}
           <Link
             href="/"
-            className="flex items-center group transition-transform duration-300 hover:scale-105 shrink-0"
+            className="group flex shrink-0 touch-manipulation items-center transition-transform duration-300 [@media(hover:hover)_and_(pointer:fine)]:hover:scale-105"
             aria-label="Amarus Design — Inicio"
           >
             <div className="flex items-center gap-2">
@@ -158,32 +158,32 @@ const Navbar = ({ initialCategories = [] }: { initialCategories?: Category[] }) 
                 priority
                 className="w-9 h-9 rounded-full object-cover bg-white/10"
               />
-              <span className="text-lg md:text-xl font-bold text-white group-hover:text-[#F5EFFF] transition-all duration-300 whitespace-nowrap">
+              <span className="whitespace-nowrap text-lg font-bold text-white transition-all duration-300 md:text-xl [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-[#F5EFFF]">
                 Amarus Design
               </span>
             </div>
           </Link>
 
-          {/* Desktop Navigation - overflow-visible para que el desplegable de Tienda Online no se recorte */}
-          <div className="hidden md:block min-w-0 overflow-visible">
+          {/* Desktop Navigation (solo pantallas grandes; tablet usa menú hamburguesa) */}
+          <div className="hidden min-w-0 overflow-visible lg:block">
             <div className="ml-4 flex items-baseline space-x-3">
               <Link
                 href="/"
-                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
+                className="group relative shrink-0 touch-manipulation whitespace-nowrap px-2 py-2 text-sm font-medium text-white transition-colors duration-200 [@media(hover:hover)_and_(pointer:fine)]:hover:text-[#F5EFFF]"
               >
                 Inicio
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
+                <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#F5EFFF] transition-all duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:w-full"></span>
               </Link>
 
               {/* Tienda Online Dropdown: pegado al enlace para que al pasar el ratón no se cierre y se pueda hacer clic en cada categoría */}
-              <div className="relative group shrink-0">
+              <div className="group relative shrink-0">
                 <Link
                   href="/tienda-online"
-                  className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium flex items-center relative transition-colors duration-200 whitespace-nowrap"
+                  className="relative flex touch-manipulation items-center whitespace-nowrap px-2 py-2 text-sm font-medium text-white transition-colors duration-200 [@media(hover:hover)_and_(pointer:fine)]:hover:text-[#F5EFFF]"
                 >
                   Tienda Online
                   <svg
-                    className="ml-1.5 h-5 w-5 transition-transform duration-200 group-hover:rotate-180"
+                    className="ml-1.5 h-5 w-5 transition-transform duration-200 [@media(hover:hover)_and_(pointer:fine)]:group-hover:rotate-180"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -195,9 +195,9 @@ const Navbar = ({ initialCategories = [] }: { initialCategories?: Category[] }) 
                       d="M19 9l-7 7-7-7"
                     />
                   </svg>
-                  <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
+                  <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#F5EFFF] transition-all duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:w-full"></span>
                 </Link>
-                <div className="absolute left-0 top-full pt-1 w-72 max-h-[min(70vh,28rem)] overflow-y-auto bg-white shadow-xl rounded-b-lg border border-gray-200 border-t-0 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100]">
+                <div className="absolute left-0 top-full z-[100] w-72 max-h-[min(70vh,28rem)] overflow-y-auto rounded-b-lg border border-t-0 border-gray-200 bg-white pt-1 shadow-xl opacity-0 invisible transition-all duration-200 [@media(hover:hover)_and_(pointer:fine)]:group-hover:visible [@media(hover:hover)_and_(pointer:fine)]:group-hover:opacity-100">
                   <div className="py-1.5">
                     <Link
                       href="/tienda-online"
@@ -238,37 +238,37 @@ const Navbar = ({ initialCategories = [] }: { initialCategories?: Category[] }) 
 
               <Link
                 href="/equipo"
-                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
+                className="group relative shrink-0 touch-manipulation whitespace-nowrap px-2 py-2 text-sm font-medium text-white transition-colors duration-200 [@media(hover:hover)_and_(pointer:fine)]:hover:text-[#F5EFFF]"
               >
                 Equipo
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
+                <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#F5EFFF] transition-all duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:w-full"></span>
               </Link>
               <a
                 href="/#historia"
-                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
+                className="group relative shrink-0 touch-manipulation whitespace-nowrap px-2 py-2 text-sm font-medium text-white transition-colors duration-200 [@media(hover:hover)_and_(pointer:fine)]:hover:text-[#F5EFFF]"
               >
                 Historia
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
+                <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#F5EFFF] transition-all duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:w-full"></span>
               </a>
               <Link
                 href="/politicas"
-                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
+                className="group relative shrink-0 touch-manipulation whitespace-nowrap px-2 py-2 text-sm font-medium text-white transition-colors duration-200 [@media(hover:hover)_and_(pointer:fine)]:hover:text-[#F5EFFF]"
               >
                 Políticas
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
+                <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#F5EFFF] transition-all duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:w-full"></span>
               </Link>
               <Link
                 href="/blog"
-                className="text-white hover:text-[#F5EFFF] px-2 py-2 text-sm font-medium relative group transition-colors duration-200 whitespace-nowrap shrink-0"
+                className="group relative shrink-0 touch-manipulation whitespace-nowrap px-2 py-2 text-sm font-medium text-white transition-colors duration-200 [@media(hover:hover)_and_(pointer:fine)]:hover:text-[#F5EFFF]"
               >
                 Blog
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#F5EFFF] group-hover:w-full transition-all duration-300"></span>
+                <span className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#F5EFFF] transition-all duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:w-full"></span>
               </Link>
             </div>
           </div>
 
           {/* Right side icons — ancho fijo para evitar saltos al resolver Firebase Auth */}
-          <div className="hidden md:flex items-center justify-end space-x-2 shrink-0 min-w-[17rem] min-h-10">
+          <div className="hidden min-h-10 min-w-[17rem] shrink-0 items-center justify-end space-x-2 lg:flex">
             <Link
               href="/contacto"
               className="flex items-center justify-center min-h-11 min-w-11 p-2 text-white hover:text-[#F5EFFF] hover:bg-white/10 rounded-lg transition-colors shrink-0"
@@ -316,7 +316,7 @@ const Navbar = ({ initialCategories = [] }: { initialCategories?: Category[] }) 
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden shrink-0">
+          <div className="shrink-0 lg:hidden">
             <button
               type="button"
               onClick={toggleMenu}
@@ -336,7 +336,7 @@ const Navbar = ({ initialCategories = [] }: { initialCategories?: Category[] }) 
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden" id="mobile-nav-menu">
+          <div className="lg:hidden" id="mobile-nav-menu">
             <div className="px-2 pt-2 pb-3 space-y-0.5 sm:px-3 bg-[#6B5BB6] border-t border-[#7B6BC7]">
               <Link
                 href="/"

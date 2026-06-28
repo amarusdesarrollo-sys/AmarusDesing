@@ -207,9 +207,9 @@ export default async function CategoryPage({
                     <Link
                       key={sub.id}
                       href={`/categorias/${category.slug}?sub=${encodeURIComponent(sub.slug)}`}
-                      className="group flex flex-col items-center text-center"
+                      className="group flex touch-manipulation flex-col items-center text-center"
                     >
-                      <div className="relative mb-2 aspect-square w-full max-w-[9.5rem] mx-auto overflow-hidden rounded-full border-2 border-white shadow-md bg-[#E5D9F2] transition-transform duration-300 group-hover:scale-[1.03] group-hover:border-[#6B5BB6]/40">
+                      <div className="relative mx-auto mb-2 aspect-square w-full max-w-[9.5rem] overflow-hidden rounded-full border-2 border-white bg-[#E5D9F2] shadow-md transition-transform duration-300 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-[1.03] [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-[#6B5BB6]/40">
                         {imgSrc ? (
                           <img
                             src={imgSrc}
@@ -223,7 +223,7 @@ export default async function CategoryPage({
                           </div>
                         )}
                       </div>
-                      <span className="text-sm font-medium text-gray-800 group-hover:text-[#6B5BB6] transition-colors line-clamp-2">
+                      <span className="line-clamp-2 text-sm font-medium text-gray-800 transition-colors [@media(hover:hover)_and_(pointer:fine)]:group-hover:text-[#6B5BB6]">
                         {sub.name}
                       </span>
                     </Link>
@@ -344,10 +344,11 @@ export default async function CategoryPage({
                 ? "No hay productos disponibles en esta categoría."
                 : "No hay productos que coincidan con los filtros."}
               </p>
-              <Link href="/tienda-online">
-                <button className="text-[#6B5BB6] hover:text-[#5B4BA5] font-medium transition-colors">
-                  Explorar otras categorías
-                </button>
+              <Link
+                href="/tienda-online"
+                className="inline-block font-medium text-[#6B5BB6] transition-colors active:text-[#5B4BA5] [@media(hover:hover)_and_(pointer:fine)]:hover:text-[#5B4BA5]"
+              >
+                Explorar otras categorías
               </Link>
             </div>
           </AnimatedSection>

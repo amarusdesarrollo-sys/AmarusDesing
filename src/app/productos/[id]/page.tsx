@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ShoppingCart,
   Heart,
@@ -26,6 +25,7 @@ import ProductCard from "@/components/ProductCard";
 import AnimatedSection from "@/components/AnimatedSection";
 import LazyProductVideo, {
   VideoThumbnailPlaceholder,
+  prefetchProductVideo,
 } from "@/components/LazyProductVideo";
 import {
   getProductImageUrl,
@@ -318,6 +318,7 @@ export default function ProductDetailPage() {
                 <>
                   {selectedMediaIsVideo ? (
                     <LazyProductVideo
+                      key={selectedMedia?.url ?? "video"}
                       src={selectedMedia?.url ?? ""}
                       className="h-full w-full object-cover"
                       autoPlayWhenVisible
@@ -408,8 +409,14 @@ export default function ProductDetailPage() {
                 {product.images.map((image, index) => (
                   <button
                     key={image.id}
+                    type="button"
                     onClick={() => setSelectedImageIndex(index)}
-                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                    onPointerEnter={() => {
+                      if (image.mediaType === "video") {
+                        prefetchProductVideo(image.url);
+                      }
+                    }}
+                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all touch-manipulation ${
                       selectedImageIndex === index
                         ? "border-[#6B5BB6] ring-2 ring-[#6B5BB6] ring-offset-2"
                         : "border-gray-200 hover:border-[#6B5BB6]"
@@ -682,12 +689,11 @@ export default function ProductDetailPage() {
                 </div>
 
                 <div className="flex gap-3">
-                  <motion.button
+                  <button
+                    type="button"
                     onClick={handleAddToCart}
                     disabled={!canAddToCart}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-4 px-6 rounded-lg font-semibold text-lg transition-all ${
+                    className={`flex flex-1 touch-manipulation items-center justify-center gap-2 rounded-lg px-6 py-4 text-lg font-semibold transition-all active:scale-[0.98] ${
                       canAddToCart
                         ? addedToCart
                           ? "bg-green-500 text-white"
@@ -712,9 +718,10 @@ export default function ProductDetailPage() {
                               : "Agregar al carrito"}
                       </>
                     )}
-                  </motion.button>
+                  </button>
 
                   <button
+                    type="button"
                     className="p-4 border-2 border-gray-300 rounded-lg hover:border-[#6B5BB6] hover:text-[#6B5BB6] transition-colors"
                     aria-label="Agregar a favoritos"
                   >

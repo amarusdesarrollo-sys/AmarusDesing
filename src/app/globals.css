@@ -5,6 +5,24 @@ body {
   overflow-x: hidden;
 }
 
+/* Un solo toque en tablet/móvil: sin esperar hover ni zoom por doble tap */
+a,
+button,
+[role="button"],
+input,
+select,
+textarea,
+label {
+  touch-action: manipulation;
+}
+
+@media (hover: none) {
+  a:hover,
+  button:hover {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 /* Contenedor estándar del panel admin: padding acorde al viewport */
 .admin-shell {
   width: 100%;
